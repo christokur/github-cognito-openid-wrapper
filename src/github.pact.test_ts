@@ -1,0 +1,166 @@
+// @ts-nocheck
+import { PactV3, MatchersV3 } from '@pact-foundation/pact';
+import { createGitHubClient } from './github';
+
+describe('GitHub Client', () => {
+  const provider = new PactV3({
+    dir: './pacts',
+    consumer: 'github-cognito-openid-wrapper',
+    provider: 'github',
+    logLevel: 'debug',
+  });
+
+  // Store original env
+  const originalEnv = { ...process.env };
+
+  // Set up environment variables for tests
+  beforeAll(() => {
+    process.env.GITHUB_CLIENT_ID = 'test-client-id';
+    process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
+    process.env.GITHUB_LOGIN_URL = 'http://localhost';
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  describe('getUserDetails', () => {
+    const VALID_TOKEN = 'good_token';
+    const INVALID_TOKEN = 'bad_token';
+
+    test('with valid token', async () => {
+      await provider
+        .given('a valid access token exists')
+        .uponReceiving('a request for user details')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${VALID_TOKEN}`,
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: MatchersV3.like({
+            name: 'monalisa octocat',
+            login: 'octocat',
+          }),
+        })
+        .executeTest(async (mockServer) => {
+          const client = createGitHubClient(mockServer.url);
+          const userDetails = await client.getUserDetails(VALID_TOKEN);
+          expect(userDetails.name).toBe('monalisa octocat');
+        });
+    });
+
+    test('with invalid token', async () => {
+      await provider
+        .given('an invalid access token exists')
+        .uponReceiving('a request for user details with invalid token')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${INVALID_TOKEN}`,
+          },
+        })
+        .willRespondWith({
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: MatchersV3.like({
+            error: 'Bad credentials',
+            error_description: 'The access token is invalid',
+          }),
+        })
+        .executeTest(async (mockServer) => {
+          const client = createGitHubClient(mockServer.url);
+          await expect(client.getUserDetails(INVALID_TOKEN)).rejects.toThrow();
+        });
+    });
+  });
+
+  describe('getUserEmails', () => {
+    const VALID_TOKEN = 'good_token';
+
+    test('with valid token', async () => {
+      await provider
+        .given('a valid access token exists')
+        .uponReceiving('a request for user emails')
+        .withRequest({
+          method: 'GET',
+          path: '/user/emails',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${VALID_TOKEN}`,
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: MatchersV3.eachLike(
+            {
+              email: 'octocat@github.com',
+              primary: true,
+              verified: true,
+              visibility: null,
+            },
+            1,
+          ),
+        })
+        .executeTest(async (mockServer) => {
+          const client = createGitHubClient(mockServer.url);
+          const emails = await client.getUserEmails(VALID_TOKEN);
+          expect(emails).toHaveLength(1);
+          expect(emails[0].email).toBe('octocat@github.com');
+        });
+    });
+  });
+
+  describe('getToken', () => {
+    const GOOD_CODE = 'good_code';
+
+    test('with valid code', async () => {
+      await provider
+        .given('a valid authorization code exists')
+        .uponReceiving('a request for access token')
+        .withRequest({
+          method: 'POST',
+          path: '/oauth/access_token',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: {
+            client_id: 'test-client-id',
+            client_secret: 'test-client-secret',
+            code: GOOD_CODE,
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: MatchersV3.like({
+            access_token: 'good_token',
+            token_type: 'bearer',
+            scope: 'user:email',
+          }),
+        })
+        .executeTest(async (mockServer) => {
+          const client = createGitHubClient(mockServer.url);
+          const tokenResponse = await client.getToken(GOOD_CODE);
+          expect(tokenResponse.access_token).toBe('good_token');
+        });
+    });
+  });
+});

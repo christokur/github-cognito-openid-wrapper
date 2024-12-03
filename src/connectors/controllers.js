@@ -7,7 +7,7 @@ module.exports = (respond) => ({
       client_id,
       scope,
       state,
-      response_type
+      response_type,
     );
     logger.info('Redirecting to authorizeUrl');
     logger.debug('Authorize Url is: %s', authorizeUrl, {});
@@ -24,7 +24,7 @@ module.exports = (respond) => ({
         logger.error(
           'Failed to provide user info: %s',
           error.message || error,
-          {}
+          {},
         );
         respond.error(error);
       });
@@ -39,7 +39,7 @@ module.exports = (respond) => ({
             code,
             state,
             host,
-            {}
+            {},
           );
           respond.success(tokens);
         })
@@ -50,7 +50,7 @@ module.exports = (respond) => ({
             state,
             host,
             error.message || error,
-            {}
+            {},
           );
           respond.error(error);
         });
@@ -62,7 +62,7 @@ module.exports = (respond) => ({
         state,
         host,
         error.message || error,
-        {}
+        {},
       );
       respond.error(error);
     }

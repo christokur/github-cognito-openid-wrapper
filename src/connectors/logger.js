@@ -29,9 +29,9 @@ if (SPLUNK_URL) {
       splunk: splunkSettings,
       format: winston.format.combine(
         winston.format.splat(),
-        winston.format.timestamp()
+        winston.format.timestamp(),
       ),
-    })
+    }),
   );
 } else {
   // STDOUT logging for dev/regular servers
@@ -40,9 +40,9 @@ if (SPLUNK_URL) {
       format: winston.format.combine(
         winston.format.splat(),
         winston.format.colorize({ all: true }),
-        winston.format.simple()
+        winston.format.simple(),
       ),
-    })
+    }),
   );
 }
 

@@ -1,354 +1,225 @@
-const { pactWith } = require('jest-pact');
-const path = require('path');
+const { PactV3, MatchersV3 } = require('@pact-foundation/pact');
 const github = require('./github');
 
-jest.mock('./config', () => ({
-  COGNITO_REDIRECT_URI: 'COGNITO_REDIRECT_URI',
-  GITHUB_CLIENT_SECRET: 'GITHUB_CLIENT_SECRET',
-  GITHUB_CLIENT_ID: 'GITHUB_CLIENT_ID',
-  GITHUB_API_URL: 'GITHUB_API_URL',
-  GITHUB_LOGIN_URL: 'GITHUB_LOGIN_URL',
-}));
-
-pactWith(
-  {
-    log: path.resolve(process.cwd(), 'logs', 'mockserver-integration.log'),
-    dir: path.resolve(process.cwd(), 'pacts'),
+describe('GitHub Client', () => {
+  const provider = new PactV3({
+    dir: './pacts',
     consumer: 'github-cognito-openid-wrapper',
-    provider: 'GitHub.com',
-  },
-  (provider) => {
-    describe('GitHub Client Pact', () => {
-      describe('UserDetails endpoint', () => {
-        const userDetailsRequest = {
-          uponReceiving: 'a request for user details',
-          withRequest: {
-            method: 'GET',
-            path: '/user',
-            headers: {
-              Accept: 'application/vnd.github.v3+json',
-              Authorization: `token THIS_IS_MY_TOKEN`,
-            },
+    provider: 'github',
+    logLevel: 'debug',
+  });
+
+  // Store original env
+  const originalEnv = { ...process.env };
+
+  // Set up environment variables for tests
+  beforeAll(() => {
+    process.env.GITHUB_CLIENT_ID = 'test-client-id';
+    process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
+    process.env.COGNITO_REDIRECT_URI = 'http://localhost/callback';
+    process.env.GITHUB_LOGIN_URL = 'http://localhost';
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  describe('getUserDetails', () => {
+    const VALID_TOKEN = 'good_token';
+    const INVALID_TOKEN = 'bad_token';
+
+    test('with valid token', async () => {
+      await provider
+        .given('a valid access token exists')
+        .uponReceiving('a request for user details')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${VALID_TOKEN}`,
           },
-        };
-        describe('When the access token is good', () => {
-          const EXPECTED_BODY = { name: 'Tim Jones' };
-          beforeEach(() => {
-            const interaction = {
-              ...userDetailsRequest,
-              state: 'Where the access token is good',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_BODY,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('returns a sucessful body', () =>
-            github(provider.mockService.baseUrl)
-              .getUserDetails('THIS_IS_MY_TOKEN')
-              .then((response) => {
-                expect(response).toEqual(EXPECTED_BODY);
-              }));
-        });
-        describe('When the access token is bad', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...userDetailsRequest,
-              state: 'Where the access token is bad',
-              willRespondWith: {
-                status: 400,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('rejects the promise', () =>
-            expect(
-              github(provider.mockService.baseUrl).getUserDetails(
-                'THIS_IS_MY_TOKEN'
-              )
-            ).rejects.toThrow(
-              new Error('Request failed with status code 400')
-            ));
-        });
-        describe('When there is a server error response', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...userDetailsRequest,
-              state: 'Where there is a server error response',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('rejects the promise', () =>
-            expect(
-              github(provider.mockService.baseUrl).getUserDetails(
-                'THIS_IS_MY_TOKEN'
-              )
-            ).rejects.toThrow(
-              new Error(
-                'GitHub API responded with a failure: This is an error, This is a description'
-              )
-            ));
-        });
-      });
-
-      describe('UserEmails endpoint', () => {
-        const userEmailsRequest = {
-          uponReceiving: 'a request for user emails',
-          withRequest: {
-            method: 'GET',
-            path: '/user/emails',
-            headers: {
-              Accept: 'application/vnd.github.v3+json',
-              Authorization: `token THIS_IS_MY_TOKEN`,
-            },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
           },
-        };
-        describe('When the access token is good', () => {
-          const EXPECTED_BODY = [{ email: 'ben@example.com', primary: true }];
-          beforeEach(() => {
-            const interaction = {
-              ...userEmailsRequest,
-              state: 'Where the access token is good',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_BODY,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('returns a sucessful body', () =>
-            github(provider.mockService.baseUrl)
-              .getUserEmails('THIS_IS_MY_TOKEN')
-              .then((response) => {
-                expect(response).toEqual(EXPECTED_BODY);
-              }));
+          body: MatchersV3.like({
+            name: 'monalisa octocat',
+            login: 'octocat',
+          }),
         });
-        describe('When the access token is bad', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...userEmailsRequest,
-              state: 'Where the access token is bad',
-              willRespondWith: {
-                status: 400,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
 
-          // add expectations
-          it('rejects the promise', () =>
-            expect(
-              github(provider.mockService.baseUrl).getUserEmails(
-                'THIS_IS_MY_TOKEN'
-              )
-            ).rejects.toThrow(
-              new Error('Request failed with status code 400')
-            ));
-        });
-        describe('When there is a server error response', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...userEmailsRequest,
-              state: 'Where there is a server error response',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('rejects the promise', () =>
-            expect(
-              github(provider.mockService.baseUrl).getUserEmails(
-                'THIS_IS_MY_TOKEN'
-              )
-            ).rejects.toThrow(
-              new Error(
-                'GitHub API responded with a failure: This is an error, This is a description'
-              )
-            ));
-        });
-      });
-
-      describe('Authorization endpoint', () => {
-        describe('always', () => {
-          it('returns a redirect url', () => {
-            expect(
-              github(provider.mockService.baseUrl).getAuthorizeUrl(
-                'client_id',
-                'scope',
-                'state',
-                'response_type'
-              )
-            ).toEqual(
-              `${provider.mockService.baseUrl}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type`
-            );
-          });
-        });
-      });
-
-      describe('Auth Token endpoint', () => {
-        const accessTokenRequest = {
-          uponReceiving: 'a request for an access token',
-          withRequest: {
-            method: 'POST',
-            path: '/login/oauth/access_token',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: {
-              // OAuth required fields
-              grant_type: 'authorization_code',
-              redirect_uri: 'COGNITO_REDIRECT_URI',
-              client_id: 'GITHUB_CLIENT_ID',
-              // GitHub Specific
-              response_type: 'code',
-              client_secret: 'GITHUB_CLIENT_SECRET',
-              code: 'SOME_CODE',
-            },
-          },
-        };
-
-        describe('When the code is good', () => {
-          const EXPECTED_BODY = {
-            access_token: 'xxxx',
-            refresh_token: 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
-            expires_in: 21600,
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...accessTokenRequest,
-              state: 'Where the code is good',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_BODY,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('returns a sucessful body', () =>
-            github(provider.mockService.baseUrl)
-              .getToken('SOME_CODE')
-              .then((response) => {
-                expect(response).toEqual(EXPECTED_BODY);
-              }));
-        });
-        describe('When the code is bad', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...accessTokenRequest,
-              state: 'Where the code is bad',
-              willRespondWith: {
-                status: 400,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('rejects the promise', (done) => {
-            github(provider.mockService.baseUrl)
-              .getToken('SOME_CODE')
-              .catch(() => {
-                done();
-              });
-          });
-        });
-        describe('When there is a server error response', () => {
-          const EXPECTED_ERROR = {
-            error: 'This is an error',
-            error_description: 'This is a description',
-          };
-          beforeEach(() => {
-            const interaction = {
-              ...accessTokenRequest,
-              state: 'Where there is a server error response',
-              willRespondWith: {
-                status: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: EXPECTED_ERROR,
-              },
-            };
-            return provider.addInteraction(interaction);
-          });
-
-          // add expectations
-          it('rejects the promise', (done) => {
-            github(provider.mockService.baseUrl)
-              .getToken('SOME_CODE')
-              .catch(() => {
-                done();
-              });
-          });
-        });
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url);
+        const response = await client.getUserDetails(VALID_TOKEN);
+        expect(response.name).toBe('monalisa octocat');
+        expect(response.login).toBe('octocat');
       });
     });
-  }
-);
+
+    test('with invalid token', async () => {
+      await provider
+        .given('an invalid access token')
+        .uponReceiving('a request with invalid token')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${INVALID_TOKEN}`,
+          },
+        })
+        .willRespondWith({
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Bad credentials',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url);
+        await expect(client.getUserDetails(INVALID_TOKEN)).rejects.toThrow(
+          'Request failed with status code 401',
+        );
+      });
+    });
+  });
+
+  describe('getUserEmails', () => {
+    const VALID_TOKEN = 'good_token';
+
+    test('with valid token', async () => {
+      await provider
+        .given('a valid access token exists')
+        .uponReceiving('a request for user emails')
+        .withRequest({
+          method: 'GET',
+          path: '/user/emails',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${VALID_TOKEN}`,
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: MatchersV3.eachLike({
+            email: 'octocat@github.com',
+            verified: true,
+            primary: true,
+          }),
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url);
+        const response = await client.getUserEmails(VALID_TOKEN);
+        expect(response[0].email).toBe('octocat@github.com');
+        expect(response[0].verified).toBe(true);
+        expect(response[0].primary).toBe(true);
+      });
+    });
+  });
+
+  describe('getToken', () => {
+    const VALID_CODE = 'valid_code';
+    const INVALID_CODE = 'invalid_code';
+
+    test('with valid code', async () => {
+      await provider
+        .given('a valid authorization code')
+        .uponReceiving('a token request with valid code')
+        .withRequest({
+          method: 'POST',
+          path: '/login/oauth/access_token',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: MatchersV3.like({
+            code: VALID_CODE,
+            grant_type: 'authorization_code',
+            response_type: 'code',
+          }),
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            access_token: 'test_access_token',
+            token_type: 'bearer',
+            scope: 'user:email',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        const response = await client.getToken(VALID_CODE);
+        expect(response.access_token).toBe('test_access_token');
+        expect(response.token_type).toBe('bearer');
+        expect(response.scope).toBe('user:email');
+      });
+    });
+
+    test('with invalid code', async () => {
+      await provider
+        .given('an invalid authorization code')
+        .uponReceiving('a token request with invalid code')
+        .withRequest({
+          method: 'POST',
+          path: '/login/oauth/access_token',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: MatchersV3.like({
+            code: INVALID_CODE,
+            grant_type: 'authorization_code',
+            response_type: 'code',
+          }),
+        })
+        .willRespondWith({
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getToken(INVALID_CODE)).rejects.toThrow(
+          'Request failed with status code 400',
+        );
+      });
+    });
+  });
+
+  describe('getAuthorizeUrl', () => {
+    test('returns a redirect url', async () => {
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url);
+        const url = client.getAuthorizeUrl(
+          'client_id',
+          'scope',
+          'state',
+          'response_type',
+        );
+        expect(url).toBe(
+          `${mockServer.url}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type`,
+        );
+      });
+    });
+  });
+});

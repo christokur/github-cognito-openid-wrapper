@@ -10,7 +10,7 @@ const logger = require('./connectors/logger');
 
 const getApiEndpoints = (
   apiBaseUrl = GITHUB_API_URL,
-  loginBaseUrl = GITHUB_LOGIN_URL
+  loginBaseUrl = GITHUB_LOGIN_URL,
 ) => ({
   userDetails: `${apiBaseUrl}/user`,
   userEmails: `${apiBaseUrl}/user/emails`,
@@ -23,14 +23,14 @@ const check = (response) => {
   if (response.data) {
     if (response.data.error) {
       throw new Error(
-        `GitHub API responded with a failure: ${response.data.error}, ${response.data.error_description}`
+        `GitHub API responded with a failure: ${response.data.error}, ${response.data.error_description}`,
       );
     } else if (response.status === 200) {
       return response.data;
     }
   }
   throw new Error(
-    `GitHub API responded with a failure: ${response.status} (${response.statusText})`
+    `GitHub API responded with a failure: ${response.status} (${response.statusText})`,
   );
 };
 
@@ -44,15 +44,21 @@ const gitHubGet = (url, accessToken) =>
     },
   });
 
-module.exports = (apiBaseUrl, loginBaseUrl) => {
+function githubClient(
+  apiBaseUrl = GITHUB_API_URL,
+  loginBaseUrl = GITHUB_LOGIN_URL,
+) {
   const urls = getApiEndpoints(apiBaseUrl, loginBaseUrl || apiBaseUrl);
+
   return {
     getAuthorizeUrl: (client_id, scope, state, response_type) =>
       `${urls.oauthAuthorize}?client_id=${client_id}&scope=${encodeURIComponent(
-        scope
+        scope,
       )}&state=${state}&response_type=${response_type}`,
+
     getUserDetails: (accessToken) =>
       gitHubGet(urls.userDetails, accessToken).then(check),
+
     getUserEmails: (accessToken) =>
       gitHubGet(urls.userEmails, accessToken).then(check),
     getToken: (code, state) => {
@@ -73,7 +79,7 @@ module.exports = (apiBaseUrl, loginBaseUrl) => {
         'Getting token from %s with data: %j',
         urls.oauthToken,
         data,
-        {}
+        {},
       );
       return axios({
         method: 'post',
@@ -86,4 +92,6 @@ module.exports = (apiBaseUrl, loginBaseUrl) => {
       }).then(check);
     },
   };
-};
+}
+
+module.exports = githubClient;

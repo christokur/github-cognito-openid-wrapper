@@ -1,19 +1,17 @@
 module.exports = function(api) {
+  api.cache(true);
+
   const presets = [
     [
       '@babel/preset-env',
       {
-        targets: { node: '8.10' }
+        targets: { node: 'current' }
       }
-    ]
+    ],
+    '@babel/preset-typescript'
   ];
-  const plugins = [];
-
-  // Cache the returned value forever and don't call this function again.
-  api.cache(true);
 
   return {
-    presets,
-    plugins
+    presets
   };
 };

@@ -1,64 +1,77 @@
 const logger = require('./connectors/logger');
 const { NumericDate } = require('./helpers');
 const crypto = require('./crypto');
-const github = require('./github');
+const githubClient = require('./github');
+const config = require('./config');
 
 const getJwks = () => ({ keys: [crypto.getPublicKey()] });
 
-const getUserInfo = (accessToken) =>
-  Promise.all([
-    github()
-      .getUserDetails(accessToken)
-      .then((userDetails) => {
-        logger.debug('Fetched user details: %j', userDetails, {});
-        // Here we map the github user response to the standard claims from
-        // OpenID. The mapping was constructed by following
-        // https://developer.github.com/v3/users/
-        // and http://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-        const claims = {
-          sub: `${userDetails.id}`, // OpenID requires a string
-          name: userDetails.name,
-          preferred_username: userDetails.login,
-          profile: userDetails.html_url,
-          picture: userDetails.avatar_url,
-          website: userDetails.blog,
-          updated_at: NumericDate(
-            // OpenID requires the seconds since epoch in UTC
-            new Date(Date.parse(userDetails.updated_at))
-          ),
-        };
-        logger.debug('Resolved claims: %j', claims, {});
-        return claims;
-      }),
-    github()
-      .getUserEmails(accessToken)
-      .then((userEmails) => {
-        logger.debug('Fetched user emails: %j', userEmails, {});
-        const primaryEmail = userEmails.find((email) => email.primary);
-        if (primaryEmail === undefined) {
-          throw new Error('User did not have a primary email address');
-        }
-        const claims = {
-          email: primaryEmail.email,
-          email_verified: primaryEmail.verified,
-        };
-        logger.debug('Resolved claims: %j', claims, {});
-        return claims;
-      }),
-  ]).then((claims) => {
-    const mergedClaims = claims.reduce(
-      (acc, claim) => ({ ...acc, ...claim }),
-      {}
-    );
-    logger.debug('Resolved combined claims: %j', mergedClaims, {});
-    return mergedClaims;
-  });
+/**
+ * Fetches user information from GitHub and returns the OpenID claims.
+ *
+ * @param {string} accessToken - The access token to use for authentication.
+ * @returns {Promise<Object>} A promise that resolves to the OpenID claims.
+ */
+const getUserInfo = (accessToken) => {
+  const githubClientInstance = githubClient(
+    config.GITHUB_API_URL,
+    config.GITHUB_LOGIN_URL,
+  );
+  return githubClientInstance
+    .getUserDetails(accessToken)
+    .then((userDetails) => {
+      logger.debug('Fetched user details: %j', userDetails, {});
+      // Here we map the github user response to the standard claims from
+      // OpenID. The mapping was constructed by following
+      // https://developer.github.com/v3/users/
+      // and http://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+      const claims = {
+        sub: `${userDetails.id}`, // OpenID requires a string
+        name: userDetails.name,
+        preferred_username: userDetails.login,
+        profile: userDetails.html_url,
+        picture: userDetails.avatar_url,
+        website: userDetails.blog,
+        updated_at: NumericDate(
+          // OpenID requires the seconds since epoch in UTC
+          new Date(Date.parse(userDetails.updated_at)),
+        ),
+      };
+      logger.debug('Resolved claims: %j', claims, {});
+      return Promise.all([
+        Promise.resolve(claims),
+        githubClientInstance.getUserEmails(accessToken).then((userEmails) => {
+          logger.debug('Fetched user emails: %j', userEmails, {});
+          const primaryEmail = userEmails.find((email) => email.primary);
+          if (primaryEmail === undefined) {
+            throw new Error('User did not have a primary email address');
+          }
+          return {
+            email: primaryEmail.email,
+            email_verified: primaryEmail.verified,
+          };
+        }),
+      ]).then(([userClaims, emailClaims]) => ({
+        ...userClaims,
+        ...emailClaims,
+      }));
+    })
+    .catch((error) => {
+      logger.error('Failed to fetch user info: %j', error, {});
+      throw error;
+    });
+};
 
 const getAuthorizeUrl = (client_id, scope, state, response_type) =>
-  github().getAuthorizeUrl(client_id, scope, state, response_type);
+  githubClient(config.GITHUB_API_URL, config.GITHUB_LOGIN_URL).getAuthorizeUrl(
+    client_id,
+    scope,
+    state,
+    response_type,
+  );
 
 const getTokens = (code, state, host) =>
-  github()
+  githubClient(config.GITHUB_API_URL, config.GITHUB_LOGIN_URL)
     .getToken(code, state)
     .then((githubToken) => {
       logger.debug('Got token: %s', githubToken, {});
@@ -96,6 +109,10 @@ const getTokens = (code, state, host) =>
 
         resolve(tokenResponse);
       });
+    })
+    .catch((error) => {
+      logger.error('Failed to get token: %s', error.message, {});
+      throw error;
     });
 
 const getConfigFor = (host) => ({

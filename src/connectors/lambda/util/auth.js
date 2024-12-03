@@ -18,7 +18,7 @@ module.exports = {
         const accessToken = req.queryStringParameters.access_token;
         logger.debug(
           'Section 2.3 Authorization query parameter: %s',
-          accessToken
+          accessToken,
         );
         resolve(req.queryStringParameters.access_token);
       } else if (

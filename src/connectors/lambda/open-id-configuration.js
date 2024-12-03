@@ -6,7 +6,7 @@ module.exports.handler = (event, context, callback) => {
   controllers(responder(callback)).openIdConfiguration(
     auth.getIssuer(
       event.headers.Host,
-      event.requestContext && event.requestContext.stage
-    )
+      event.requestContext && event.requestContext.stage,
+    ),
   );
 };

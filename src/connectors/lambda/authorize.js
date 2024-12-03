@@ -9,6 +9,6 @@ module.exports.handler = (event, context, callback) => {
     client_id,
     scope,
     state,
-    response_type
+    response_type,
   );
 };
