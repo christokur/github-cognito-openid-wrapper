@@ -4424,4 +4424,4 @@ reference = "codeartifact"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11.8,<3.13.0"
-content-hash = "d3d9bc3c2402cbb47c940b2a4f0335f3e329726c1a575242ec1732b2e10ce015"
+content-hash = "103ce7eb4223d0680f76a3812c1ca22f1e606477e124868e5954c5feabdf1a30"

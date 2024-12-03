@@ -6,9 +6,9 @@ requires = [
 ]
 
 [tool.poetry]
-name = "cdk-user-pool-identity-provider-github"
-version = "2.0.1"
-description = "A CDK construct that adds GitHub as an identity provider to a Cognito user pool"
+name = "github-cognito-openid-wrapper"
+version = "1.2.1"
+description = "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)"
 authors = ["Christo De Lange <christo.delange@sands.com>"]
 license = "(c) 2024 DLDInternet LLC"
 readme = "README.md"
@@ -28,10 +28,11 @@ exclude = [
 ]
 package-mode = false
 
+
 [tool.poetry.urls]
-Homepage = "https://github.com/SandsB2B/cdk-user-pool-identity-provider-github"
-Documentation = "https://cdk-user-pool-identity-provider-github.docs.infra-area2.com/"
-Changelog = "https://github.com/SandsB2B/cdk-user-pool-identity-provider-github/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/SandsB2B/github-cognito-openid-wrapper"
+Documentation = "https://github-cognito-openid-wrapper.docs.infra-area2.com/"
+Changelog = "https://github.com/SandsB2B/github-cognito-openid-wrapper/blob/main/CHANGELOG.md"
 
 [[tool.poetry.source]]
 name = "codeartifact"
@@ -94,7 +95,7 @@ optional = true
 pdocs = { git = "https://github.com/christokur/pdocs.git", branch = "master" }
 portray = { git = "https://github.com/christokur/portray.git", branch = "main" }
 mkdocs-material = { version = ">=8.5.0,<9.0.0" }
-mdx-include = { version = ">=1.4.1,<2.0.1" }
+mdx-include = { version = ">=1.4.1,<2.0.0" }
 mkdocs-markdownextradata-plugin = { version = ">=0.1.7,<0.3.0" }
 mkdocs-simple-hooks = { version = "~0.1.5" }
 pydocstyle = { version = "~6.1.1", extras = ["toml"] }
@@ -155,7 +156,7 @@ show-fixes = true
 # By default, always show source code snippets.
 # show-source = false
 # Allow imports relative to the "src" and "test" directories.
-src = ["src", "tests"]
+src = ["src", ""]
 target-version = "py311"
 
 [tool.ruff.lint]
@@ -163,7 +164,7 @@ target-version = "py311"
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "ANN", "ARG", "B", "BLE", "C", "COM", "D", "DTZ", "E", "EM", "ERA", "EXE", "F", "FBT", "G", "I", "ICN", "INP", "ISC", "N", "PD", "PGH", "PIE", "PL", "PT", "PTH", "Q", "RET", "RUF", "S", "SIM", "T", "TCH", "TID", "TRY", "UP", "W", "YTT"]
-ignore = [ "ANN002", "ANN003", "ANN101", "D211","D213", "S101", "T20", "EM101", "EM102", "ERA001", "D417", "BLE001", "RET504", "UP038", "D212", "D407" ]
+ignore = [ "ANN002", "ANN003", "D211", "D213", "S101", "T20", "EM101", "EM102", "ERA001", "D417", "BLE001", "RET504", "UP038", "D212", "D407" ]
 per-file-ignores = {}
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 # "FBT", "TRY",
@@ -184,14 +185,14 @@ max-args = 10
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-src_paths = [ "src", "tests",  ]
+src_paths = [ "src", "",  ]
 
 [tool.flake8]
 max-line-length = 120
 extend-ignore = "E203"
 
 [tool.pytest.ini_options]
-testpaths = [ "src", "tests",  ]
+testpaths = [ "src", "",  ]
 addopts = ["--doctest-modules"]
 norecursedirs = [
     "build",
@@ -201,7 +202,7 @@ doctest_optionflags = "NORMALIZE_WHITESPACE ELLIPSIS"
 
 [tool.coverage.run]
 command_line = "-m pytest --doctest-modules"
-source = [ "src", "tests",]
+source = [ "src", ]
 parallel = true
 branch = true # measure branch coverage in addition to statement coverage
 
@@ -210,8 +211,6 @@ fail_under = 29
 
 [tool.coverage.paths]
 source = [
-    "srccdk_user_pool_identity_provider_github",
-    "**/site-packages/cdk_user_pool_identity_provider_github",
 ]
 
 [tool.poetry_bump2version.options]
@@ -237,9 +236,9 @@ pc-autoupdate = { shell = "pre-commit autoupdate", help = "Auto update pre-commi
 pc-reinstall = { shell = "pre-commit uninstall; gitlint uninstall-hook; pre-commit install; pre-commit gc; pre-commit autoupdate; gitlint install-hook", help = "Reset commit-msg and pre-commit hooks" }
 pc-uninstall = { shell = "pre-commit uninstall; gitlint uninstall-hook", help = "Uninstall commit-msg and pre-commit hooks" }
 hooks = { shell = "git add -A; pre-commit run", help = "Run pre-commit hooks" }
-isort = { shell = "[ -z 'srctests' ] || { export PYTHONWARNINGS='ignore::Warning:setuptools.command.install'; isort src tests; }", help = "isort imports in src and tests" }
-black = { shell = "[ -z 'srctests' ] || { black src tests; }", help = "black formatting in src and tests" }
-tests = { shell = "[ -z 'srctests' ] || { poetry run pytest -s --doctest-modules src tests; }", help = "pytest's" }
+isort = { shell = "[ -z 'src' ] || { export PYTHONWARNINGS='ignore::Warning:setuptools.command.install'; isort src ; }", help = "isort imports in src and " }
+black = { shell = "[ -z 'src' ] || { black src ; }", help = "black formatting in src and " }
+tests = { shell = "[ -z 'src' ] || { poetry run pytest -s --doctest-modules src ; }", help = "pytest's" }
 pros = { shell = "prospector --profile prospector.yaml", help = "Prospector" }
 b2v = { cmd = "bump2version patch --new-version '${version}' --allow-dirty --commit", args = [{ name = "version", positional = true, multiple = false }], help = "Prospector" }
 gcl = { shell = "cz changelog --incremental || { echo 'With incremental changelog we are ok when there is nothing new to add ...'; true; }; python scripts/normalize_changelog.py", help = "Git Changelog" }
@@ -248,7 +247,7 @@ format = { shell = "black --check --diff ." }
 add = { shell = "git add -A" }
 ibtl = { sequence = ["isort", "black", "tests", "lint"] }
 doctests = { shell = "[ -z 'src' ] || { poetry run pytest --doctest-modules --verbose src }", help = "doctest's" }
-deps = { shell = "poetry install --with local-dev,test,docs", help = "Install project dependencies" }
+deps = { shell = "bash -c 'poetry env info; poetry install --with local-dev,test,docs'", help = "Install project dependencies" }
 prepare = { sequence = ["locks", "deps", "formats", "tests", "gcl", "docs-make", "add", "hooks"], help = "Do things to prepare for release" }
 docs-make = { shell = "make docs || true" }
 docs-build = { shell = "[ -z 'srcsite' ] || { rm -fr site || true; PYTHONPATH=src poetry run portray as_html; }" }
@@ -258,10 +257,10 @@ pule = { sequence = ["pu", "locks", "exports"], help = "Poetry update and export
 exports = { sequence = ["export", "export-dev"], help = "Do things to export" }
 formats = { sequence = ["isort", "black"], help = "Run checks" }
 locks = { sequence = ["set-lock", "check-lock"], help = "Manage poetry.lock" }
-ruff =       { shell = "[ -z 'srctests' ] || { poe formats; ruff check         src tests; }", help = "Ruff linter" }
-ruff-noqa  = { shell = "[ -z 'srctests' ] || { ruff check --select RUF --fix   src tests; }", help = "Ruff linter fix noqa" }
-ruff-watch = { shell = "[ -z 'srctests' ] || { poe formats; ruff check --watch src tests; }", help = "Ruff linter in watch mode" }
-ruff-fix =   { shell = "[ -z 'srctests' ] || { ruff check --fix-only           src tests; }", help = "Ruff linter fixes" }
+ruff =       { shell = "[ -z 'src' ] || { poe formats; ruff check         src ; }", help = "Ruff linter" }
+ruff-noqa  = { shell = "[ -z 'src' ] || { ruff check --select RUF --fix   src ; }", help = "Ruff linter fix noqa" }
+ruff-watch = { shell = "[ -z 'src' ] || { poe formats; ruff check --watch src ; }", help = "Ruff linter in watch mode" }
+ruff-fix =   { shell = "[ -z 'src' ] || { ruff check --fix-only           src ; }", help = "Ruff linter fixes" }
 tflint = { shell = "env bash bin/run-tflint.sh", help = "Terraform linter" }
 tffmt = { shell = "terraform fmt -list=true -recursive -write=true", help = "Terraform formatting" }
 cruft = { shell = "git add -A ; poe cruft-checkout :latest:; git status ", help = "Update cruft to latest" }
@@ -271,18 +270,18 @@ cruft-all = { sequence = ["cruft", "cruft-chore"], help = "Update cruft stuff in
 
 [tool.poe.tasks.lint]
 shell = """
-[ -z 'srctests' ] || {
-python -m black --check src tests;
-python -m isort --check-only src tests;
-ruff check src tests;
+[ -z 'src' ] || {
+python -m black --check src ;
+python -m isort --check-only src ;
+ruff check src ;
 }
 """
 help = "Do a few lint checks"
 
 [tool.poe.tasks.test-cov]
 shell = """
-[ -z 'srctests' ] || {
-coverage run -m pytest --doctest-modules src tests;
+[ -z 'src' ] || {
+coverage run -m pytest --doctest-modules src ;
 [ 0 -eq $? ] || { echo 'Tests failed'; exit 1; };
 coverage combine;
 coverage html -d coverage;
@@ -317,7 +316,7 @@ args = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "2.0.1"
+version = "1.2.1"
 version_files = [
     ".bumpversion.cfg",
     "VERSION",
@@ -340,7 +339,7 @@ style = [
 [tool.portray]
 docs_dir = "docs"
 output_dir = "site"
-modules = ["cdk_user_pool_identity_provider_github"]
+modules = []
 port = 8000
 append_directory_to_python_path = true
 include_reference_documentation = true
@@ -349,10 +348,10 @@ extra_markdown_extensions = ["admonition", "codehilite", "extra"]
 [tool.portray.pdocs]
 
 [tool.portray.mkdocs]
-site_name = "cdk_user_pool_identity_provider_github"
-site_description = "A CDK construct that adds GitHub as an identity provider to a Cognito user pool"
-site_url = "https://cdk-user-pool-identity-provider-github.docs.infra-area2.com/"
-repo_url = "https://github.com/SandsB2B/cdk-user-pool-identity-provider-github"
+site_name = "github_cognito_openid_wrapper"
+site_description = "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)"
+site_url = "https://github-cognito-openid-wrapper.docs.infra-area2.com/"
+repo_url = "https://github.com/SandsB2B/github-cognito-openid-wrapper"
 edit_uri = "edit/master"
 copyright = "(c) 2022 Las Vegas Sands"
 
@@ -386,4 +385,4 @@ accent = "yellow"
 toggle = { icon = "material/lightbulb-outline", name = "Switch to dark mode" }
 
 [tool.cruft]
-skip= ["CODEOWNERS","README.md","Makefile",".gitignore","src/cdk_user_pool_identity_provider_github/__init__.py","tests/*",".editorconfig",".bumpversion.cfg","tests/test_nothing.py",".github/workflows/build-test-publish.yml",".pre-commit-config.yaml",".github/workflows/mkdocs-gh-pages.yml",".bumpversion.cfg",".github/workflows/mkdocs-gh-pages.yml",]
+skip= ["CODEOWNERS","README.md","Makefile",".gitignore","ests/*",".editorconfig",".bumpversion.cfg",".github/workflows/build-test-publish.yml",".pre-commit-config.yaml",".github/workflows/mkdocs-gh-pages.yml",".bumpversion.cfg",".github/workflows/mkdocs-gh-pages.yml",]
