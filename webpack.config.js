@@ -39,7 +39,8 @@ const config = [
       token: './src/connectors/lambda/token.js',
       userinfo: './src/connectors/lambda/userinfo.js',
       jwks: './src/connectors/lambda/jwks.js',
-      authorize: './src/connectors/lambda/authorize.js'
+      authorize: './src/connectors/lambda/authorize.js',
+      index: './src/connectors/lambda/index.js'
     }
   },
   {

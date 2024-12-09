@@ -1,5 +1,5 @@
 const authorize = require('./authorize');
-const openIdConfiguration = require('./openIdConfiguration');
+const openIdConfiguration = require('./open-id-configuration');
 const token = require('./token');
 const userinfo = require('./userinfo');
 const jwks = require('./jwks');
