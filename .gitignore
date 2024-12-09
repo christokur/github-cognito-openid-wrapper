@@ -12,3 +12,7 @@ serverless-output.yml
 package-lock.json
 /.aider*
 /.ai/**/*
+config.rc
+.aider*
+.env
+*.js.map
