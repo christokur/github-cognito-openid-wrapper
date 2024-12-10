@@ -74,3 +74,14 @@ describe('ensureNumber', () => {
     expect(() => ensureNumber('PORT')).not.toThrow();
   });
 });
+
+describe('ensureNumber SOME_NUMBER', () => {
+  it('should throw an error if the variable is not a valid number', () => {
+    const config = require('./config');
+    config.SOME_NUMBER = 'not-a-number';
+    const { ensureNumber } = require('./helpers');
+    expect(() => ensureNumber('SOME_NUMBER')).toThrow(
+      'Environment variable SOME_NUMBER must be set and be a number'
+    );
+  });
+});
