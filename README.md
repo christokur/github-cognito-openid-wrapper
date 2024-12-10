@@ -236,7 +236,7 @@ Tests are provided with [Jest](https://jestjs.io/) using
 [`chai`'s `expect`](http://www.chaijs.com/api/bdd/), included by a shim based on [this blog post](https://medium.com/@RubenOostinga/combining-chai-and-jest-matchers-d12d1ffd0303).
 
 [Pact](http://pact.io) consumer tests for the GitHub API connection are provided
-in `src/github.pact.test.js`. There is currently no provider validation performed.
+in `src/github.pact.test_js`. There is currently no provider validation performed.
 
 #### Private key
 
