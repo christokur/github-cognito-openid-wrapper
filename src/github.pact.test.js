@@ -247,6 +247,9 @@ describe('GitHub Client', () => {
             Accept: 'application/json',
           },
           body: MatchersV3.like({
+            client_id: process.env.GITHUB_CLIENT_ID,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
+            redirect_uri: process.env.COGNITO_REDIRECT_URI,
             code: VALID_CODE,
             grant_type: 'authorization_code',
             response_type: 'code',
@@ -254,7 +257,6 @@ describe('GitHub Client', () => {
         })
         .willRespondWith({
           status: 200,
-          statusText: 'OK',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -286,6 +288,9 @@ describe('GitHub Client', () => {
             Accept: 'application/json',
           },
           body: MatchersV3.like({
+            client_id: process.env.GITHUB_CLIENT_ID,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
+            redirect_uri: process.env.COGNITO_REDIRECT_URI,
             code: INVALID_CODE,
             grant_type: 'authorization_code',
             response_type: 'code',
@@ -298,7 +303,8 @@ describe('GitHub Client', () => {
             'Content-Type': 'application/json',
           },
           body: {
-            message: 'Bad verification code',
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.',
           },
         });
 
@@ -394,19 +400,22 @@ describe('GitHub Client', () => {
     test('should handle OAuth error response', async () => {
       await provider
         .given('an OAuth error occurs')
-        .uponReceiving('a request that returns an OAuth error')
+        .uponReceiving('a token request that returns an OAuth error')
         .withRequest({
           method: 'POST',
           path: '/login/oauth/access_token',
           headers: {
-            Accept: 'application/json',
             'Content-Type': 'application/json',
+            Accept: 'application/json',
           },
-          body: {
+          body: MatchersV3.like({
+            client_id: process.env.GITHUB_CLIENT_ID,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
+            redirect_uri: process.env.COGNITO_REDIRECT_URI,
             code: 'oauth_error_code',
             grant_type: 'authorization_code',
-            response_type: 'code'
-          },
+            response_type: 'code',
+          }),
         })
         .willRespondWith({
           status: 400,
@@ -415,7 +424,8 @@ describe('GitHub Client', () => {
             'Content-Type': 'application/json',
           },
           body: {
-            message: 'Bad verification code',
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.',
           },
         });
 

@@ -28,9 +28,14 @@ describe('validateConfig', () => {
   });
 
   test('should validate required number configuration', () => {
-    expect(() => {
-      validateConfig();
-    }).toThrow('COGNITO_JWKS_MAX_AGE must be a number');
+    // First, set all required string environment variables
+    process.env.GITHUB_CLIENT_ID = 'test_client_id';
+    process.env.GITHUB_CLIENT_SECRET = 'test_client_secret';
+    process.env.COGNITO_REDIRECT_URI = 'http://localhost/callback';
+    process.env.COGNITO_JWKS = 'test_jwks';
+    process.env.COGNITO_JWKS_MAX_AGE = 'not_a_number'; // This should trigger the number validation error
+
+    expect(() => validateConfig()).toThrow('COGNITO_JWKS_MAX_AGE must be a number');
   });
 });
 
