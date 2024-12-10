@@ -4,7 +4,7 @@ const NumericDate = (date) => Math.floor(date / 1000);
 
 const ensureString = (variableName) => {
   const value = config[variableName];
-  if (value !== undefined && typeof value !== 'string') {
+  if (typeof value !== 'string' || value === undefined) {
     throw new Error(
       `Environment variable ${String(variableName)} must be set and be a string`,
     );
@@ -13,7 +13,13 @@ const ensureString = (variableName) => {
 
 const ensureNumber = (variableName) => {
   const value = config[variableName];
-  if (value !== undefined && typeof value !== 'number') {
+  if (value === undefined) {
+    throw new Error(
+      `Environment variable ${String(variableName)} must be set and be a number`,
+    );
+  }
+  const numValue = Number(value);
+  if (isNaN(numValue)) {
     throw new Error(
       `Environment variable ${String(variableName)} must be set and be a number`,
     );
@@ -26,7 +32,7 @@ const requiredStrings = [
   'COGNITO_REDIRECT_URI',
 ];
 
-const requiredNumbers = ['PORT'];
+const requiredNumbers = ['PORT', 'COGNITO_JWKS_MAX_AGE'];
 
 const validateConfig = () => {
   requiredStrings.forEach(ensureString);

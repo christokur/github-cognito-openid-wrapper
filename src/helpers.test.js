@@ -1,41 +1,40 @@
-const {
-  validateConfig,
-  NumericDate,
-  ensureString,
-  ensureNumber,
-} = require('./helpers');
-const config = require('./config');
-
-beforeAll(() => {
-  process.env.GITHUB_CLIENT_SECRET = 'some-secret';
-  process.env.SOME_NUMBER = '123';
-});
+const NumericDate = require('./helpers').NumericDate;
 
 beforeEach(() => {
   jest.resetModules();
-  config.GITHUB_CLIENT_ID = 'test-client-id';
-  config.GITHUB_CLIENT_SECRET = 12345; // Intentional type error for testing
-  config.COGNITO_REDIRECT_URI = 'http://localhost';
-  config.COGNITO_JWKS_MAX_AGE = 'not-a-number'; // Set the number field we're testing
-  config.SOME_NUMBER = 'not-a-number'; // Intentional type error for testing
+  delete require.cache[require.resolve('./config')];
+  delete require.cache[require.resolve('./helpers')];
+  // Clear relevant env vars
+  delete process.env.GITHUB_CLIENT_ID;
+  delete process.env.GITHUB_CLIENT_SECRET;
+  delete process.env.COGNITO_REDIRECT_URI;
+  delete process.env.COGNITO_JWKS_MAX_AGE;
+  delete process.env.SOME_NUMBER;
+  delete process.env.PORT;
 });
 
 describe('validateConfig', () => {
   it('should throw an error if configuration is invalid', () => {
+    // Only set GITHUB_CLIENT_ID to make GITHUB_CLIENT_SECRET fail
+    process.env.GITHUB_CLIENT_ID = 'test_client_id';
+    const { validateConfig } = require('./helpers');
     expect(() => validateConfig()).toThrow(
-      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string',
+      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string'
     );
   });
 
   test('should validate required number configuration', () => {
-    // First, set all required string environment variables
+    // First set all required string variables
     process.env.GITHUB_CLIENT_ID = 'test_client_id';
     process.env.GITHUB_CLIENT_SECRET = 'test_client_secret';
     process.env.COGNITO_REDIRECT_URI = 'http://localhost/callback';
-    process.env.COGNITO_JWKS = 'test_jwks';
+    process.env.PORT = '8080'; // Set PORT to a valid number
     process.env.COGNITO_JWKS_MAX_AGE = 'not_a_number'; // This should trigger the number validation error
 
-    expect(() => validateConfig()).toThrow('COGNITO_JWKS_MAX_AGE must be a number');
+    const { validateConfig } = require('./helpers');
+    expect(() => validateConfig()).toThrow(
+      'Environment variable COGNITO_JWKS_MAX_AGE must be set and be a number'
+    );
   });
 });
 
@@ -49,16 +48,29 @@ describe('NumericDate', () => {
 
 describe('ensureString', () => {
   it('should throw an error if the variable is not a string', () => {
+    // Set up config with non-string value
+    process.env.GITHUB_CLIENT_SECRET = '12345';
+    const config = require('./config');
+    config.GITHUB_CLIENT_SECRET = 12345; // Directly modify to be a number
+    const { ensureString } = require('./helpers');
     expect(() => ensureString('GITHUB_CLIENT_SECRET')).toThrow(
-      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string',
+      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string'
     );
   });
 });
 
 describe('ensureNumber', () => {
-  it('should throw an error if the variable is not a number', () => {
-    expect(() => ensureNumber('SOME_NUMBER')).toThrow(
-      'Environment variable SOME_NUMBER must be set and be a number',
+  it('should throw an error if the variable is not a valid number', () => {
+    process.env.PORT = 'not-a-number';
+    const { ensureNumber } = require('./helpers');
+    expect(() => ensureNumber('PORT')).toThrow(
+      'Environment variable PORT must be set and be a number'
     );
+  });
+
+  it('should not throw if the variable is a valid number string', () => {
+    process.env.PORT = '123';
+    const { ensureNumber } = require('./helpers');
+    expect(() => ensureNumber('PORT')).not.toThrow();
   });
 });
