@@ -1,15 +1,17 @@
 const JSONWebKey = require('json-web-key');
 const jwt = require('jsonwebtoken');
-const { GITHUB_CLIENT_ID } = require('./config');
+const config = require('./config');
 const logger = require('./connectors/logger');
+const defaultPrivateKey = require('../jwtRS256.key');
+const defaultPublicKey = require('../jwtRS256.key.pub');
 
-const KEY_ID = 'jwtRS256';
-const cert = require('../jwtRS256.key');
-const pubKey = require('../jwtRS256.key.pub');
+const KEY_ID = config.JWT_KEY_ID;
+const cert = config.JWT_PRIVATE_KEY_PATH === '../jwtRS256.key' ? defaultPrivateKey : require(config.JWT_PRIVATE_KEY_PATH);
+const pubKey = config.JWT_PUBLIC_KEY_PATH === '../jwtRS256.key.pub' ? defaultPublicKey : require(config.JWT_PUBLIC_KEY_PATH);
 
 module.exports = {
   getPublicKey: () => ({
-    alg: 'RS256',
+    alg: config.JWT_ALGORITHM,
     kid: KEY_ID,
     ...JSONWebKey.fromPEM(pubKey).toJSON(),
   }),
@@ -18,12 +20,12 @@ module.exports = {
     const enrichedPayload = {
       ...payload,
       iss: `https://${host}`,
-      aud: GITHUB_CLIENT_ID,
+      aud: config.GITHUB_CLIENT_ID,
     };
     logger.debug('Signing payload %j', enrichedPayload, {});
     return jwt.sign(enrichedPayload, cert, {
       expiresIn: '1h',
-      algorithm: 'RS256',
+      algorithm: config.JWT_ALGORITHM,
       keyid: KEY_ID,
     });
   },

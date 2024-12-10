@@ -16,3 +16,4 @@ config.rc
 .aider*
 .env
 *.js.map
+.ai/**/*

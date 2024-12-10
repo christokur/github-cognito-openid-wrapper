@@ -6,6 +6,12 @@ module.exports = {
   GITHUB_LOGIN_URL: process.env.GITHUB_LOGIN_URL,
   PORT: parseInt(process.env.PORT, 10) || undefined,
 
+  // JWT key configuration
+  JWT_KEY_ID: process.env.JWT_KEY_ID || 'jwtRS256',
+  JWT_PRIVATE_KEY_PATH: process.env.JWT_PRIVATE_KEY_PATH || '../jwtRS256.key',
+  JWT_PUBLIC_KEY_PATH: process.env.JWT_PUBLIC_KEY_PATH || '../jwtRS256.key.pub',
+  JWT_ALGORITHM: process.env.JWT_ALGORITHM || 'RS256',
+
   // Splunk logging variables
   SPLUNK_URL: process.env.SPLUNK_URL,
   SPLUNK_TOKEN: process.env.SPLUNK_TOKEN,
