@@ -16,6 +16,7 @@ beforeEach(() => {
   config.GITHUB_CLIENT_ID = 'test-client-id';
   config.GITHUB_CLIENT_SECRET = 12345; // Intentional type error for testing
   config.COGNITO_REDIRECT_URI = 'http://localhost';
+  config.COGNITO_JWKS_MAX_AGE = 'not-a-number'; // Set the number field we're testing
   config.SOME_NUMBER = 'not-a-number'; // Intentional type error for testing
 });
 
@@ -24,6 +25,12 @@ describe('validateConfig', () => {
     expect(() => validateConfig()).toThrow(
       'Environment variable GITHUB_CLIENT_SECRET must be set and be a string',
     );
+  });
+
+  test('should validate required number configuration', () => {
+    expect(() => {
+      validateConfig();
+    }).toThrow('COGNITO_JWKS_MAX_AGE must be a number');
   });
 });
 

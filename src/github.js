@@ -20,10 +20,6 @@ const getApiEndpoints = (
 
 const check = (response) => {
   logger.debug('Checking response: %j', response, {});
-  if (!response) {
-    throw new Error('No response received from GitHub API');
-  }
-
   if (response.status !== 200) {
     throw new Error(
       `GitHub API responded with a failure: ${response.status} (${response.statusText})`,
