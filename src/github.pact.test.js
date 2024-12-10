@@ -1,7 +1,12 @@
 const { PactV3, MatchersV3 } = require('@pact-foundation/pact');
 const github = require('./github');
+const axios = require('axios');
 
 describe('GitHub Client', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   const provider = new PactV3({
     dir: './pacts',
     consumer: 'github-cognito-openid-wrapper',
@@ -25,9 +30,6 @@ describe('GitHub Client', () => {
   });
 
   describe('getUserDetails', () => {
-    const VALID_TOKEN = 'good_token';
-    const INVALID_TOKEN = 'bad_token';
-
     test('with valid token', async () => {
       await provider
         .given('a valid access token exists')
@@ -37,29 +39,32 @@ describe('GitHub Client', () => {
           path: '/user',
           headers: {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${VALID_TOKEN}`,
+            Authorization: 'token good_token',
           },
         })
         .willRespondWith({
           status: 200,
+          statusText: 'OK',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: MatchersV3.like({
-            name: 'monalisa octocat',
+          body: {
             login: 'octocat',
-          }),
+            name: 'monalisa octocat',
+          },
         });
 
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url);
-        const response = await client.getUserDetails(VALID_TOKEN);
-        expect(response.name).toBe('monalisa octocat');
-        expect(response.login).toBe('octocat');
+        const client = github(mockServer.url, mockServer.url);
+        const response = await client.getUserDetails('good_token');
+        expect(response).toEqual({
+          login: 'octocat',
+          name: 'monalisa octocat',
+        });
       });
     });
 
-    test('with invalid token', async () => {
+    test('with bad token', async () => {
       await provider
         .given('an invalid access token')
         .uponReceiving('a request with invalid token')
@@ -68,7 +73,7 @@ describe('GitHub Client', () => {
           path: '/user',
           headers: {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${INVALID_TOKEN}`,
+            Authorization: 'token bad_token',
           },
         })
         .willRespondWith({
@@ -82,17 +87,46 @@ describe('GitHub Client', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url);
-        await expect(client.getUserDetails(INVALID_TOKEN)).rejects.toThrow(
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('bad_token')).rejects.toThrow(
           'Request failed with status code 401',
+        );
+      });
+    });
+
+    test('with api error', async () => {
+      await provider
+        .given('an API error occurs')
+        .uponReceiving('a request that returns an API error')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token error_token',
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          statusText: 'OK',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'An API error occurred',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('error_token')).rejects.toThrow(
+          'GitHub API responded with a failure: An API error occurred',
         );
       });
     });
   });
 
   describe('getUserEmails', () => {
-    const VALID_TOKEN = 'good_token';
-
     test('with valid token', async () => {
       await provider
         .given('a valid access token exists')
@@ -102,27 +136,97 @@ describe('GitHub Client', () => {
           path: '/user/emails',
           headers: {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${VALID_TOKEN}`,
+            Authorization: 'token good_token',
           },
         })
         .willRespondWith({
           status: 200,
+          statusText: 'OK',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: MatchersV3.eachLike({
-            email: 'octocat@github.com',
-            verified: true,
-            primary: true,
-          }),
+          body: [
+            {
+              email: 'octocat@github.com',
+              verified: true,
+              primary: true,
+              visibility: 'public',
+            },
+          ],
         });
 
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url);
-        const response = await client.getUserEmails(VALID_TOKEN);
-        expect(response[0].email).toBe('octocat@github.com');
-        expect(response[0].verified).toBe(true);
-        expect(response[0].primary).toBe(true);
+        const client = github(mockServer.url, mockServer.url);
+        const response = await client.getUserEmails('good_token');
+        expect(response).toEqual([
+          {
+            email: 'octocat@github.com',
+            primary: true,
+            verified: true,
+            visibility: 'public',
+          },
+        ]);
+      });
+    });
+
+    test('with bad token', async () => {
+      await provider
+        .given('an invalid access token')
+        .uponReceiving('a request with invalid token')
+        .withRequest({
+          method: 'GET',
+          path: '/user/emails',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token bad_token',
+          },
+        })
+        .willRespondWith({
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Bad credentials',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserEmails('bad_token')).rejects.toThrow(
+          'Request failed with status code 401',
+        );
+      });
+    });
+
+    test('with api error', async () => {
+      await provider
+        .given('an API error occurs')
+        .uponReceiving('a request that returns an API error')
+        .withRequest({
+          method: 'GET',
+          path: '/user/emails',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token error_token',
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          statusText: 'OK',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'An API error occurred',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserEmails('error_token')).rejects.toThrow(
+          'GitHub API responded with a failure: An API error occurred',
+        );
       });
     });
   });
@@ -150,6 +254,7 @@ describe('GitHub Client', () => {
         })
         .willRespondWith({
           status: 200,
+          statusText: 'OK',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -188,19 +293,19 @@ describe('GitHub Client', () => {
         })
         .willRespondWith({
           status: 400,
+          statusText: 'Bad Request',
           headers: {
             'Content-Type': 'application/json',
           },
           body: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
+            message: 'Bad verification code',
           },
         });
 
       await provider.executeTest(async (mockServer) => {
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getToken(INVALID_CODE)).rejects.toThrow(
-          'Request failed with status code 400',
+          'GitHub API responded with a failure: 400 (Bad Request)',
         );
       });
     });
@@ -209,7 +314,7 @@ describe('GitHub Client', () => {
   describe('getAuthorizeUrl', () => {
     test('returns a redirect url', async () => {
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url);
+        const client = github(mockServer.url, mockServer.url);
         const url = client.getAuthorizeUrl(
           'client_id',
           'scope',
@@ -218,6 +323,168 @@ describe('GitHub Client', () => {
         );
         expect(url).toBe(
           `${mockServer.url}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type`,
+        );
+      });
+    });
+  });
+
+  describe('error handling', () => {
+    test('should handle network errors', async () => {
+      await provider
+        .given('a network error occurs')
+        .uponReceiving('a request that fails with network error')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token network_error_token',
+          },
+        })
+        .willRespondWith({
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Service Unavailable',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('network_error_token')).rejects.toThrow(
+          'Request failed with status code 503',
+        );
+      });
+    });
+
+    test('should handle non-200 status without error object', async () => {
+      await provider
+        .given('a server error occurs')
+        .uponReceiving('a request that returns 500')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token server_error_token',
+          },
+        })
+        .willRespondWith({
+          status: 500,
+          statusText: 'Internal Server Error',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Internal Server Error',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('server_error_token')).rejects.toThrow(
+          'Request failed with status code 500',
+        );
+      });
+    });
+
+    test('should handle OAuth error response', async () => {
+      await provider
+        .given('an OAuth error occurs')
+        .uponReceiving('a request that returns an OAuth error')
+        .withRequest({
+          method: 'POST',
+          path: '/login/oauth/access_token',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: {
+            code: 'oauth_error_code',
+            grant_type: 'authorization_code',
+            response_type: 'code'
+          },
+        })
+        .willRespondWith({
+          status: 400,
+          statusText: 'Bad Request',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Bad verification code',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getToken('oauth_error_code')).rejects.toThrow(
+          'GitHub API responded with a failure: 400 (Bad Request)',
+        );
+      });
+    });
+
+    test('should handle 401 Unauthorized', async () => {
+      await provider
+        .given('an unauthorized request')
+        .uponReceiving('a request with unauthorized token')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token unauthorized_token',
+          },
+        })
+        .willRespondWith({
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'Bad credentials',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('unauthorized_token')).rejects.toThrow(
+          'Request failed with status code 401',
+        );
+      });
+    });
+
+    test('should handle error response with 200 status', async () => {
+      await provider
+        .given('an API error with 200 status')
+        .uponReceiving('a request that returns an error with 200 status')
+        .withRequest({
+          method: 'GET',
+          path: '/user',
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token api_error_token',
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          statusText: 'OK',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: {
+            message: 'An API error occurred',
+          },
+        });
+
+      await provider.executeTest(async (mockServer) => {
+        const client = github(mockServer.url, mockServer.url);
+        await expect(client.getUserDetails('api_error_token')).rejects.toThrow(
+          'GitHub API responded with a failure: An API error occurred',
         );
       });
     });

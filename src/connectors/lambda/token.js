@@ -1,7 +1,7 @@
 const qs = require('querystring');
 const responder = require('./util/responder');
-const auth = require('./util/auth');
 const controllers = require('../controllers');
+const { validators, handleError } = require('./util/error-handler');
 
 const parseBody = (event) => {
   const contentType = event.headers['Content-Type'];
@@ -17,18 +17,22 @@ const parseBody = (event) => {
 };
 
 module.exports.handler = (event, context, callback) => {
-  const body = parseBody(event);
-  const query = event.queryStringParameters || {};
+  try {
+    // Extract and validate body parameters
+    const body = JSON.parse(event.body || '{}');
+    const code = validators.required(body.code, 'code');
+    const client_id = validators.required(body.client_id, 'client_id');
+    const client_secret = validators.required(body.client_secret, 'client_secret');
+    const grant_type = validators.grant_type(body.grant_type);
 
-  const code = body.code || query.code;
-  const state = body.state || query.state;
-
-  controllers(responder(callback)).token(
-    code,
-    state,
-    auth.getIssuer(
-      event.headers.Host,
-      event.requestContext && event.requestContext.stage,
-    ),
-  );
+    // Call the controller with validated parameters
+    controllers(responder(callback)).token(
+      code,
+      client_id,
+      client_secret,
+      grant_type
+    );
+  } catch (error) {
+    handleError(error, callback);
+  }
 };
