@@ -7,10 +7,7 @@ const jwks = require('./jwks');
 exports.handler = async (event, context, callback) => {
   const path = event.path || '';
   
-  // Strip /prod prefix if present
-  const cleanPath = path.replace(/^\/prod/, '');
-
-  switch (cleanPath) {
+  switch (path) {
     case '/authorize':
       return authorize.handler(event, context, callback);
     case '/.well-known/openid-configuration':
