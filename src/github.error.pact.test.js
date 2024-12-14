@@ -22,6 +22,7 @@ describe('GitHub Client - Error Handling', () => {
     process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
     process.env.COGNITO_REDIRECT_URI = 'http://localhost/callback';
     process.env.GITHUB_LOGIN_URL = 'http://localhost';
+    process.env.GITHUB_API_URL = 'http://localhost';
   });
 
   afterAll(() => {
@@ -53,9 +54,10 @@ describe('GitHub Client - Error Handling', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
+        // Use mock server URL for both API and OAuth endpoints
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getUserDetails('network_error_token')).rejects.toThrow(
-          'Request failed with status code 503',
+          'GitHub API responded with a failure: 503 (Service Unavailable)'
         );
       });
     });
@@ -84,9 +86,10 @@ describe('GitHub Client - Error Handling', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
+        // Use mock server URL for both API and OAuth endpoints
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getUserDetails('server_error_token')).rejects.toThrow(
-          'Request failed with status code 500',
+          'GitHub API responded with a failure: 500 (Internal Server Error)'
         );
       });
     });
@@ -115,9 +118,10 @@ describe('GitHub Client - Error Handling', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
+        // Use mock server URL for both API and OAuth endpoints
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getUserDetails('unauthorized_token')).rejects.toThrow(
-          'Request failed with status code 401',
+          'GitHub API responded with a failure: 401 (Bad credentials)'
         );
       });
     });
@@ -148,32 +152,33 @@ describe('GitHub Client - Error Handling', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
+        // Use mock server URL for both API and OAuth endpoints
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getUserDetails('api_error_token')).rejects.toThrow(
-          'GitHub API responded with a failure: An API error occurred',
+          'An API error occurred'
         );
       });
     });
 
     test('should handle OAuth error response', async () => {
       await provider
-        .given('an OAuth error occurs')
-        .uponReceiving('a token request that returns an OAuth error')
+        .given('an OAuth error')
+        .uponReceiving('a request that returns an OAuth error')
         .withRequest({
           method: 'POST',
           path: '/login/oauth/access_token',
           headers: {
-            'Content-Type': 'application/json',
             Accept: 'application/json',
+            'Content-Type': 'application/json',
           },
-          body: MatchersV3.like({
-            client_id: process.env.GITHUB_CLIENT_ID,
-            client_secret: process.env.GITHUB_CLIENT_SECRET,
-            redirect_uri: process.env.COGNITO_REDIRECT_URI,
-            code: 'oauth_error_code',
+          body: {
+            client_id: MatchersV3.string('github-client-id'),
+            client_secret: MatchersV3.string('github-client-secret'),
+            code: 'invalid_code',
             grant_type: 'authorization_code',
-            response_type: 'code',
-          }),
+            redirect_uri: MatchersV3.string('http://localhost/callback'),
+            response_type: 'code'
+          },
         })
         .willRespondWith({
           status: 400,
@@ -184,13 +189,23 @@ describe('GitHub Client - Error Handling', () => {
           body: {
             error: 'bad_verification_code',
             error_description: 'The code passed is incorrect or expired.',
+            error_uri: 'https://docs.github.com/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps'
           },
         });
 
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url, mockServer.url);
-        await expect(client.getToken('oauth_error_code')).rejects.toThrow(
-          'GitHub API responded with a failure: 400 (Bad Request)',
+        // Set the mock server URL for both API and login endpoints
+        process.env.GITHUB_API_URL = mockServer.url;
+        process.env.GITHUB_LOGIN_URL = mockServer.url;
+        
+        // Create a new github client module instance to pick up the new environment variables
+        jest.resetModules();
+        const github = require('./github');
+        
+        // Create a new client instance
+        const client = github();
+        await expect(client.getToken('invalid_code')).rejects.toThrow(
+          'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)'
         );
       });
     });

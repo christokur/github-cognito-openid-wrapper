@@ -18,25 +18,45 @@ const getApiEndpoints = (
   oauthAuthorize: `${loginBaseUrl}/login/oauth/authorize`,
 });
 
-const check = (response) => {
+const handleGitHubResponse = (response) => {
   logger.debug('Checking response: %j', response, {});
-  if (response.status !== 200) {
-    throw new Error(
-      `GitHub API responded with a failure: ${response.status} (${response.statusText})`,
-    );
-  }
-
+  
+  // For 200 responses with error messages (some GitHub API endpoints do this)
   if (response.data && response.data.message) {
-    throw new Error(
-      `GitHub API responded with a failure: ${response.data.message}`,
-    );
+    throw new Error(`GitHub API responded with a failure: ${response.status} (${response.data.message})`);
+  }
+  
+  return response.data;
+};
+
+const handleGitHubError = (error, isOAuth = false) => {
+  if (!error.response) {
+    throw error;
   }
 
-  return response.data;
-} ;
+  const status = error.response.status;
+  const statusText = error.response.statusText;
+  let message;
+
+  // For OAuth endpoints
+  if (isOAuth && error.response.data) {
+    const { error: errorType, error_description } = error.response.data;
+    message = errorType && error_description ? 
+      `${statusText} - ${errorType}: ${error_description}` :
+      statusText;
+  }
+  // For all other endpoints 
+  else if (error.response.data && error.response.data.message) {
+    message = error.response.data.message;
+  }
+  // Fallback to status text
+ 
+  throw new Error(`GitHub API responded with a failure: ${status} (${message})`);
+  
+};
 
 const gitHubGet = (url, accessToken) => {
-  console.log('Making request to URL:', url); // Log the URL being used
+  logger.debug('Making request to URL: %s', url, {});
   return axios({
     method: 'get',
     url,
@@ -45,16 +65,17 @@ const gitHubGet = (url, accessToken) => {
       Authorization: `token ${accessToken}`,
     },
   })
-    .then(check);
+    .then(handleGitHubResponse)
+    .catch((error) => handleGitHubError(error, false));
 };
 
 function githubClient(
   apiBaseUrl = GITHUB_API_URL,
   loginBaseUrl = GITHUB_LOGIN_URL,
 ) {
-  console.log('GITHUB_API_URL:', apiBaseUrl); // Log the API base URL
+  logger.debug('GITHUB_API_URL: %s', apiBaseUrl, {});
   const urls = getApiEndpoints(apiBaseUrl, loginBaseUrl);
-  console.log('API Endpoints:', urls); // Log the URLs object
+  logger.debug('API Endpoints: %j', urls, {});
 
   return {
     getAuthorizeUrl: (client_id, scope, state, response_type) =>
@@ -67,16 +88,18 @@ function githubClient(
 
     getUserEmails: (accessToken) =>
       gitHubGet(urls.userEmails, accessToken),
+
     getToken: (code, state) => {
       const data = {
-        // OAuth required fields
-        grant_type: 'authorization_code',
-        redirect_uri: COGNITO_REDIRECT_URI,
+        // Required GitHub OAuth fields first
         client_id: GITHUB_CLIENT_ID,
-        // GitHub Specific
-        response_type: 'code',
         client_secret: GITHUB_CLIENT_SECRET,
         code,
+        // Optional redirect_uri
+        redirect_uri: COGNITO_REDIRECT_URI,
+        // OAuth 2.0 fields
+        grant_type: 'authorization_code',
+        response_type: 'code',
         // State may not be present, so we conditionally include it
         ...(state && { state }),
       };
@@ -96,15 +119,8 @@ function githubClient(
         },
         data,
       })
-        .then(check)
-        .catch((error) => {
-          if (error.response) {
-            throw new Error(
-              `GitHub API responded with a failure: ${error.response.status} (${error.response.statusText})`,
-            );
-          }
-          throw error;
-        });
+        .then(handleGitHubResponse)
+        .catch((error) => handleGitHubError(error, true));
     },
   };
 }

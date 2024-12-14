@@ -88,7 +88,7 @@ describe('GitHub Client - User Operations', () => {
       await provider.executeTest(async (mockServer) => {
         const client = github(mockServer.url, mockServer.url);
         await expect(client.getUserDetails('bad_token')).rejects.toThrow(
-          'Request failed with status code 401',
+          'GitHub API responded with a failure: 401 (Bad credentials)'
         );
       });
     });
@@ -139,8 +139,8 @@ describe('GitHub Client - User Operations', () => {
 
     test('with bad token', async () => {
       await provider
-        .given('an invalid access token')
-        .uponReceiving('a request with invalid token')
+        .given('a request with invalid token')
+        .uponReceiving('a request to get user emails with invalid token')
         .withRequest({
           method: 'GET',
           path: '/user/emails',
@@ -160,9 +160,9 @@ describe('GitHub Client - User Operations', () => {
         });
 
       await provider.executeTest(async (mockServer) => {
-        const client = github(mockServer.url, mockServer.url);
+        const client = github(mockServer.url);
         await expect(client.getUserEmails('bad_token')).rejects.toThrow(
-          'Request failed with status code 401',
+          'GitHub API responded with a failure: 401 (Bad credentials)'
         );
       });
     });
