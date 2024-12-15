@@ -9,7 +9,7 @@ const errorTypes = {
   UNSUPPORTED_GRANT_TYPE: 'unsupported_grant_type',
   INVALID_SCOPE: 'invalid_scope',
   ACCESS_DENIED: 'access_denied',
-  SERVER_ERROR: 'server_error',
+  SERVER_ERROR: 'server_error'
 };
 
 // Error messages
@@ -21,7 +21,7 @@ const errorMessages = {
   [errorTypes.UNSUPPORTED_GRANT_TYPE]: 'The authorization grant type is not supported',
   [errorTypes.INVALID_SCOPE]: 'The requested scope is invalid or malformed',
   [errorTypes.ACCESS_DENIED]: 'The resource owner denied the request',
-  [errorTypes.SERVER_ERROR]: 'The server encountered an unexpected condition',
+  [errorTypes.SERVER_ERROR]: 'The server encountered an unexpected condition'
 };
 
 // HTTP status codes
@@ -33,7 +33,7 @@ const statusCodes = {
   [errorTypes.UNSUPPORTED_GRANT_TYPE]: 400,
   [errorTypes.INVALID_SCOPE]: 400,
   [errorTypes.ACCESS_DENIED]: 403,
-  [errorTypes.SERVER_ERROR]: 500,
+  [errorTypes.SERVER_ERROR]: 500
 };
 
 // Input validation functions
@@ -45,8 +45,8 @@ const validators = {
     return value;
   },
   scope: (value) => {
-    // Modified regex to allow colons for GitHub scopes like read:user
-    if (value && !value.match(/^[\x21\x23-\x5B\x5D-\x7E:]+$/)) {
+    // Allow space-separated list of scopes, each scope can contain letters, numbers, colons, and certain special characters
+    if (value && !value.split(' ').every(scope => scope.match(/^[\w.:-]+$/))) {
       throw new OAuthError(errorTypes.INVALID_SCOPE, 'scope contains invalid characters');
     }
     return value;
@@ -62,7 +62,7 @@ const validators = {
       throw new OAuthError(errorTypes.INVALID_REQUEST, 'response_type must be code or token');
     }
     return value;
-  },
+  }
 };
 
 class OAuthError extends Error {
@@ -75,19 +75,19 @@ class OAuthError extends Error {
 
 function handleError(error, callback) {
   let response;
-  
+
   if (error instanceof OAuthError) {
     response = {
       statusCode: error.statusCode,
       body: JSON.stringify({
         error: error.type,
-        error_description: error.message,
+        error_description: error.message
       }),
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
-        'Pragma': 'no-cache',
-      },
+        'Pragma': 'no-cache'
+      }
     };
   } else {
     logger.error('Unexpected error:', error);
@@ -95,13 +95,13 @@ function handleError(error, callback) {
       statusCode: 500,
       body: JSON.stringify({
         error: errorTypes.SERVER_ERROR,
-        error_description: 'An unexpected error occurred',
+        error_description: 'An unexpected error occurred'
       }),
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
-        'Pragma': 'no-cache',
-      },
+        'Pragma': 'no-cache'
+      }
     };
   }
 
@@ -112,5 +112,5 @@ module.exports = {
   OAuthError,
   errorTypes,
   handleError,
-  validators,
+  validators
 };
