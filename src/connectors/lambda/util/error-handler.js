@@ -45,7 +45,8 @@ const validators = {
     return value;
   },
   scope: (value) => {
-    if (value && !value.match(/^[\x21\x23-\x5B\x5D-\x7E]+$/)) {
+    // Modified regex to allow colons for GitHub scopes like read:user
+    if (value && !value.match(/^[\x21\x23-\x5B\x5D-\x7E:]+$/)) {
       throw new OAuthError(errorTypes.INVALID_SCOPE, 'scope contains invalid characters');
     }
     return value;
