@@ -18,8 +18,8 @@ const parseBody = (event) => {
 
 module.exports.handler = (event, context, callback) => {
   try {
-    // Extract and validate body parameters
-    const body = JSON.parse(event.body || '{}');
+    // Use parseBody instead of JSON.parse to handle both JSON and form-urlencoded data
+    const body = parseBody(event);
     const code = validators.required(body.code, 'code');
     const client_id = validators.required(body.client_id, 'client_id');
     const client_secret = validators.required(body.client_secret, 'client_secret');

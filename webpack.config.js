@@ -32,7 +32,8 @@ const config = [
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-lambda`,
-      filename: '[name].js'
+      filename: '[name].js', // Output JS files
+      sourceMapFilename: '[name].js.map' // Output source maps
     },
     entry: {
       openIdConfiguration: './src/connectors/lambda/open-id-configuration.js',
@@ -48,7 +49,8 @@ const config = [
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-web`,
-      filename: '[name].js'
+      filename: '[name].js', // Output JS files
+      sourceMapFilename: '[name].js.map' // Output source maps
     },
     entry: {
       server: './src/connectors/web/app.js'
