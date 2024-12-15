@@ -1,4 +1,5 @@
 const axios = require('axios');
+const qs = require('qs');
 const {
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
@@ -115,9 +116,9 @@ function githubClient(
         url: urls.oauthToken,
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data,
+        data: qs.stringify(data),
       })
         .then(handleGitHubResponse)
         .catch((error) => handleGitHubError(error, true));
