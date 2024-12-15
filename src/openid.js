@@ -80,7 +80,7 @@ const getTokens = (code, state, host) =>
       // https://tools.ietf.org/html/rfc6749#section-5.1
       // Also, we need to add openid as a scope,
       // since GitHub will have stripped it
-      const scope = `openid ${githubToken.scope.replace(',', ' ')}`;
+      const scope = `openid ${githubToken.scope.replace(/,/g, ' ')}`;
 
       // ** JWT ID Token required fields **
       // iss - issuer https url
