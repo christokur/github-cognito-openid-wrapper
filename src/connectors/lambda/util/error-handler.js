@@ -45,15 +45,24 @@ const validators = {
     return value;
   },
   scope: (value) => {
-    // Allow space-separated list of scopes, each scope can contain letters, numbers, colons, and certain special characters
-    if (value && !value.split(' ').every(scope => scope.match(/^[\w.:-]+$/))) {
-      throw new OAuthError(errorTypes.INVALID_SCOPE, 'scope contains invalid characters');
+    if (!value) return value;
+    
+    // URL decode the scope string
+    const decodedValue = decodeURIComponent(value.replace(/\+/g, ' '));
+    
+    // Split into individual scopes and validate each one
+    const scopes = decodedValue.split(' ');
+    const validScopeRegex = /^[\w.:-]+$/;
+    
+    if (!scopes.every(scope => validScopeRegex.test(scope))) {
+      throw new OAuthError(errorTypes.INVALID_SCOPE, 'scope contains invalid characters: ' + decodedValue);
     }
+    
     return value;
   },
   state: (value) => {
     if (value && !value.match(/^[A-Za-z0-9-._~+/]+=*$/)) {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'state contains invalid characters');
+      throw new OAuthError(errorTypes.INVALID_REQUEST, 'state contains invalid characters: ' + value);
     }
     return value;
   },
