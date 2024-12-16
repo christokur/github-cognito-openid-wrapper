@@ -20,10 +20,16 @@ const getApiEndpoints = (
 });
 
 const handleGitHubResponse = (response) => {
-  logger.debug('Checking response: %j', response, {});
+  logger.debug('GitHub response details:\nStatus: %s\nHeaders: %j\nData: %j', 
+    response.status,
+    response.headers,
+    response.data,
+    {}
+  );
   
   // For 200 responses with error messages (some GitHub API endpoints do this)
   if (response.data && response.data.message) {
+    logger.error('GitHub API error in 200 response: %s', response.data.message, {});
     throw new Error(`GitHub API responded with a failure: ${response.status} (${response.data.message})`);
   }
   
@@ -32,12 +38,22 @@ const handleGitHubResponse = (response) => {
 
 const handleGitHubError = (error, isOAuth = false) => {
   if (!error.response) {
+    logger.error('GitHub request failed without response: %s', error.message, {});
     throw error;
   }
 
   const status = error.response.status;
   const statusText = error.response.statusText;
   let message;
+  message = statusText;
+
+  logger.error('GitHub error details:\nStatus: %s\nStatusText: %s\nHeaders: %j\nData: %j',
+    status,
+    statusText,
+    error.response.headers,
+    error.response.data,
+    {}
+  );
 
   // For OAuth endpoints
   if (isOAuth && error.response.data) {
@@ -51,7 +67,7 @@ const handleGitHubError = (error, isOAuth = false) => {
     message = error.response.data.message;
   }
   // Fallback to status text
- 
+
   throw new Error(`GitHub API responded with a failure: ${status} (${message})`);
   
 };
@@ -106,8 +122,12 @@ function githubClient(
       };
 
       logger.debug(
-        'Getting token from %s with data: %j',
+        'Token exchange request details:\nURL: %s\nHeaders: %j\nData: %j',
         urls.oauthToken,
+        {
+          Accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         data,
         {},
       );

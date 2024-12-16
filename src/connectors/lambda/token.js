@@ -21,16 +21,15 @@ module.exports.handler = (event, context, callback) => {
     // Use parseBody instead of JSON.parse to handle both JSON and form-urlencoded data
     const body = parseBody(event);
     const code = validators.required(body.code, 'code');
-    const client_id = validators.required(body.client_id, 'client_id');
-    const client_secret = validators.required(body.client_secret, 'client_secret');
-    const grant_type = body.grant_type || 'authorization_code';
+    // Validate state if present, but don't require it
+    const state = body.state ? validators.state(body.state) : undefined;
+    const host = event.headers.Host;
 
     // Call the controller with validated parameters
     controllers(responder(callback)).token(
       code,
-      client_id,
-      client_secret,
-      grant_type
+      state,
+      host
     );
   } catch (error) {
     handleError(error, callback);

@@ -4,7 +4,9 @@ if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCa
   require('source-map-support').install();
 }
 
-const VERSION = '1.3.11';
+const VERSION = '1.3.13';
+const VERSION_CONSUMER = process.env.VERSION_CONSUMER || '0.0.0';
+const VERSION_COMPONENT = process.env.VERSION_COMPONENT || '0.0.0';
 
 const authorize = require('./authorize');
 const openIdConfiguration = require('./open-id-configuration');
@@ -15,6 +17,8 @@ const jwks = require('./jwks');
 function logRequest(event, context) {
   console.log('Lambda Invocation:', JSON.stringify({
     version: VERSION,
+    VERSION_CONSUMER: VERSION_CONSUMER,
+    VERSION_COMPONENT: VERSION_COMPONENT,
     event: event,
     context: context
   }, null, 2));
