@@ -108,15 +108,12 @@ function githubClient(
 
     getToken: (code, state) => {
       const data = {
-        // Required GitHub OAuth fields first
+        // Required GitHub OAuth fields
         client_id: GITHUB_CLIENT_ID,
         client_secret: GITHUB_CLIENT_SECRET,
         code,
         // Optional redirect_uri
         redirect_uri: COGNITO_REDIRECT_URI,
-        // OAuth 2.0 fields
-        grant_type: 'authorization_code',
-        response_type: 'code',
         // State may not be present, so we conditionally include it
         ...(state && { state }),
       };

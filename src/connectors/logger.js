@@ -7,8 +7,17 @@ const {
   SPLUNK_INDEX,
 } = require('../config');
 
+// Get log level from environment variable, default to 'info'
+const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
+
+// Validate log level
+const validLogLevels = ['error', 'warn', 'info', 'debug'];
+if (!validLogLevels.includes(LOG_LEVEL)) {
+  console.warn(`Invalid LOG_LEVEL "${LOG_LEVEL}". Using "info" instead. Valid levels are: ${validLogLevels.join(', ')}`);
+}
+
 const logger = winston.createLogger({
-  level: 'info',
+  level: validLogLevels.includes(LOG_LEVEL) ? LOG_LEVEL : 'info',
 });
 
 // Activate Splunk logging if Splunk's env variables are set
@@ -45,5 +54,8 @@ if (SPLUNK_URL) {
     }),
   );
 }
+
+// Log the current level on startup
+logger.info(`Logger initialized with level: ${logger.level}`);
 
 module.exports = logger;

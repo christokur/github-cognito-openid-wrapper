@@ -70,11 +70,12 @@ const getAuthorizeUrl = (client_id, scope, state, response_type) =>
     response_type,
   );
 
-const getTokens = (code, state, host) =>
-  githubClient(config.GITHUB_API_URL, config.GITHUB_LOGIN_URL)
+const getTokens = (code, state, host) => {
+  logger.debug('Getting tokens with code: %s, state: %s, host: %s', code, state, host, {});
+  return githubClient(config.GITHUB_API_URL, config.GITHUB_LOGIN_URL)
     .getToken(code, state)
     .then((githubToken) => {
-      logger.debug('Got token: %s', githubToken, {});
+      logger.debug('Got GitHub token response: %j', githubToken, {});
       // GitHub returns scopes separated by commas
       // But OAuth wants them to be spaces
       // https://tools.ietf.org/html/rfc6749#section-5.1
@@ -98,6 +99,7 @@ const getTokens = (code, state, host) =>
           //  ...userInfo,
         };
 
+        logger.debug('Creating ID token with payload: %j', payload, {});
         const idToken = crypto.makeIdToken(payload, host);
         const tokenResponse = {
           ...githubToken,
@@ -105,15 +107,15 @@ const getTokens = (code, state, host) =>
           id_token: idToken,
         };
 
-        logger.debug('Resolved token response: %j', tokenResponse, {});
-
+        logger.debug('Final token response: %j', tokenResponse, {});
         resolve(tokenResponse);
       });
     })
     .catch((error) => {
-      logger.error('Failed to get token: %s', error.message, {});
+      logger.error('Failed to get token: %s', error.message || error, {});
       throw error;
     });
+};
 
 const getConfigFor = (host) => ({
   issuer: `https://${host}`,

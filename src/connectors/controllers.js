@@ -30,25 +30,22 @@ module.exports = (respond) => ({
       });
   },
   token: (code, state, host) => {
+    logger.debug('Token controller called with code: %s, state: %s, host: %s', code, state, host, {});
     if (code) {
+      logger.debug('Attempting to get tokens from GitHub', {});
       openid
         .getTokens(code, state, host)
         .then((tokens) => {
           logger.debug(
-            'Token for (%s, %s, %s) provided',
-            code,
-            state,
-            host,
+            'Token exchange successful. Response: %j',
+            tokens,
             {},
           );
           respond.success(tokens);
         })
         .catch((error) => {
           logger.error(
-            'Token for (%s, %s, %s) failed: %s',
-            code,
-            state,
-            host,
+            'Token exchange failed: %s',
             error.message || error,
             {},
           );
@@ -57,10 +54,7 @@ module.exports = (respond) => ({
     } else {
       const error = new Error('No code supplied');
       logger.error(
-        'Token for (%s, %s, %s) failed: %s',
-        code,
-        state,
-        host,
+        'Token exchange failed: %s',
         error.message || error,
         {},
       );
