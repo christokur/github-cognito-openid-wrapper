@@ -1,5 +1,6 @@
 const { PactV3, MatchersV3 } = require('@pact-foundation/pact');
 const github = require('./github');
+const qs = require('qs');
 
 describe('GitHub Client - OAuth Operations', () => {
   beforeEach(() => {
@@ -39,10 +40,10 @@ describe('GitHub Client - OAuth Operations', () => {
           method: 'POST',
           path: '/login/oauth/access_token',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
             Accept: 'application/json',
           },
-          body: MatchersV3.like({
+          body: qs.stringify({
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: VALID_CODE,
@@ -89,10 +90,10 @@ describe('GitHub Client - OAuth Operations', () => {
           method: 'POST',
           path: '/login/oauth/access_token',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
             Accept: 'application/json',
           },
-          body: MatchersV3.like({
+          body: qs.stringify({
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: INVALID_CODE,
@@ -103,6 +104,7 @@ describe('GitHub Client - OAuth Operations', () => {
         })
         .willRespondWith({
           status: 400,
+          statusText: 'Bad Request',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -151,7 +153,7 @@ describe('GitHub Client - OAuth Operations', () => {
           'response_type',
         );
         expect(url).toBe(
-          `${mockServer.url}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type`,
+          `${mockServer.url}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type&redirect_uri=${encodeURIComponent(process.env.COGNITO_REDIRECT_URI)}`,
         );
       });
     });

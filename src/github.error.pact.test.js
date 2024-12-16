@@ -1,5 +1,6 @@
 const { PactV3, MatchersV3 } = require('@pact-foundation/pact');
 const github = require('./github');
+const qs = require('qs');
 
 describe('GitHub Client - Error Handling', () => {
   beforeEach(() => {
@@ -163,22 +164,22 @@ describe('GitHub Client - Error Handling', () => {
     test('should handle OAuth error response', async () => {
       await provider
         .given('an OAuth error')
-        .uponReceiving('a request that returns an OAuth error')
+        .uponReceiving('a request with invalid code')
         .withRequest({
           method: 'POST',
           path: '/login/oauth/access_token',
           headers: {
             Accept: 'application/json',
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: {
-            client_id: MatchersV3.string('github-client-id'),
-            client_secret: MatchersV3.string('github-client-secret'),
+          body: qs.stringify({
+            client_id: process.env.GITHUB_CLIENT_ID,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: 'invalid_code',
             grant_type: 'authorization_code',
-            redirect_uri: MatchersV3.string('http://localhost/callback'),
+            redirect_uri: process.env.COGNITO_REDIRECT_URI,
             response_type: 'code'
-          },
+          }),
         })
         .willRespondWith({
           status: 400,
@@ -204,7 +205,9 @@ describe('GitHub Client - Error Handling', () => {
         
         // Create a new client instance
         const client = github();
-        await expect(client.getToken('invalid_code')).rejects.toThrow(
+        await expect(
+          client.getToken('invalid_code')
+        ).rejects.toThrow(
           'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)'
         );
       });

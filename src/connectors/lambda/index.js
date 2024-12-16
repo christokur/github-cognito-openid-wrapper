@@ -1,3 +1,9 @@
+// Enable source map support if enabled via environment variable
+const sourceMapSupport = process.env.SOURCE_MAP_SUPPORT;
+if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCase())) {
+  require('source-map-support').install();
+}
+
 const authorize = require('./authorize');
 const openIdConfiguration = require('./open-id-configuration');
 const token = require('./token');
