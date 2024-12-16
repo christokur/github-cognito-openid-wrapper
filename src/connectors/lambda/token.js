@@ -23,7 +23,7 @@ module.exports.handler = (event, context, callback) => {
     const code = validators.required(body.code, 'code');
     const client_id = validators.required(body.client_id, 'client_id');
     const client_secret = validators.required(body.client_secret, 'client_secret');
-    const grant_type = validators.grant_type(body.grant_type);
+    const grant_type = body.grant_type || 'authorization_code';
 
     // Call the controller with validated parameters
     controllers(responder(callback)).token(

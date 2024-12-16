@@ -72,15 +72,6 @@ const validators = {
     }
     return value;
   },
-  grant_type: (value) => {
-    if (!value) {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'grant_type is required');
-    }
-    if (value !== 'authorization_code') {
-      throw new OAuthError(errorTypes.UNSUPPORTED_GRANT_TYPE, 'Only authorization_code grant type is supported');
-    }
-    return value;
-  }
 };
 
 class OAuthError extends Error {

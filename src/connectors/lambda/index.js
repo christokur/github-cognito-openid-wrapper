@@ -4,6 +4,8 @@ if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCa
   require('source-map-support').install();
 }
 
+const VERSION = '1.3.11';
+
 const authorize = require('./authorize');
 const openIdConfiguration = require('./open-id-configuration');
 const token = require('./token');
@@ -11,21 +13,11 @@ const userinfo = require('./userinfo');
 const jwks = require('./jwks');
 
 function logRequest(event, context) {
-  const logData = {
-    requestId: context.awsRequestId,
-    path: event.path || '',
-    method: event.httpMethod,
-    queryStringParameters: event.queryStringParameters,
-    requestTimeEpoch: event.requestContext?.requestTimeEpoch,
-    sourceIp: event.requestContext?.identity?.sourceIp,
-    userAgent: event.requestContext?.identity?.userAgent,
-    functionVersion: context.functionVersion,
-    functionName: context.functionName,
-    memoryLimitInMB: context.memoryLimitInMB,
-    remainingTime: context.getRemainingTimeInMillis(),
-  };
-
-  console.log('Lambda Invocation:', JSON.stringify(logData, null, 2));
+  console.log('Lambda Invocation:', JSON.stringify({
+    version: VERSION,
+    event: event,
+    context: context
+  }, null, 2));
 }
 
 exports.handler = async (event, context, callback) => {
