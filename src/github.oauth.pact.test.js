@@ -47,9 +47,7 @@ describe('GitHub Client - OAuth Operations', () => {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: VALID_CODE,
-            redirect_uri: process.env.COGNITO_REDIRECT_URI,
-            grant_type: 'authorization_code',
-            response_type: 'code',
+            redirect_uri: process.env.COGNITO_REDIRECT_URI
           }),
         })
         .willRespondWith({
@@ -97,9 +95,7 @@ describe('GitHub Client - OAuth Operations', () => {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: INVALID_CODE,
-            redirect_uri: process.env.COGNITO_REDIRECT_URI,
-            grant_type: 'authorization_code',
-            response_type: 'code',
+            redirect_uri: process.env.COGNITO_REDIRECT_URI
           }),
         })
         .willRespondWith({
@@ -111,7 +107,7 @@ describe('GitHub Client - OAuth Operations', () => {
           body: {
             error: 'bad_verification_code',
             error_description: 'The code passed is incorrect or expired.',
-            error_uri: 'https://docs.github.com/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps',
+            error_uri: 'https://docs.github.com/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps'
           },
         });
 

@@ -176,9 +176,7 @@ describe('GitHub Client - Error Handling', () => {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
             code: 'invalid_code',
-            grant_type: 'authorization_code',
-            redirect_uri: process.env.COGNITO_REDIRECT_URI,
-            response_type: 'code'
+            redirect_uri: process.env.COGNITO_REDIRECT_URI
           }),
         })
         .willRespondWith({
