@@ -1,5 +1,5 @@
 const NodemonPlugin = require('nodemon-webpack-plugin');
-const nodeExternals = require('webpack-node-externals');
+const webpack = require('webpack');
 
 const baseConfig = {
   mode: 'development',
@@ -23,24 +23,28 @@ const baseConfig = {
         ]
       }
     ]
-  }
+  },
+  externals: [
+    ({ request }, callback) => {
+      // Exclude version.js from bundling
+      if (/version\.js$/.test(request)) {
+        return callback(null, 'commonjs ' + request);
+      }
+      callback();
+    }
+  ],
+  plugins: [
+    new webpack.ProvidePlugin({
+      'source-map-support': 'source-map-support',
+      'source-map': 'source-map',
+      'buffer-from': 'buffer-from'
+    })
+  ]
 };
 
 const config = [
   {
     ...baseConfig,
-    externals: [
-      nodeExternals({
-        allowlist: ['source-map-support', 'source-map', 'buffer-from']
-      }),
-      ({ request }, callback) => {
-        // Exclude version.js from bundling
-        if (/version\.js$/.test(request)) {
-          return callback(null, 'commonjs ' + request);
-        }
-        callback();
-      }
-    ],
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-lambda`,
@@ -67,7 +71,6 @@ const config = [
     entry: {
       server: './src/connectors/web/app.js'
     },
-    externals: [nodeExternals()],
     plugins: [new NodemonPlugin()]
   }
 ];
