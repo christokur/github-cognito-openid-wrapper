@@ -1,5 +1,6 @@
 const NodemonPlugin = require('nodemon-webpack-plugin');
 const webpack = require('webpack');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 const baseConfig = {
   mode: 'development',
@@ -38,8 +39,13 @@ const baseConfig = {
       'source-map-support': 'source-map-support',
       'source-map': 'source-map',
       'buffer-from': 'buffer-from'
+    }),
+    process.env.ANALYZE && new BundleAnalyzerPlugin({
+      analyzerMode: 'static',
+      reportFilename: 'bundle-analysis.html',
+      openAnalyzer: false
     })
-  ]
+  ].filter(Boolean)
 };
 
 const config = [
@@ -48,8 +54,8 @@ const config = [
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-lambda`,
-      filename: '[name].js', // Output JS files
-      sourceMapFilename: '[name].js.map' // Output source maps
+      filename: '[name].js', 
+      sourceMapFilename: '[name].js.map' 
     },
     entry: {
       openIdConfiguration: './src/connectors/lambda/open-id-configuration.js',
@@ -65,8 +71,8 @@ const config = [
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-web`,
-      filename: '[name].js', // Output JS files
-      sourceMapFilename: '[name].js.map' // Output source maps
+      filename: '[name].js', 
+      sourceMapFilename: '[name].js.map' 
     },
     entry: {
       server: './src/connectors/web/app.js'
