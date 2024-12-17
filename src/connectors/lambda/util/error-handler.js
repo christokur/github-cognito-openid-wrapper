@@ -72,7 +72,7 @@ const validators = {
     }
     return value;
   },
-};
+} ;
 
 class OAuthError extends Error {
   constructor(type, message) {

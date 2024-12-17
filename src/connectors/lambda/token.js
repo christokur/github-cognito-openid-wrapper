@@ -25,26 +25,56 @@ const parseBody = (event) => {
   return {};
 };
 
-module.exports.handler = (event, context, callback) => {
+// Return a Promise that resolves to a properly formatted API Gateway response
+const handleTokenRequest = (code, state, host) => {
+  return new Promise((resolve) => {
+    controllers(responder((error, result) => {
+      if (error) {
+        logger.error('Token handler error: %s', error.message || error, {});
+        resolve({
+          statusCode: 500,
+          body: JSON.stringify({
+            error: 'server_error',
+            error_description: error.message || 'An unexpected error occurred'
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache'
+          }
+        });
+      } else {
+        resolve(result);
+      }
+    })).token(code, state, host);
+  });
+};
+
+module.exports.handler = async (event, context) => {
   try {
-    // Use parseBody instead of JSON.parse to handle both JSON and form-urlencoded data
     const body = parseBody(event);
     logger.debug('Attempting to validate code from body', {});
     const code = validators.required(body.code, 'code');
-    // Validate state if present, but don't require it
     const state = body.state ? validators.state(body.state) : undefined;
     const host = event.headers.Host;
 
     logger.debug('Calling token controller with code: %s, state: %s, host: %s', code, state, host, {});
-
-    // Call the controller with validated parameters
-    controllers(responder(callback)).token(
-      code,
-      state,
-      host
-    );
+    
+    // Always return a properly formatted response
+    return await handleTokenRequest(code, state, host);
   } catch (error) {
     logger.error('Token handler error: %s', error.message || error, {});
-    handleError(error, callback);
+    return {
+      statusCode: error.statusCode || 500,
+      body: JSON.stringify({
+        error: error.type || 'server_error',
+        error_description: error.message || 'An unexpected error occurred'
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Pragma': 'no-cache'
+      }
+    };
   }
 };
