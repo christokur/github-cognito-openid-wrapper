@@ -38,7 +38,18 @@ module.exports.handler = (event, context, callback) => {
     const responseCallback = (error, response) => {
       if (error) {
         logger.error('Token controller error:', error);
-        handleError(error, callback);
+        callback(null, {
+          statusCode: error.statusCode || 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache'
+          },
+          body: JSON.stringify({
+            error: error.type || 'server_error',
+            error_description: error.message || 'An unexpected error occurred'
+          })
+        });
       } else {
         callback(null, {
           statusCode: 200,
@@ -57,15 +68,15 @@ module.exports.handler = (event, context, callback) => {
     logger.error('Token handler error: %s', error.message || error, {});
     callback(null, {
       statusCode: error.statusCode || 500,
-      body: JSON.stringify({
-        error: error.type || 'server_error',
-        error_description: error.message || 'An unexpected error occurred'
-      }),
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
         'Pragma': 'no-cache'
-      }
+      },
+      body: JSON.stringify({
+        error: error.type || 'server_error',
+        error_description: error.message || 'An unexpected error occurred'
+      })
     });
   }
 };
