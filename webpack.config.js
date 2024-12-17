@@ -29,6 +29,16 @@ const baseConfig = {
 const config = [
   {
     ...baseConfig,
+    externals: [
+      nodeExternals(),
+      ({ request }, callback) => {
+        // Exclude version.js from bundling
+        if (/version\.js$/.test(request)) {
+          return callback(null, 'commonjs ' + request);
+        }
+        callback();
+      }
+    ],
     output: {
       libraryTarget: 'commonjs2',
       path: `${__dirname}/dist-lambda`,
