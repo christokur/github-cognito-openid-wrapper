@@ -31,7 +31,7 @@ const config = [
     ...baseConfig,
     externals: [
       nodeExternals({
-        allowlist: ['source-map-support']
+        allowlist: ['source-map-support', 'source-map', 'buffer-from']
       }),
       ({ request }, callback) => {
         // Exclude version.js from bundling
