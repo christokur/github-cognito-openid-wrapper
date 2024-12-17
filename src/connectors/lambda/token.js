@@ -25,32 +25,7 @@ const parseBody = (event) => {
   return {};
 };
 
-// Return a Promise that resolves to a properly formatted API Gateway response
-const handleTokenRequest = (code, state, host) => {
-  return new Promise((resolve) => {
-    controllers(responder((error, result) => {
-      if (error) {
-        logger.error('Token handler error: %s', error.message || error, {});
-        resolve({
-          statusCode: 500,
-          body: JSON.stringify({
-            error: 'server_error',
-            error_description: error.message || 'An unexpected error occurred'
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
-          }
-        });
-      } else {
-        resolve(result);
-      }
-    })).token(code, state, host);
-  });
-};
-
-module.exports.handler = async (event, context) => {
+module.exports.handler = (event, context, callback) => {
   try {
     const body = parseBody(event);
     logger.debug('Attempting to validate code from body', {});
@@ -60,11 +35,11 @@ module.exports.handler = async (event, context) => {
 
     logger.debug('Calling token controller with code: %s, state: %s, host: %s', code, state, host, {});
     
-    // Always return a properly formatted response
-    return await handleTokenRequest(code, state, host);
+    // Use the controllers and responder directly without Promise wrapper
+    controllers(responder(callback)).token(code, state, host);
   } catch (error) {
     logger.error('Token handler error: %s', error.message || error, {});
-    return {
+    callback(null, {
       statusCode: error.statusCode || 500,
       body: JSON.stringify({
         error: error.type || 'server_error',
@@ -75,6 +50,6 @@ module.exports.handler = async (event, context) => {
         'Cache-Control': 'no-store',
         'Pragma': 'no-cache'
       }
-    };
+    });
   }
 };
