@@ -47,9 +47,18 @@ if (SPLUNK_URL) {
   logger.add(
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.splat(),
-        winston.format.colorize({ all: true }),
-        winston.format.simple(),
+        winston.format.timestamp(),
+        winston.format.printf(({ level, message, timestamp, ...rest }) => {
+          // Create a structured log entry
+          const logEntry = {
+            timestamp,
+            level,
+            ...(typeof message === 'object' ? message : { message }),
+            ...rest
+          };
+          // Ensure single line JSON output
+          return JSON.stringify(logEntry);
+        })
       ),
     }),
   );
