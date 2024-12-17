@@ -4,7 +4,7 @@ if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCa
   require('source-map-support').install();
 }
 
-const VERSION = '1.3.17';
+const VERSION = '1.3.18';
 const VERSION_CONSUMER = process.env.VERSION_CONSUMER || '0.0.0';
 const VERSION_COMPONENT = process.env.VERSION_COMPONENT || '0.0.0';
 

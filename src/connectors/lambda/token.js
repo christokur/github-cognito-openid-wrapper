@@ -35,8 +35,24 @@ module.exports.handler = (event, context, callback) => {
 
     logger.debug('Calling token controller with code: %s, state: %s, host: %s', code, state, host, {});
     
-    // Use the controllers and responder directly without Promise wrapper
-    controllers(responder(callback)).token(code, state, host);
+    const responseCallback = (error, response) => {
+      if (error) {
+        logger.error('Token controller error:', error);
+        handleError(error, callback);
+      } else {
+        callback(null, {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache'
+          },
+          body: JSON.stringify(response)
+        });
+      }
+    };
+
+    controllers(responder(responseCallback)).token(code, state, host);
   } catch (error) {
     logger.error('Token handler error: %s', error.message || error, {});
     callback(null, {
