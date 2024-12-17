@@ -20,16 +20,16 @@ const getApiEndpoints = (
 });
 
 const handleGitHubResponse = (response) => {
-  logger.debug('GitHub response details:\nStatus: %s\nHeaders: %j\nData: %j', 
-    response.status,
-    response.headers,
-    response.data,
-    {}
-  );
+  logger.debug({
+    message: 'GitHub response details',
+    status: response.status,
+    headers: response.headers,
+    data: response.data
+  });
   
   // For 200 responses with error messages (some GitHub API endpoints do this)
   if (response.data && response.data.message) {
-    logger.error('GitHub API error in 200 response: %s', response.data.message, {});
+    logger.error('GitHub API error in 200 response: %s', response.data.message);
     throw new Error(`GitHub API responded with a failure: ${response.status} (${response.data.message})`);
   }
   
@@ -38,7 +38,10 @@ const handleGitHubResponse = (response) => {
 
 const handleGitHubError = (error, isOAuth = false) => {
   if (!error.response) {
-    logger.error('GitHub request failed without response: %s', error.message, {});
+    logger.error({
+      message: 'GitHub request failed without response',
+      error: error.message
+    });
     throw error;
   }
 
@@ -47,13 +50,13 @@ const handleGitHubError = (error, isOAuth = false) => {
   let message;
   message = statusText;
 
-  logger.error('GitHub error details:\nStatus: %s\nStatusText: %s\nHeaders: %j\nData: %j',
+  logger.error({
+    message: 'GitHub error details',
     status,
     statusText,
-    error.response.headers,
-    error.response.data,
-    {}
-  );
+    headers: error.response.headers,
+    data: error.response.data
+  });
 
   // For OAuth endpoints
   if (isOAuth && error.response.data) {
@@ -73,7 +76,7 @@ const handleGitHubError = (error, isOAuth = false) => {
 };
 
 const gitHubGet = (url, accessToken) => {
-  logger.debug('Making request to URL: %s', url, {});
+  logger.debug('Making request to URL: %s', url);
   return axios({
     method: 'get',
     url,
@@ -90,9 +93,8 @@ function githubClient(
   apiBaseUrl = GITHUB_API_URL,
   loginBaseUrl = GITHUB_LOGIN_URL,
 ) {
-  logger.debug('GITHUB_API_URL: %s', apiBaseUrl, {});
   const urls = getApiEndpoints(apiBaseUrl, loginBaseUrl);
-  logger.debug('API Endpoints: %j', urls, {});
+  logger.debug('API Endpoints: %j; GITHUB_API_URL: %s', urls, apiBaseUrl);
 
   return {
     getAuthorizeUrl: (client_id, scope, state, response_type) =>
@@ -118,16 +120,15 @@ function githubClient(
         ...(state && { state }),
       };
 
-      logger.debug(
-        'Token exchange request details:\nURL: %s\nHeaders: %j\nData: %j',
-        urls.oauthToken,
-        {
+      logger.debug({
+        message: 'Token exchange request details',
+        url: urls.oauthToken,
+        headers: {
           Accept: 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data,
-        {},
-      );
+        data
+      });
       return axios({
         method: 'post',
         url: urls.oauthToken,
@@ -137,7 +138,15 @@ function githubClient(
         },
         data: qs.stringify(data),
       })
-        .then(handleGitHubResponse)
+        .then((response) => {
+          logger.debug({
+            message: 'Raw axios response before handleGitHubResponse',
+            status: response.status,
+            headers: response.headers,
+            data: response.data
+          });
+          return handleGitHubResponse(response);
+        })
         .catch((error) => handleGitHubError(error, true));
     },
   };

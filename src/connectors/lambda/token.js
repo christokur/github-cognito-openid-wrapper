@@ -7,17 +7,22 @@ const logger = require('../logger');
 const parseBody = (event) => {
   logger.debug('Token handler received event: %j', event, {});
   const contentType = event.headers['content-type'] || event.headers['Content-Type'];
-  logger.debug('Content-Type header: %s', contentType, {});
   
   if (event.body) {
     if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
       const parsedBody = qs.parse(event.body);
-      logger.debug('Parsed form body: %j', parsedBody, {});
+      logger.debug({
+        contentType,
+        parsedBody
+      }, 'Parsed x-www-form-urlencoded data');
       return parsedBody;
     }
     if (contentType && contentType.startsWith('application/json')) {
       const parsedBody = JSON.parse(event.body);
-      logger.debug('Parsed JSON body: %j', parsedBody, {});
+      logger.debug({
+        contentType,
+        parsedBody
+      }, 'Parsed JSON body: %j');
       return parsedBody;
     }
   }
@@ -28,7 +33,7 @@ const parseBody = (event) => {
 module.exports.handler = (event, context, callback) => {
   try {
     const body = parseBody(event);
-    logger.debug('Attempting to validate code from body', {});
+    logger.debug('Attempting to validate code from body', body);
     const code = validators.required(body.code, 'code');
     const state = body.state ? validators.state(body.state) : undefined;
     const host = event.headers.Host;
@@ -38,7 +43,7 @@ module.exports.handler = (event, context, callback) => {
     const responseCallback = (error, response) => {
       if (error) {
         logger.error('Token controller error:', error);
-        callback(null, {
+        const errorResponse = {
           statusCode: error.statusCode || 500,
           headers: {
             'Content-Type': 'application/json',
@@ -49,9 +54,11 @@ module.exports.handler = (event, context, callback) => {
             error: error.type || 'server_error',
             error_description: error.message || 'An unexpected error occurred'
           })
-        });
+        };
+        logger.error('Returning error response to API Gateway: %j', errorResponse, {});
+        callback(null, errorResponse);
       } else {
-        callback(null, {
+        const successResponse = {
           statusCode: 200,
           headers: {
             'Content-Type': 'application/json',
@@ -59,14 +66,16 @@ module.exports.handler = (event, context, callback) => {
             'Pragma': 'no-cache'
           },
           body: JSON.stringify(response)
-        });
+        };
+        logger.debug('Returning success response to API Gateway: %j', successResponse, {});
+        callback(null, successResponse);
       }
     };
 
     controllers(responder(responseCallback)).token(code, state, host);
   } catch (error) {
     logger.error('Token handler error: %s', error.message || error, {});
-    callback(null, {
+    const errorResponse = {
       statusCode: error.statusCode || 500,
       headers: {
         'Content-Type': 'application/json',
@@ -77,6 +86,8 @@ module.exports.handler = (event, context, callback) => {
         error: error.type || 'server_error',
         error_description: error.message || 'An unexpected error occurred'
       })
-    });
+    };
+    logger.error('Returning error response to API Gateway: %j', errorResponse, {});
+    callback(null, errorResponse);
   }
 };
