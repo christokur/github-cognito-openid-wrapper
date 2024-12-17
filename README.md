@@ -1,4 +1,4 @@
-# GitHub OpenID Connect Wrapper for Cognito - v1.3.23
+# GitHub OpenID Connect Wrapper for Cognito - v1.3.24
 
 [![Build, lint, test](https://github.com/TimothyJones/github-cognito-openid-wrapper/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/TimothyJones/github-cognito-openid-wrapper/actions/workflows/build-and-test.yml)
 [![Maintainability](https://api.codeclimate.com/v1/badges/f787719be529b1c0e8ee/maintainability)](https://codeclimate.com/github/TimothyJones/github-openid-wrapper/maintainability)
