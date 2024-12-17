@@ -1,6 +1,8 @@
 const NodemonPlugin = require('nodemon-webpack-plugin');
 const webpack = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const DashboardPlugin = require('webpack-dashboard/plugin');
+
 
 const baseConfig = {
   mode: 'development',
@@ -77,7 +79,7 @@ const config = [
     entry: {
       server: './src/connectors/web/app.js'
     },
-    plugins: [new NodemonPlugin()]
+    plugins: [new DashboardPlugin(),new NodemonPlugin()]
   }
 ];
 
