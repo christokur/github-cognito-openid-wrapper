@@ -1,125 +1,282 @@
 const logger = require('./logger');
 const openid = require('../openid');
+const { validate } = require('../utils/validator');
 
-module.exports = (respond) => ({
-  authorize: (client_id, scope, state, response_type) => {
-    const authorizeUrl = openid.getAuthorizeUrl(
-      client_id,
-      scope,
-      state,
-      response_type,
-    );
-    logger.info({
-      message: 'Redirecting to authorizeUrl',
-    });
-    logger.debug({
-      message: 'Authorize URL generated',
-      authorizeUrl,
-    });
-    respond.redirect(authorizeUrl);
-  },
-  userinfo: (tokenPromise) => {
-    tokenPromise
-      .then((token) => openid.getUserInfo(token))
-      .then((userInfo) => {
-        logger.debug({
-          message: 'Resolved user infos',
-          userInfo,
-        });
-        respond.success(userInfo);
-      })
-      .catch((error) => {
-        logger.error({
-          message: 'Failed to provide user info',
-          error: error.message || error,
-        });
-        respond.error(error);
-      });
-  },
-  token: (code, state, host) => {
-    logger.debug({
-      message: 'Token controller called',
-      code,
-      state,
-      host,
-    });
-    try {
-      const memBefore = process.memoryUsage();
-      logger.debug({
-        message: 'Memory usage before token controller',
-        memoryUsage: memBefore,
-      });
+// OAuth2 error codes
+const OAUTH_ERRORS = {
+  INVALID_REQUEST: 'invalid_request',
+  INVALID_CLIENT: 'invalid_client',
+  INVALID_GRANT: 'invalid_grant',
+  INVALID_SCOPE: 'invalid_scope',
+  UNAUTHORIZED_CLIENT: 'unauthorized_client',
+  SERVER_ERROR: 'server_error'
+};
 
-      if (code) {
-        logger.debug({
-          message: 'Attempting to get tokens from GitHub',
-          code,
-        });
-        openid
-          .getTokens(code, state, host)
-          .then((tokens) => {
-            const memAfter = process.memoryUsage();
-            logger.debug({
-              message: 'Memory usage after successful token exchange',
-              memoryUsage: memAfter,
-            });
-            logger.debug({
-              message: 'Token exchange successful',
-              tokens,
-            });
-            respond.success(tokens);
-          })
-          .catch((error) => {
-            const memError = process.memoryUsage();
-            logger.error({
-              message: 'Memory usage at token exchange error',
-              memoryUsage: memError,
-            });
-            logger.error({
-              message: 'Token exchange failed',
-              error: error.message || error,
-            });
-            respond.error(error);
-          });
-      } else {
-        const memError = process.memoryUsage();
-        logger.error({
-          message: 'Memory usage at missing code error',
-          memoryUsage: memError,
-        });
-        logger.error({
-          message: 'No code supplied',
-        });
-        respond.error(new Error('No code supplied'));
+// Map internal errors to OAuth2 errors
+const mapError = (error) => {
+  if (error.name === 'ValidationError') {
+    return {
+      code: OAUTH_ERRORS.INVALID_REQUEST,
+      status: 400,
+      message: error.message,
+      errors: error.errors
+    };
+  }
+  if (error.message.includes('required parameter')) {
+    return {
+      code: OAUTH_ERRORS.INVALID_REQUEST,
+      status: 400
+    };
+  }
+  if (error.message.includes('invalid token')) {
+    return {
+      code: OAUTH_ERRORS.INVALID_GRANT,
+      status: 401
+    };
+  }
+  if (error.message.includes('rate limit')) {
+    return {
+      code: OAUTH_ERRORS.SERVER_ERROR,
+      status: 429,
+      headers: {
+        'Retry-After': '60'
       }
-    } catch (error) {
-      const memError = process.memoryUsage();
-      logger.error({
-        message: 'Memory usage at critical controller error',
-        memoryUsage: memError,
+    };
+  }
+  return {
+    code: OAUTH_ERRORS.SERVER_ERROR,
+    status: 500
+  };
+};
+
+module.exports = () => ({
+  authorize: (client_id, scope, state, response_type) => {
+    try {
+      // Validate and sanitize input
+      const validated = validate('authorize', {
+        client_id,
+        scope,
+        state,
+        response_type
       });
+
+      const authorizeUrl = openid.getAuthorizeUrl(
+        validated.client_id,
+        validated.scope,
+        validated.state,
+        validated.response_type,
+      );
+
+      logger.info({
+        message: 'Redirecting to authorizeUrl',
+      });
+      logger.debug({
+        message: 'Authorize URL generated',
+        authorizeUrl,
+      });
+
+      return {
+        statusCode: 302,
+        headers: {
+          'Location': authorizeUrl,
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache'
+        }
+      };
+    } catch (error) {
       logger.error({
-        message: 'Critical error in token controller',
+        message: 'Failed to generate authorize URL',
         error: error.message || error,
       });
-      respond.error(error);
+      const { code, status, headers = {}, message, errors } = mapError(error);
+      return {
+        statusCode: status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          ...headers
+        },
+        body: JSON.stringify({
+          error: code,
+          error_description: message || error.message,
+          ...(errors && { validation_errors: errors })
+        })
+      };
     }
   },
+
+  userinfo: (token) => {
+    try {
+      // Validate and sanitize input
+      const validated = validate('userinfo', {
+        access_token: token
+      });
+
+      const userInfo = openid.getUserInfo(validated.access_token);
+      logger.debug({
+        message: 'Resolved user infos',
+        userInfo,
+      });
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify(userInfo)
+      };
+    } catch (error) {
+      logger.error({
+        message: 'Failed to provide user info',
+        error: error.message || error,
+      });
+      const { code, status, headers = {}, message, errors } = mapError(error);
+      return {
+        statusCode: status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          ...headers
+        },
+        body: JSON.stringify({
+          error: code,
+          error_description: message || error.message,
+          ...(errors && { validation_errors: errors })
+        })
+      };
+    }
+  },
+
+  token: (code, state, host) => {
+    try {
+      logger.debug({
+        message: 'Token controller called',
+        code,
+        state,
+        host,
+      });
+
+      // Validate and sanitize input
+      const validated = validate('token', {
+        code,
+        state
+      });
+
+      const tokens = openid.getTokens(validated.code, validated.state, host);
+      logger.debug({
+        message: 'Tokens retrieved',
+        tokens,
+      });
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify(tokens)
+      };
+    } catch (error) {
+      logger.error({
+        message: 'Failed to get tokens',
+        error: error.message || error,
+      });
+      const { code, status, headers = {}, message, errors } = mapError(error);
+      return {
+        statusCode: status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          ...headers
+        },
+        body: JSON.stringify({
+          error: code,
+          error_description: message || error.message,
+          ...(errors && { validation_errors: errors })
+        })
+      };
+    }
+  },
+
   jwks: () => {
-    const jwks = openid.getJwks();
-    logger.info({
-      message: 'Providing access to JWKS',
-      jwks,
-    });
-    respond.success(jwks);
+    try {
+      const keys = openid.getJwks();
+      logger.debug({
+        message: 'JWKS retrieved',
+        keys,
+      });
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400'
+        },
+        body: JSON.stringify(keys)
+      };
+    } catch (error) {
+      logger.error({
+        message: 'Failed to get JWKS',
+        error: error.message || error,
+      });
+      const { code, status, headers = {}, message, errors } = mapError(error);
+      return {
+        statusCode: status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          ...headers
+        },
+        body: JSON.stringify({
+          error: code,
+          error_description: message || error.message,
+          ...(errors && { validation_errors: errors })
+        })
+      };
+    }
   },
-  openIdConfiguration: (host) => {
-    const config = openid.getConfigFor(host);
-    logger.info({
-      message: 'Providing configuration',
-      host,
-      config,
-    });
-    respond.success(config);
-  },
+
+  openIdConfiguration: (issuer) => {
+    try {
+      const config = openid.getConfigFor(issuer);
+      logger.debug({
+        message: 'OpenID configuration retrieved',
+        config,
+      });
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400'
+        },
+        body: JSON.stringify(config)
+      };
+    } catch (error) {
+      logger.error({
+        message: 'Failed to get OpenID configuration',
+        error: error.message || error,
+      });
+      const { code, status, headers = {}, message, errors } = mapError(error);
+      return {
+        statusCode: status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          ...headers
+        },
+        body: JSON.stringify({
+          error: code,
+          error_description: message || error.message,
+          ...(errors && { validation_errors: errors })
+        })
+      };
+    }
+  }
 });

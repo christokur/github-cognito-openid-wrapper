@@ -1,9 +1,6 @@
-const responder = require('./util/responder');
-const auth = require('./util/auth');
 const controllers = require('../controllers');
 
 module.exports.handler = (event, context, callback) => {
-  controllers(responder(callback)).openIdConfiguration(
-    auth.getIssuer(event.headers.Host),
-  );
+  // No parameters needed, just return OIDC configuration
+  controllers(callback).configuration();
 };

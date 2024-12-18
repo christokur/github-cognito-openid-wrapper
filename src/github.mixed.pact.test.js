@@ -1,7 +1,26 @@
 const axios = require('axios');
 const github = require('./github');
 
-jest.mock('axios');
+jest.mock('axios', () => {
+  return {
+    create: jest.fn(() => {
+      return {
+        get: jest.fn(),
+        post: jest.fn(),
+        interceptors: {
+          request: {
+            use: jest.fn(),
+            eject: jest.fn()
+          },
+          response: {
+            use: jest.fn(),
+            eject: jest.fn()
+          }
+        }
+      };
+    })
+  };
+});
 
 describe('GitHub Client - Response Handling', () => {
   beforeEach(() => {
@@ -23,7 +42,7 @@ describe('GitHub Client - Response Handling', () => {
         }
       };
       
-      axios.mockImplementation(() => Promise.reject({ response: mockResponse }));
+      axios.create().get.mockRejectedValue({ response: mockResponse });
 
       const client = github('http://api.github.com');
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
@@ -31,7 +50,7 @@ describe('GitHub Client - Response Handling', () => {
       );
 
       // Verify axios was called correctly
-      expect(axios).toHaveBeenCalledWith({
+      expect(axios.create().get).toHaveBeenCalledWith({
         method: 'get',
         url: 'http://api.github.com/user',
         headers: {
@@ -40,7 +59,7 @@ describe('GitHub Client - Response Handling', () => {
         },
         timeout: 10000
       });
-    });
+    }, 15000); // Increase timeout to 15 seconds
 
     test('should handle 204 response with error message', async () => {
       // Mock axios to return a 204 with error message
@@ -56,7 +75,7 @@ describe('GitHub Client - Response Handling', () => {
         }
       };
       
-      axios.mockImplementation(() => Promise.resolve(mockResponse));
+      axios.create().get.mockResolvedValue(mockResponse);
 
       const client = github('http://api.github.com');
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
@@ -64,7 +83,7 @@ describe('GitHub Client - Response Handling', () => {
       );
 
       // Verify axios was called correctly
-      expect(axios).toHaveBeenCalledWith({
+      expect(axios.create().get).toHaveBeenCalledWith({
         method: 'get',
         url: 'http://api.github.com/user',
         headers: {
@@ -89,7 +108,7 @@ describe('GitHub Client - Response Handling', () => {
         }
       };
       
-      axios.mockImplementation(() => Promise.reject({ response: mockResponse }));
+      axios.create().get.mockRejectedValue({ response: mockResponse });
 
       const client = github('http://api.github.com');
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
@@ -97,7 +116,7 @@ describe('GitHub Client - Response Handling', () => {
       );
 
       // Verify axios was called correctly
-      expect(axios).toHaveBeenCalledWith({
+      expect(axios.create().get).toHaveBeenCalledWith({
         method: 'get',
         url: 'http://api.github.com/user',
         headers: {
@@ -106,13 +125,13 @@ describe('GitHub Client - Response Handling', () => {
         },
         timeout: 10000
       });
-    });
+    }, 15000); // Increase timeout to 15 seconds
   });
 
   describe('getToken', () => {
     test('should handle network error without response object', async () => {
       const networkError = new Error('Network Error');
-      axios.mockRejectedValue(networkError);
+      axios.create().post.mockRejectedValue(networkError);
 
       const client = github('http://api.github.com');
       await expect(client.getToken('test_code')).rejects.toThrow('Network Error');

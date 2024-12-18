@@ -22,11 +22,17 @@ module.exports = (callback) => ({
       message: 'Error response',
       error: err.message || err
     });
+    const errorResponse = {
+      error: err.type || 'server_error',
+      error_description: err.message || 'An unexpected error occurred'
+    };
     callback(null, {
-      statusCode: 400,
-      body: JSON.stringify(err.message),
+      statusCode: err.statusCode || 400,
+      body: JSON.stringify(errorResponse),
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Pragma': 'no-cache'
       },
     });
   },

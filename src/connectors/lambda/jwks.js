@@ -1,6 +1,6 @@
-const responder = require('./util/responder');
 const controllers = require('../controllers');
 
 module.exports.handler = (event, context, callback) => {
-  controllers(responder(callback)).jwks();
+  // No parameters needed, just return public keys
+  controllers(callback).jwks();
 };

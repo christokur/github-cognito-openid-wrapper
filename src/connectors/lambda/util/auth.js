@@ -1,51 +1,62 @@
 const logger = require('../../logger');
 
 module.exports = {
-  getBearerToken: (req) =>
-    new Promise((resolve, reject) => {
+  getBearerToken: (event) => {
+    try {
       // This method implements https://tools.ietf.org/html/rfc6750
-      const authHeader = req.headers.Authorization;
-      logger.debug({
-        message: 'Detected authorization header',
-        header: authHeader,
-      });
+      const authHeader = event.headers ? event.headers.Authorization || event.headers.authorization : null;
       if (authHeader) {
         // Section 2.1 Authorization request header
         // Should be of the form 'Bearer <token>'
         // We can ignore the 'Bearer ' bit
-        const authValue = authHeader.split(' ')[1];
-        logger.debug({
-          message: 'Section 2.1 Authorization bearer header',
-          value: authValue,
-        });
-        resolve(authValue);
-      } else if (req.queryStringParameters.access_token) {
+        const parts = authHeader.split(' ');
+        if (parts.length !== 2 || parts[0] !== 'Bearer') {
+          const error = new Error('Invalid Authorization header format');
+          logger.error({
+            message: 'Invalid Authorization header',
+            header: authHeader
+          });
+          throw error;
+        }
+        return parts[1];
+      } else if (event.queryStringParameters && event.queryStringParameters.access_token) {
         // Section 2.3 URI query parameter
-        const accessToken = req.queryStringParameters.access_token;
-        logger.debug(
-          'Section 2.3 Authorization query parameter: %s',
-          accessToken,
-        );
-        resolve(req.queryStringParameters.access_token);
+        return event.queryStringParameters.access_token;
       } else if (
-        req.headers['Content-Type'] === 'application/x-www-form-urlencoded' &&
-        req.body
+        event.headers &&
+        (event.headers['Content-Type'] === 'application/x-www-form-urlencoded' ||
+         event.headers['content-type'] === 'application/x-www-form-urlencoded') &&
+        event.body
       ) {
         // Section 2.2 form encoded body parameter
-        const body = JSON.parse(req.body);
-        logger.debug({
-          message: 'Section 2.2. Authorization form encoded body',
-          body,
-        });
-        resolve(body.access_token);
-      } else {
-        const msg = 'No token specified in request';
-        logger.warn(msg);
-        reject(new Error(msg));
+        const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+        return body.access_token;
       }
-    }),
+      const error = new Error('No token specified in request');
+      logger.error({
+        message: 'Missing access token',
+        event: {
+          headers: event.headers,
+          queryStringParameters: event.queryStringParameters
+        }
+      });
+      throw error;
+    } catch (error) {
+      logger.error({
+        message: 'Failed to get bearer token',
+        error: error.message || error
+      });
+      throw error;
+    }
+  },
 
   getIssuer: (host) => {
-    return host;
+    if (!host) {
+      logger.error({
+        message: 'Missing host parameter'
+      });
+      throw new Error('Host parameter is required');
+    }
+    return `${host}`;
   },
 };

@@ -137,10 +137,10 @@ describe('GitHub Client - User Operations', () => {
       });
     });
 
-    test('with bad token', async () => {
+    test('should fail to get user emails with invalid token', async () => {
       await provider
-        .given('a request with invalid token')
-        .uponReceiving('a request to get user emails with invalid token')
+        .given('an invalid access token for user emails')
+        .uponReceiving('a request for user emails with invalid access token')
         .withRequest({
           method: 'GET',
           path: '/user/emails',
