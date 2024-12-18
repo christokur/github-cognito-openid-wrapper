@@ -38,6 +38,7 @@ describe('GitHub Client - Response Handling', () => {
           Accept: 'application/vnd.github.v3+json',
           Authorization: 'token test_token',
         },
+        timeout: 10000
       });
     });
 
@@ -70,6 +71,7 @@ describe('GitHub Client - Response Handling', () => {
           Accept: 'application/vnd.github.v3+json',
           Authorization: 'token test_token',
         },
+        timeout: 10000
       });
     });
 
@@ -102,6 +104,7 @@ describe('GitHub Client - Response Handling', () => {
           Accept: 'application/vnd.github.v3+json',
           Authorization: 'token test_token',
         },
+        timeout: 10000
       });
     });
   });

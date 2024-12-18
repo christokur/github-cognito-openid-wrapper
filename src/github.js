@@ -29,7 +29,10 @@ const handleGitHubResponse = (response) => {
   
   // For 200 responses with error messages (some GitHub API endpoints do this)
   if (response.data && response.data.message) {
-    logger.error('GitHub API error in 200 response: %s', response.data.message);
+    logger.error({
+      message: 'GitHub API error in 200 response',
+      errorMessage: response.data.message
+    });
     throw new Error(`GitHub API responded with a failure: ${response.status} (${response.data.message})`);
   }
   
@@ -37,11 +40,16 @@ const handleGitHubResponse = (response) => {
 };
 
 const handleGitHubError = (error, isOAuth = false) => {
+  logger.error({
+    message: 'GitHub request failed',
+    error: {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    }
+  });
+
   if (!error.response) {
-    logger.error({
-      message: 'GitHub request failed without response',
-      error: error.message
-    });
     throw error;
   }
 
@@ -76,16 +84,33 @@ const handleGitHubError = (error, isOAuth = false) => {
 };
 
 const gitHubGet = (url, accessToken) => {
-  logger.debug('Making request to URL: %s', url);
+  logger.debug({
+    message: 'Making request to URL',
+    url
+  });
+  const memBefore = process.memoryUsage();
+  logger.debug({
+    message: 'Memory usage before GitHub GET',
+    memoryUsage: memBefore
+  });
+  
   return axios({
     method: 'get',
     url,
+    timeout: 10000, // 10 second timeout
     headers: {
       Accept: 'application/vnd.github.v3+json',
       Authorization: `token ${accessToken}`,
     },
   })
-    .then(handleGitHubResponse)
+    .then((response) => {
+      const memAfter = process.memoryUsage();
+      logger.debug({
+        message: 'Memory usage after GitHub GET',
+        memoryUsage: memAfter
+      });
+      return handleGitHubResponse(response);
+    })
     .catch((error) => handleGitHubError(error, false));
 };
 
@@ -94,7 +119,46 @@ function githubClient(
   loginBaseUrl = GITHUB_LOGIN_URL,
 ) {
   const urls = getApiEndpoints(apiBaseUrl, loginBaseUrl);
-  logger.debug('API Endpoints: %j; GITHUB_API_URL: %s', urls, apiBaseUrl);
+  logger.debug({
+    message: 'API Endpoints configuration',
+    urls,
+    apiBaseUrl,
+    memoryUsage: process.memoryUsage()
+  });
+
+  // Add request interceptor for logging
+  axios.interceptors.request.use((config) => {
+    logger.debug({
+      message: 'Outgoing request',
+      method: config.method,
+      url: config.url,
+      headers: config.headers
+    });
+    return config;
+  });
+
+  // Add response interceptor for logging
+  axios.interceptors.response.use(
+    (response) => {
+      logger.debug({
+        message: 'Response received',
+        status: response.status,
+        headers: response.headers
+      });
+      return response;
+    },
+    (error) => {
+      logger.error({
+        message: 'Request failed',
+        error: {
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        }
+      });
+      throw error;
+    }
+  );
 
   return {
     getAuthorizeUrl: (client_id, scope, state, response_type) =>
@@ -109,6 +173,12 @@ function githubClient(
       gitHubGet(urls.userEmails, accessToken),
 
     getToken: (code, state) => {
+      const memBefore = process.memoryUsage();
+      logger.debug({
+        message: 'Memory usage before token exchange',
+        memoryUsage: memBefore
+      });
+      
       const data = {
         // Required GitHub OAuth fields
         client_id: GITHUB_CLIENT_ID,
@@ -132,6 +202,7 @@ function githubClient(
       return axios({
         method: 'post',
         url: urls.oauthToken,
+        timeout: 10000, // 10 second timeout
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -139,6 +210,11 @@ function githubClient(
         data: qs.stringify(data),
       })
         .then((response) => {
+          const memAfter = process.memoryUsage();
+          logger.debug({
+            message: 'Memory usage after token exchange',
+            memoryUsage: memAfter
+          });
           logger.debug({
             message: 'Raw axios response before handleGitHubResponse',
             status: response.status,

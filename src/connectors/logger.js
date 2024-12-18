@@ -20,9 +20,36 @@ const logger = winston.createLogger({
   level: validLogLevels.includes(LOG_LEVEL) ? LOG_LEVEL : 'info',
 });
 
+// Common format that handles both structured logging and printf-style placeholders
+const commonFormat = winston.format.combine(
+  winston.format.splat(),
+  winston.format.timestamp(),
+  winston.format.printf(({ level, message, timestamp, ...rest }) => {
+    // Handle both structured logging and printf-style messages
+    const logEntry = {
+      timestamp,
+      level,
+      ...rest
+    };
+
+    // If message is an object, spread it into the log entry
+    if (typeof message === 'object' && message !== null) {
+      Object.assign(logEntry, message);
+    } else {
+      // For string messages (including printf-style), use the message field
+      logEntry.message = message;
+    }
+
+    // Remove internal winston splat array if it exists
+    delete logEntry[Symbol.for('splat')];
+    
+    return JSON.stringify(logEntry);
+  })
+);
+
 // Activate Splunk logging if Splunk's env variables are set
 if (SPLUNK_URL) {
-  const SplunkStreamEvent = require('winston-splunk-httplogger'); // eslint-disable-line global-require
+  const SplunkStreamEvent = require('winston-splunk-httplogger');
 
   const splunkSettings = {
     url: SPLUNK_URL || 'localhost',
@@ -36,30 +63,14 @@ if (SPLUNK_URL) {
   logger.add(
     new SplunkStreamEvent({
       splunk: splunkSettings,
-      format: winston.format.combine(
-        winston.format.splat(),
-        winston.format.timestamp(),
-      ),
+      format: commonFormat,
     }),
   );
 } else {
   // STDOUT logging for dev/regular servers
   logger.add(
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.printf(({ level, message, timestamp, ...rest }) => {
-          // Create a structured log entry
-          const logEntry = {
-            timestamp,
-            level,
-            ...(typeof message === 'object' ? message : { message }),
-            ...rest
-          };
-          // Ensure single line JSON output
-          return JSON.stringify(logEntry);
-        })
-      ),
+      format: commonFormat,
     }),
   );
 }

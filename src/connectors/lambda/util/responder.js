@@ -2,8 +2,13 @@ const logger = require('../../logger');
 
 module.exports = (callback) => ({
   success: (response) => {
-    logger.info('Success response');
-    logger.debug('Response was: ', response);
+    logger.info({
+      message: 'Success response'
+    });
+    logger.debug({
+      message: 'Response was: ',
+      response
+    });
     callback(null, {
       statusCode: 200,
       body: JSON.stringify(response),
@@ -13,7 +18,10 @@ module.exports = (callback) => ({
     });
   },
   error: (err) => {
-    logger.error('Error response: ', err.message || err);
+    logger.error({
+      message: 'Error response',
+      error: err.message || err
+    });
     callback(null, {
       statusCode: 400,
       body: JSON.stringify(err.message),
@@ -23,8 +31,13 @@ module.exports = (callback) => ({
     });
   },
   redirect: (url) => {
-    logger.info('Redirect response');
-    logger.debug('Redirect response to %s', url, {});
+    logger.info({
+      message: 'Redirect response'
+    });
+    logger.debug({
+      message: 'Redirect response to',
+      url
+    });
     callback(null, {
       statusCode: 302,
       headers: {

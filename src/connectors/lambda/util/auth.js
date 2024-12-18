@@ -5,13 +5,19 @@ module.exports = {
     new Promise((resolve, reject) => {
       // This method implements https://tools.ietf.org/html/rfc6750
       const authHeader = req.headers.Authorization;
-      logger.debug('Detected authorization header %s', authHeader);
+      logger.debug({
+        message: 'Detected authorization header',
+        header: authHeader,
+      });
       if (authHeader) {
         // Section 2.1 Authorization request header
         // Should be of the form 'Bearer <token>'
         // We can ignore the 'Bearer ' bit
         const authValue = authHeader.split(' ')[1];
-        logger.debug('Section 2.1 Authorization bearer header: %s', authValue);
+        logger.debug({
+          message: 'Section 2.1 Authorization bearer header',
+          value: authValue,
+        });
         resolve(authValue);
       } else if (req.queryStringParameters.access_token) {
         // Section 2.3 URI query parameter
@@ -27,7 +33,10 @@ module.exports = {
       ) {
         // Section 2.2 form encoded body parameter
         const body = JSON.parse(req.body);
-        logger.debug('Section 2.2. Authorization form encoded body: %s', body);
+        logger.debug({
+          message: 'Section 2.2. Authorization form encoded body',
+          body,
+        });
         resolve(body.access_token);
       } else {
         const msg = 'No token specified in request';

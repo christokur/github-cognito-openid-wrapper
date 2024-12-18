@@ -22,7 +22,10 @@ module.exports = {
       iss: `https://${host}`,
       aud: config.GITHUB_CLIENT_ID,
     };
-    logger.debug('Signing payload %j', enrichedPayload, {});
+    logger.debug({
+      message: 'Signing payload',
+      payload: enrichedPayload
+    });
     return jwt.sign(enrichedPayload, cert, {
       expiresIn: '1h',
       algorithm: config.JWT_ALGORITHM,
