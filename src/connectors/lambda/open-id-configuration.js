@@ -16,9 +16,11 @@ module.exports.handler = (event, context, callback) => {
         })
       });
     }
-
-    const issuer = `https://${host}`;
-    const response = controllers(callback).openIdConfiguration(issuer);
+    //  if host already has a `http?://` prefix do nothing else add it
+    if (!host.startsWith('http://') && !host.startsWith('https://')) {
+      host = `https://${host}`;
+    }
+    const response = controllers(callback).openIdConfiguration(host);
     return callback(null, response);
   } catch (error) {
     return callback(null, {
