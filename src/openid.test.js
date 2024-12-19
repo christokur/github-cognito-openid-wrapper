@@ -4,8 +4,7 @@
 /* eslint-disable no-unused-vars */
 
 
-import path from 'path';
-import { jest } from '@jest/globals';
+// const path = require('path');
 
 jest.mock('./github', () => {
   const githubMock = {

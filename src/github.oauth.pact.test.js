@@ -140,16 +140,16 @@ describe('GitHub Client - OAuth Operations', () => {
         jest.resetModules();
         const github = require('./github');
         
-        // Create a new client instance
-        const client = github();
+        const client = github(mockServer.url);
+        
         const url = client.getAuthorizeUrl(
-          'client_id',
-          'scope',
-          'state',
-          'response_type',
+          'test-client-id', // state
+          'scope',         // nonce
+          'state'         // codeChallenge
         );
+
         expect(url).toBe(
-          `${mockServer.url}/login/oauth/authorize?client_id=client_id&scope=scope&state=state&response_type=response_type&redirect_uri=${encodeURIComponent(process.env.COGNITO_REDIRECT_URI)}`,
+          `${mockServer.url}/login/oauth/authorize?client_id=test-client-id&scope=user%3Aemail&state=test-client-id&response_type=code&redirect_uri=${encodeURIComponent(process.env.COGNITO_REDIRECT_URI)}&nonce=scope&code_challenge=state&code_challenge_method=S256`
         );
       });
     });

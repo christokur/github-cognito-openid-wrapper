@@ -1,6 +1,6 @@
 const logger = require('../connectors/logger');
 
-const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const exponentialBackoff = (retryCount, baseDelay = 1000, maxDelay = 10000) => {
   const delay = Math.min(baseDelay * Math.pow(2, retryCount), maxDelay);
@@ -9,9 +9,11 @@ const exponentialBackoff = (retryCount, baseDelay = 1000, maxDelay = 10000) => {
 };
 
 const isRetryableError = (error) => {
+  const retry = error?.isRetryable || true
+  if (!retry) return false; // Custom errors can be marked as non-retryable
   if (!error.response) return true; // Network errors are retryable
-  
-  const status = error.response.status;
+
+  const status = error.response?.status || 0;
   return (
     status === 408 || // Request Timeout
     status === 429 || // Too Many Requests
@@ -22,24 +24,17 @@ const isRetryableError = (error) => {
   );
 };
 
-async function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {}) {
-  let lastError;
-  
-  for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
+function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {}) {
+  let retryCount = 0;
+  let result;
+  let error;
+
+  while (retryCount <= maxRetries) {
     try {
-      if (retryCount > 0) {
-        const delay = exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
-        logger.debug({
-          message: `Retrying operation (attempt ${retryCount}/${maxRetries})`,
-          delay
-        });
-        await wait(delay);
-      }
-      
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      
+      result = operation();
+      break;
+    } catch (err) {
+      error = err;
       if (!isRetryableError(error) || retryCount === maxRetries) {
         logger.error({
           message: 'Operation failed after retries',
@@ -48,17 +43,18 @@ async function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay
         });
         throw error;
       }
-      
-      logger.warn({
-        message: 'Operation failed, will retry',
-        error: error.message,
-        retryCount,
-        maxRetries
+
+      retryCount++;
+      const delay = exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
+      logger.debug({
+        message: `Retrying operation (attempt ${retryCount}/${maxRetries})`,
+        delay
       });
+      wait(delay);
     }
   }
-  
-  throw lastError;
+
+  return result;
 }
 
 module.exports = {

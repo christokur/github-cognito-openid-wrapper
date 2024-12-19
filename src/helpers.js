@@ -1,4 +1,5 @@
 const config = require('./config');
+const axios = require('axios');
 
 const NumericDate = (date) => Math.floor(date / 1000);
 
@@ -38,6 +39,12 @@ const validateConfig = () => {
   requiredStrings.forEach(ensureString);
   requiredNumbers.forEach(ensureNumber);
 };
+
+const getAxios = () => {
+  return axios.create({
+    timeout: 10000,
+  });
+}
 
 module.exports = {
   NumericDate,

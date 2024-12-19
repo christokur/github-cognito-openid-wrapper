@@ -1,6 +1,3 @@
-const mockAxios = jest.fn();
-jest.mock('axios', () => mockAxios);
-
 const mockRateLimiter = {
   checkLimit: jest.fn(),
   updateLimits: jest.fn(),
@@ -9,6 +6,13 @@ const mockRateLimiter = {
 
 jest.mock('./utils/rate-limiter', () => mockRateLimiter);
 
+const mockAxios = jest.fn();
+const { getAxios } = require('./helpers');
+jest.mock('./helpers', () => ({
+  getAxios: jest.fn(() => mockAxios),
+  NumericDate: jest.requireActual('./helpers').NumericDate
+}));
+
 // Set up environment variables before requiring the module
 process.env.GITHUB_CLIENT_ID = 'mock-client-id';
 process.env.GITHUB_CLIENT_SECRET = 'mock-client-secret';
@@ -16,7 +20,7 @@ process.env.COGNITO_REDIRECT_URI = 'http://localhost/callback';
 process.env.GITHUB_API_URL = 'https://api.github.com';
 process.env.GITHUB_LOGIN_URL = 'https://github.com';
 
-const github = require('./github')();
+const github = require('./github');
 
 describe('githubClient', () => {
   const mockClientId = 'mock-client-id';

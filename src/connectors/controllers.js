@@ -49,7 +49,7 @@ const mapError = (error) => {
   };
 };
 
-module.exports = () => ({
+module.exports = (callback) => ({
   authorize: (client_id, scope, state, response_type) => {
     try {
       // Validate and sanitize input
@@ -242,9 +242,9 @@ module.exports = () => ({
     }
   },
 
-  openIdConfiguration: (issuer) => {
+  openIdConfiguration: (host) => {
     try {
-      const config = openid.getConfigFor(issuer);
+      const config = openid.getConfigFor(host);
       logger.debug({
         message: 'OpenID configuration retrieved',
         config,

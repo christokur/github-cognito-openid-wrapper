@@ -282,18 +282,22 @@ const getConfigFor = (host) => {
     if (!host) {
       throw new Error('Host is required');
     }
+    //  if host already has a `http?://` prefix do nothing else add it
+    if (!host.startsWith('http://') && !host.startsWith('https://')) {
+      host = `https://${host}`;
+    }
 
     const configuration = {
-      issuer: `https://${host}`,
-      authorization_endpoint: `https://${host}/authorize`,
-      token_endpoint: `https://${host}/token`,
+      issuer: `${host}`,
+      authorization_endpoint: `${host}/authorize`,
+      token_endpoint: `${host}/token`,
       token_endpoint_auth_methods_supported: [
         'client_secret_basic',
         'private_key_jwt',
       ],
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
-      userinfo_endpoint: `https://${host}/userinfo`,
-      jwks_uri: `https://${host}/.well-known/jwks.json`,
+      userinfo_endpoint: `${host}/userinfo`,
+      jwks_uri: `${host}/.well-known/jwks.json`,
       scopes_supported: ['openid', 'read:user', 'user:email'],
       response_types_supported: ['code', 'code id_token'],
       response_modes_supported: ['query', 'fragment'],
