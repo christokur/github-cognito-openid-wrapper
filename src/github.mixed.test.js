@@ -12,6 +12,7 @@ const { mockAxios, mockGetAxios } = require('./sharedMocks');
 
 const Configuration = require('./config');
 const github = require('./github');
+const { mockValues } = require('./mocks');
 
 describe('GitHub Client - Response Handling', () => {
   beforeEach(() => {
@@ -30,7 +31,7 @@ describe('GitHub Client - Response Handling', () => {
 
       mockAxios.get.mockRejectedValue({ response: mockResponse });
 
-      const client = github('http://api.github.com');
+      const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
         'GitHub API responded with a failure: 429 (API rate limit exceeded)'
       );

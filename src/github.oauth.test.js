@@ -6,19 +6,21 @@ describe('GitHub Client - OAuth Operations', () => {
 
   let Configuration;
   let client;
+  let github;
   beforeEach(() => {
     jest.resetModules();
     Configuration = require('./config');
-    const github = require('./github');
+    github = require('./github');
     client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
   });
   
   afterEach(() => {
     jest.resetModules();
     delete require.cache[require.resolve('./config')];
+    delete require.cache[require.resolve('./github')];
     delete require.cache[require.resolve('./connectors/logger')];
   });
-  
+
   describe('getToken', () => {
     const VALID_CODE = 'valid_code';
     const INVALID_CODE = 'invalid_code';

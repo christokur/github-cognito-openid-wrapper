@@ -1,35 +1,23 @@
 const { mockValues } = require('./mocks');
-require('./mocks');
+const { axiosMock: axiosMock } = require('./sharedMocks');
 
 describe('openid domain layer - User Info', () => {
   let openid;
   let github;
   let client;
-  let mockAxios;
-
-  // Store original env
-  const originalEnv = { ...process.env };
-
-  beforeAll(() => {
-    // Set environment variables before requiring modules
-    process.env.GITHUB_CLIENT_ID = mockValues.GITHUB_CLIENT_ID;
-    process.env.GITHUB_CLIENT_SECRET = mockValues.GITHUB_CLIENT_SECRET;
-    process.env.COGNITO_REDIRECT_URI = mockValues.COGNITO_REDIRECT_URI;
-    process.env.GITHUB_API_URL = mockValues.GITHUB_API_URL;
-    process.env.GITHUB_LOGIN_URL = mockValues.GITHUB_LOGIN_URL;
-  });
 
   beforeEach(() => {
     jest.resetModules();
-    const { mockAxios: axiosMock } = require('./sharedMocks');
-    mockAxios = axiosMock;
     openid = require('./openid');
     github = require('./github');
     client = github();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetModules();
+    delete require.cache[require.resolve('./config')];
+    delete require.cache[require.resolve('./github')];
+    delete require.cache[require.resolve('./connectors/logger')];
   });
 
   afterAll(() => {
@@ -44,8 +32,8 @@ describe('openid domain layer - User Info', () => {
       describe('with complete user details', () => {
         describe('with a primary email', () => {
           test('complete', async () => {
-            const { mockAxios } = require('./sharedMocks');
-            mockAxios.get.mockImplementation((url) => {
+            const { axiosMock } = require('./sharedMocks');
+            axiosMock.get.mockImplementation((url) => {
               if (url === `${mockValues.GITHUB_API_URL}/user`) {
                 return Promise.resolve({
                   status: 200,
@@ -94,7 +82,7 @@ describe('openid domain layer - User Info', () => {
               updated_at: expectedUpdatedAt,
             });
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(axiosMock.get).toHaveBeenCalledWith(
               `${mockValues.GITHUB_API_URL}/user`,
               {
                 headers: {
@@ -105,7 +93,7 @@ describe('openid domain layer - User Info', () => {
               }
             );
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(axiosMock.get).toHaveBeenCalledWith(
               `${mockValues.GITHUB_API_URL}/user/emails`,
               {
                 headers: {
@@ -120,8 +108,8 @@ describe('openid domain layer - User Info', () => {
 
         describe('without a primary email', () => {
           test('fails', async () => {
-            const { mockAxios } = require('./sharedMocks');
-            mockAxios.get.mockImplementation((url) => {
+            const { axiosMock } = require('./sharedMocks');
+            axiosMock.get.mockImplementation((url) => {
               if (url === `${mockValues.GITHUB_API_URL}/user`) {
                 return Promise.resolve({
                   status: 200,
@@ -158,7 +146,7 @@ describe('openid domain layer - User Info', () => {
               openid.getUserInfo('without_a_primary_email')
             ).rejects.toThrow('User did not have a primary email address');
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(axiosMock.get).toHaveBeenCalledWith(
               `${mockValues.GITHUB_API_URL}/user`,
               {
                 headers: {
@@ -169,7 +157,7 @@ describe('openid domain layer - User Info', () => {
               }
             );
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(axiosMock.get).toHaveBeenCalledWith(
               `${mockValues.GITHUB_API_URL}/user/emails`,
               {
                 headers: {
@@ -192,12 +180,12 @@ describe('openid domain layer - User Info', () => {
             },
           };
 
-          const { mockAxios } = require('./sharedMocks');
-          mockAxios.get.mockRejectedValue(error);
+          const { axiosMock } = require('./sharedMocks');
+          axiosMock.get.mockRejectedValue(error);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow('Bad credentials');
 
-          expect(mockAxios.get).toHaveBeenCalledWith(
+          expect(axiosMock.get).toHaveBeenCalledWith(
             `${mockValues.GITHUB_API_URL}/user`,
             {
               headers: {
@@ -217,8 +205,8 @@ describe('openid domain layer - User Info', () => {
             },
           };
 
-          const { mockAxios } = require('./sharedMocks');
-          mockAxios.get.mockRejectedValue(detailsError);
+          const { axiosMock } = require('./sharedMocks');
+          axiosMock.get.mockRejectedValue(detailsError);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow(
             'Failed to fetch user details'
