@@ -66,7 +66,7 @@ class GitHubClient {
     };
 
     const response = await gitHubPost(endpoints.oauthToken, qs.stringify(data));
-    return response;
+    return response.access_token;
   }
 
   async getUserInfo(accessToken) {
