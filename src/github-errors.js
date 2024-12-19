@@ -98,6 +98,7 @@ const handleGitHubError = (error) => {
     const err = new Error(`GitHub API responded with a failure: ${status} (${message})`);
     err.statusCode = status;
     err.type = 'github_error';
+    err.response = error.response;  // Preserve the original response
     throw err;
   }
 

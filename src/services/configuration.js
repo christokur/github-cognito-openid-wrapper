@@ -1,4 +1,5 @@
 const logger = require('../connectors/logger');
+const Configuration = require('../config.js');
 
 /**
  * Service for handling OpenID Connect configuration

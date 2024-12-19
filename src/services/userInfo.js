@@ -46,7 +46,6 @@ class UserInfoService {
   /**
    * Fetches user information from GitHub and maps it to OpenID claims
    * @param {string} accessToken - GitHub access token
-   * @returns {Promise<Object>} Combined user claims
    */
   static async getUserInfo(accessToken) {
     try {

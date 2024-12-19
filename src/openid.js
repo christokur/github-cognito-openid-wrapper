@@ -1,6 +1,7 @@
 const logger = require('./connectors/logger');
 const UserInfoService = require('./services/userInfo');
 const TokenService = require('./services/token');
+const Configuration = require('./config');
 const ConfigurationService = require('./services/configuration');
 const AuthorizationService = require('./services/authorization');
 
@@ -11,7 +12,6 @@ class OpenIDProvider {
   /**
    * Gets user information in OpenID Connect format
    * @param {string} accessToken - GitHub access token
-   * @returns {Promise<Object>} User information as OpenID claims
    */
   static getUserInfo(accessToken) {
     return UserInfoService.getUserInfo(accessToken);
@@ -59,7 +59,6 @@ class OpenIDProvider {
    * @param {string} state - State parameter
    * @param {string} host - Host URL
    * @param {string} nonce - Nonce value
-   * @returns {Promise<Object>} Token response
    */
   static async getTokens(code, state, host, nonce) {
     try {

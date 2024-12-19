@@ -49,30 +49,25 @@ describe('RateLimiter', () => {
   });
 
   describe('checkLimit', () => {
-    test('should not wait if remaining requests > 0', async () => {
+    test('should not throw if remaining requests > 0', () => {
       rateLimiter.remaining = 100;
-      const startTime = Date.now();
-      await rateLimiter.checkLimit();
-      const endTime = Date.now();
-      expect(endTime - startTime).toBeLessThan(100); // Should return immediately
+      expect(() => rateLimiter.checkLimit()).not.toThrow();
     });
 
-    test('should wait until reset time if rate limited', async () => {
+    test('should throw rate limit error when no requests remaining', () => {
       rateLimiter.remaining = 0;
       rateLimiter.resetTime = Date.now() + 1000;
       rateLimiter.retryAfter = 0;
 
-      const waitPromise = rateLimiter.checkLimit();
-      await expect(waitPromise).resolves.toBeUndefined();
+      expect(() => rateLimiter.checkLimit()).toThrow('GitHub API responded with a failure: 429 (API rate limit exceeded)');
     });
 
-    test('should wait for retry-after if specified', async () => {
+    test('should throw rate limit error when retry-after is specified', () => {
       rateLimiter.remaining = 0;
       rateLimiter.resetTime = Date.now();
       rateLimiter.retryAfter = 1000;
 
-      const waitPromise = rateLimiter.checkLimit();
-      await expect(waitPromise).resolves.toBeUndefined();
+      expect(() => rateLimiter.checkLimit()).toThrow('GitHub API responded with a failure: 429 (API rate limit exceeded)');
     });
   });
 

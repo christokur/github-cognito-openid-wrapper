@@ -1,7 +1,7 @@
 const logger = require('../connectors/logger');
 const crypto = require('../crypto');
 const githubClient = require('../github');
-const config = require('../config');
+const Configuration = require('../config');
 
 /**
  * Service for handling token operations
@@ -57,13 +57,12 @@ class TokenService {
    * @param {string} code - Authorization code
    * @param {string} state - State parameter
    * @param {string} codeVerifier - PKCE code verifier
-   * @returns {Promise<Object>} Token response
    */
   static async getGithubToken(code, state, codeVerifier) {
     try {
       const githubClientInstance = githubClient(
-        config.GITHUB_API_URL,
-        config.GITHUB_LOGIN_URL
+        Configuration.GITHUB_API_URL,
+        Configuration.GITHUB_LOGIN_URL
       );
 
       const githubToken = await githubClientInstance.getToken(code, state, codeVerifier);
@@ -114,7 +113,6 @@ class TokenService {
   /**
    * Processes token exchange and creates response
    * @param {Object} params - Token exchange parameters
-   * @returns {Promise<Object>} Complete token response
    */
   static async processTokenExchange({ code, state, host, nonce, storedNonce, codeVerifier }) {
     try {

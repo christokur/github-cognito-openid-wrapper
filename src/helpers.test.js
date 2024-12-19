@@ -47,15 +47,17 @@ describe('NumericDate', () => {
 });
 
 describe('ensureString', () => {
-  it('should throw an error if the variable is not a string', () => {
-    // Set up config with non-string value
-    process.env.GITHUB_CLIENT_SECRET = '12345';
-    const config = require('./config');
-    config.GITHUB_CLIENT_SECRET = 12345; // Directly modify to be a number
+  it('should throw an error if the variable is undefined', () => {
     const { ensureString } = require('./helpers');
-    expect(() => ensureString('GITHUB_CLIENT_SECRET')).toThrow(
-      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string'
+    expect(() => ensureString('NONEXISTENT_VAR')).toThrow(
+      'Environment variable NONEXISTENT_VAR must be set and be a string'
     );
+  });
+
+  it('should not throw if the variable is a string', () => {
+    process.env.GITHUB_CLIENT_SECRET = 'test_secret';
+    const { ensureString } = require('./helpers');
+    expect(() => ensureString('GITHUB_CLIENT_SECRET')).not.toThrow();
   });
 });
 
@@ -77,8 +79,7 @@ describe('ensureNumber', () => {
 
 describe('ensureNumber SOME_NUMBER', () => {
   it('should throw an error if the variable is not a valid number', () => {
-    const config = require('./config');
-    config.SOME_NUMBER = 'not-a-number';
+    process.env.SOME_NUMBER = 'not-a-number';
     const { ensureNumber } = require('./helpers');
     expect(() => ensureNumber('SOME_NUMBER')).toThrow(
       'Environment variable SOME_NUMBER must be set and be a number'

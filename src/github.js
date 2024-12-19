@@ -1,17 +1,11 @@
 const qs = require('qs');
-const {
-  GITHUB_API_URL,
-  GITHUB_LOGIN_URL,
-  GITHUB_CLIENT_ID,
-  GITHUB_CLIENT_SECRET,
-  COGNITO_REDIRECT_URI,
-} = require('./config');
+const config = require('./config');
 const { gitHubGet, gitHubPost } = require('./github-api');
 
 class GitHubClient {
-  constructor(apiBaseUrl = GITHUB_API_URL, loginBaseUrl = GITHUB_LOGIN_URL) {
-    this.apiBaseUrl = apiBaseUrl || GITHUB_API_URL;
-    this.loginBaseUrl = loginBaseUrl || GITHUB_LOGIN_URL;
+  constructor(apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) {
+    this.apiBaseUrl = apiBaseUrl || config.GITHUB_API_URL;
+    this.loginBaseUrl = loginBaseUrl || config.GITHUB_LOGIN_URL;
 
     if (!this.apiBaseUrl || !this.loginBaseUrl) {
       throw new Error('GitHub API URLs are not configured');
@@ -37,13 +31,13 @@ class GitHubClient {
     return gitHubGet(endpoints.userEmails, accessToken);
   }
 
-  getAuthorizeUrl(state, nonce, codeChallenge) {
+  getAuthorizeUrl(client_id, scope, state, response_type, nonce, codeChallenge) {
     const params = {
-      client_id: GITHUB_CLIENT_ID,
-      scope: 'user:email',
+      client_id,
+      scope,
       state,
-      response_type: 'code',
-      redirect_uri: COGNITO_REDIRECT_URI,
+      response_type,
+      redirect_uri: config.COGNITO_REDIRECT_URI,
     };
 
     if (nonce) {
@@ -65,18 +59,35 @@ class GitHubClient {
   getToken(code) {
     const endpoints = this.getApiEndpoints();
     const data = {
-      client_id: GITHUB_CLIENT_ID,
-      client_secret: GITHUB_CLIENT_SECRET,
+      client_id: config.GITHUB_CLIENT_ID,
+      client_secret: config.GITHUB_CLIENT_SECRET,
       code,
-      redirect_uri: COGNITO_REDIRECT_URI,
+      redirect_uri: config.COGNITO_REDIRECT_URI,
     };
 
-    return gitHubPost(endpoints.oauthToken, qs.stringify(data));
+    return gitHubPost(endpoints.oauthToken, qs.stringify(data))
+      .then(responseData => responseData.access_token);
+  }
+
+  getUserInfo(accessToken) {
+    return this.getUserDetails(accessToken)
+      .then(userDetails => {
+        return this.getUserEmails(accessToken)
+          .then(userEmails => {
+            const primaryEmail = userEmails.find(email => email.primary);
+            if (!primaryEmail) {
+              throw new Error('User did not have a primary email address');
+            }
+            return {
+              ...userDetails,
+              email: primaryEmail.email
+            };
+          });
+      });
   }
 }
 
-const githubClient = (apiBaseUrl = GITHUB_API_URL, loginBaseUrl = GITHUB_LOGIN_URL) => {
+const githubClient = (apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) => {
   return new GitHubClient(apiBaseUrl, loginBaseUrl);
 };
 
-module.exports = githubClient;

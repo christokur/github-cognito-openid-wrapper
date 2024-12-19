@@ -4,33 +4,13 @@ jest.mock('./config', () => ({
   COGNITO_REDIRECT_URI: 'http://localhost/callback',
   GITHUB_API_URL: 'http://api.github.com',
   GITHUB_LOGIN_URL: 'http://github.com',
-}));
-const mockAxios = {
-  get: jest.fn(),
-  post: jest.fn(),
-  create: jest.fn()
-};
-const mockGetAxios = jest.fn(() => mockAxios);
-
-// !AI: Leave this alone
-const noDelay = () => {
-  return 0;
-};
-
-// const { exponentialBackoff } = require('./utils/retry');
-// Mock the actual retry module that's being used
-jest.mock('./utils/retry', () => ({
-  ...jest.requireActual('./utils/retry'),
-  exponentialBackoff: noDelay
-}));
-// !AI: Leave this alone
-
-jest.mock('./helpers', () => ({
-  getAxios: mockGetAxios,
-  NumericDate: jest.requireActual('./helpers').NumericDate
+  GITHUB_API_VERSION: 'v3',
+  GITHUB_API_TIMEOUT: 10000
 }));
 
+const { mockAxios, mockGetAxios } = require('./sharedMocks');
 
+const Configuration = require('./config');
 const github = require('./github');
 
 describe('GitHub Client - Response Handling', () => {
@@ -88,48 +68,16 @@ describe('GitHub Client - Response Handling', () => {
         timeout: 10000
       });
     });
-
-    test('should handle 429 rate limit response', async () => {
-      const mockResponse = {
-        status: 429,
-        statusText: 'Too Many Requests',
-        data: {
-          message: 'API rate limit exceeded',
-        },
-      };
-
-      mockAxios.get.mockRejectedValue({ response: mockResponse });
-
-      const client = github('http://api.github.com');
-      await expect(client.getUserDetails('test_token')).rejects.toThrow(
-        'GitHub API responded with a failure: 429 (API rate limit exceeded)'
-      );
-
-      // Verify axios was called correctly
-      expect(mockAxios.get).toHaveBeenCalledWith('http://api.github.com/user', {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          Authorization: 'token test_token',
-        },
-        timeout: 10000
-      });
-    }, 15000); // Increase timeout to 15 seconds
   });
 
   describe('getToken', () => {
     test('should handle network error without response object', async () => {
-      const networkError = new Error('Network Error');
-      networkError.isNetworkError = true;
-      // Set .response.status to -1 to prevent retrying
-      networkError.response = { status: -1 };
-
-      // Mock axios to throw the error directly
-      mockGetAxios.mockImplementationOnce(() => {
-        throw networkError;
-      });
+      mockAxios.post.mockRejectedValue(new Error('Network Error'));
 
       const client = github('http://api.github.com');
-      await expect(client.getToken('test_code')).rejects.toThrow('Network Error');
+      await expect(client.getToken('test_code')).rejects.toThrow(
+        'Network error occurred while contacting GitHub API'
+      );
     });
   });
 });

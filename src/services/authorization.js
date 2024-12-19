@@ -1,6 +1,6 @@
 const logger = require('../connectors/logger');
 const githubClient = require('../github');
-const config = require('../config');
+const Configuration = require('../config');
 const PkceHelper = require('../utils/pkce');
 const ConfigurationService = require('./configuration');
 
@@ -70,7 +70,7 @@ class AuthorizationService {
       const codeChallenge = PkceHelper.generateCodeChallenge(codeVerifier);
 
       // Get authorization URL from GitHub client
-      const url = githubClient(config.GITHUB_API_URL, config.GITHUB_LOGIN_URL)
+      const url = githubClient(Configuration.GITHUB_API_URL, Configuration.GITHUB_LOGIN_URL)
         .getAuthorizeUrl(client_id, scope, state, response_type, nonce, codeChallenge);
 
       // Store PKCE and nonce values

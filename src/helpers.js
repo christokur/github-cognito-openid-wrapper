@@ -5,7 +5,7 @@ const NumericDate = (date) => Math.floor(date / 1000);
 
 const ensureString = (variableName) => {
   const value = config[variableName];
-  if (typeof value !== 'string' || value === undefined) {
+  if (value === undefined || typeof value !== 'string') {
     throw new Error(
       `Environment variable ${String(variableName)} must be set and be a string`,
     );

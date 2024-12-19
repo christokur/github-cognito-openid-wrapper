@@ -1,41 +1,13 @@
-const mockAxios = {
-  get: jest.fn(),
-  post: jest.fn(),
-  create: jest.fn()
-};
-const mockGetAxios = jest.fn(() => mockAxios);
+const { mockAxios, mockGetAxios } = require('./sharedMocks');
+const { mockValues } = require('./mocks');
 
-// !AI: Leave this alone
-const noDelay = () => {
-  return 0;
-};
-
-// const { exponentialBackoff } = require('./utils/retry');
-// Mock the actual retry module that's being used
-jest.mock('./utils/retry', () => ({
-  ...jest.requireActual('./utils/retry'),
-  exponentialBackoff: noDelay
-}));
-// !AI: Leave this alone
-
-jest.mock('./helpers', () => ({
-  getAxios: mockGetAxios,
-  NumericDate: jest.requireActual('./helpers').NumericDate
-}));
-
-jest.mock('./config', () => ({
-  GITHUB_CLIENT_ID: 'test-client-id',
-  GITHUB_CLIENT_SECRET: 'test-client-secret',
-  COGNITO_REDIRECT_URI: 'http://localhost/callback',
-  GITHUB_API_URL: 'http://api.github.com',
-  GITHUB_LOGIN_URL: 'http://github.com',
-}));
-
-const github = require('./github');
+let github;
 
 describe('GitHub Client - Error Handling', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.resetModules();
+    github = require('./github');
   });
 
   describe('Network and Server Errors', () => {
@@ -125,6 +97,20 @@ describe('GitHub Client - Error Handling', () => {
         });
     });
 
+    test('should handle error response with 200 status', () => {
+      mockAxios.get.mockRejectedValue({
+        response: {
+          status: 200,
+          data: { message: 'Error' },
+        },
+      });
+      const client = github();
+      return client.getUserDetails('token').catch((error) => {
+        expect(error.response.status).toBe(200);
+        expect(error.response.data.message).toBe('Error');
+      });
+    });
+
     test('should handle OAuth error response', () => {
       const error = {
         response: {
@@ -133,7 +119,7 @@ describe('GitHub Client - Error Handling', () => {
           data: {
             error: 'bad_verification_code',
             error_description: 'The code passed is incorrect or expired.',
-            error_uri: 'https://docs.github.com/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps'
+            error_uri: `${mockValues.GITHUB_DOCS_URL}/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps`
           }
         }
       };
@@ -153,14 +139,23 @@ describe('GitHub Client - Error Handling', () => {
           expect(err.statusCode).toBe(400);
           expect(err.type).toBe('github_error');
 
+          const qs = require('qs');
+          const data = {
+            client_id: mockValues.GITHUB_CLIENT_ID,
+            client_secret: mockValues.GITHUB_CLIENT_SECRET,
+            code: 'invalid_code',
+            redirect_uri: mockValues.COGNITO_REDIRECT_URI
+          };
+
           expect(mockAxios.post).toHaveBeenCalledWith(
-            'http://github.com/login/oauth/access_token',
-            'client_id=test-client-id&client_secret=test-client-secret&code=invalid_code&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback',
+            `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+            qs.stringify(data),
             {
               headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
-              }
+              },
+              timeout: 10000
             }
           );
         });
@@ -212,6 +207,79 @@ describe('GitHub Client - Error Handling', () => {
           expect(err.statusCode).toBe(401);
           expect(err.type).toBe('github_error');
         });
+    });
+  });
+
+  describe('User Info Errors', () => {
+    test('should handle error response with 401 status', async () => {
+      mockAxios.get.mockRejectedValue({
+        response: {
+          status: 401,
+          data: { message: 'Unauthorized' }
+        }
+      });
+
+      const client = github();
+      await expect(client.getUserDetails('bad_token')).rejects.toMatchObject({
+        message: 'GitHub API responded with a failure: 401 (Unauthorized)',
+        statusCode: 401,
+        type: 'github_error'
+      });
+    });
+
+    test('should handle error response without primary email', async () => {
+      const userDetails = {
+        login: 'octocat',
+        id: 1,
+        avatar_url: `${mockValues.GITHUB_API_URL}/images/error/octocat_happy.gif`,
+        name: 'monalisa octocat',
+        email: 'octocat@github.com',
+        html_url: `${mockValues.GITHUB_LOGIN_URL}/octocat`,
+        blog: 'https://github.blog',
+        updated_at: '2008-01-14T04:33:35Z',
+      };
+
+      const userEmails = [
+        {
+          email: 'octocat@github.com',
+          primary: false,
+          verified: true,
+          visibility: null,
+        },
+      ];
+
+      mockAxios.get
+        .mockResolvedValueOnce({
+          status: 200,
+          data: userDetails
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: userEmails
+        });
+
+      const client = github();
+      await expect(client.getUserInfo('token_without_primary_email')).rejects.toThrow(
+        'User did not have a primary email address'
+      );
+    });
+  });
+
+  describe('Token Errors', () => {
+    test('should handle error response with bad code', async () => {
+      mockAxios.post.mockRejectedValue({
+        response: {
+          status: 400,
+          data: {
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.'
+          }
+        }
+      });
+
+      await expect(
+        github().getToken('bad_code')
+      ).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
     });
   });
 });

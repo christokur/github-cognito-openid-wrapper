@@ -8,6 +8,11 @@ jest.mock('./helpers', () => ({
   getAxios: jest.fn(() => mockAxios)
 }));
 
+// Mocking process.env values
+process.env.GITHUB_CLIENT_ID = 'mock_client_id';
+process.env.GITHUB_CLIENT_SECRET = 'mock_client_secret';
+
+const Configuration = require('./config');
 const githubClient = require('./github');
 let github;
 
@@ -16,9 +21,9 @@ beforeAll(() => {
 });
 
 describe('Token Handling', () => {
-  const mockClientId = 'mock-client-id';
-  const mockClientSecret = 'mock-client-secret';
-  const mockRedirectUri = 'http://localhost/callback';
+  const mockClientId = Configuration.GITHUB_CLIENT_ID;
+  const mockClientSecret = Configuration.GITHUB_CLIENT_SECRET;
+  const mockRedirectUri = Configuration.COGNITO_REDIRECT_URI;
   const mockAccessToken = 'mock-access-token';
   const mockState = 'mock-state';
   const mockVerifier = 'mock-verifier';
