@@ -160,8 +160,7 @@ describe('GitHub Client - Error Handling', () => {
               headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
-              },
-              timeout: 10000
+              }
             }
           );
         });

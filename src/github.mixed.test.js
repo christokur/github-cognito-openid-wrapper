@@ -5,7 +5,14 @@ jest.mock('./config', () => ({
   GITHUB_API_URL: 'http://api.github.com',
   GITHUB_LOGIN_URL: 'http://github.com',
 }));
+const mockAxios = {
+  get: jest.fn(),
+  post: jest.fn(),
+  create: jest.fn()
+};
+const mockGetAxios = jest.fn(() => mockAxios);
 
+// !AI: Leave this alone
 const noDelay = () => {
   return 0;
 };
@@ -16,17 +23,13 @@ jest.mock('./utils/retry', () => ({
   ...jest.requireActual('./utils/retry'),
   exponentialBackoff: noDelay
 }));
+// !AI: Leave this alone
 
-const mockAxios = {
-  get: jest.fn(),
-  post: jest.fn(),
-  create: jest.fn()
-};
-const mockGetAxios = jest.fn(() => mockAxios);
 jest.mock('./helpers', () => ({
   getAxios: mockGetAxios,
   NumericDate: jest.requireActual('./helpers').NumericDate
 }));
+
 
 const github = require('./github');
 

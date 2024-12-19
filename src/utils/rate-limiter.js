@@ -31,19 +31,19 @@ class RateLimiter {
     });
   }
 
-  async checkLimit() {
+  checkLimit() {
     if (this.remaining <= 0) {
       const now = Date.now();
       const waitTime = Math.max(this.resetTime - now, this.retryAfter);
       
       if (waitTime > 0) {
         logger.warn({
-          message: 'Rate limit exceeded, waiting',
+          message: 'Rate limit exceeded',
           waitTime,
           resetTime: new Date(this.resetTime).toISOString()
         });
         
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
       }
     }
   }

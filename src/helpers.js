@@ -51,4 +51,5 @@ module.exports = {
   ensureString,
   ensureNumber,
   validateConfig,
+  getAxios,
 };

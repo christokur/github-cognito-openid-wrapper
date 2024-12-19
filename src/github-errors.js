@@ -66,13 +66,12 @@ const handleGitHubError = (error) => {
 
     // Handle rate limiting specifically
     if (rateLimiter.isRateLimitError(error)) {
-      rateLimiter.checkLimit((err) => {
-        if (err) {
-          throw err;
-        }
-        throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
-      });
-      return;
+      try {
+        rateLimiter.checkLimit();
+      } catch (err) {
+        throw err;
+      }
+      throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
     }
 
     const status = error.response.status;

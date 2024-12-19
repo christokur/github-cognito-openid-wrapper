@@ -57,6 +57,8 @@ class GitHubClient {
 
     const queryString = qs.stringify(params);
     const endpoints = this.getApiEndpoints();
+    console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
+    console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
     return `${endpoints.oauthAuthorize}?${queryString}`;
   }
 
