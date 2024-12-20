@@ -14,35 +14,32 @@ const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 const validLogLevels = ['error', 'warn', 'info', 'debug'];
 if (!validLogLevels.includes(LOG_LEVEL)) {
   console.warn(`Invalid LOG_LEVEL "${LOG_LEVEL}". Using "info" instead. Valid levels are: ${validLogLevels.join(', ')}`);
+  LOG_LEVEL = 'info'
 }
 
 const logger = winston.createLogger({
-  level: validLogLevels.includes(LOG_LEVEL) ? LOG_LEVEL : 'info',
+  level: LOG_LEVEL,
 });
 
 // Common format that handles both structured logging and printf-style placeholders
 const commonFormat = winston.format.combine(
+  winston.format.uncolorize(), // Remove colors
   winston.format.splat(),
   winston.format.timestamp(),
   winston.format.printf(({ level, message, timestamp, ...rest }) => {
-    // Handle both structured logging and printf-style messages
     const logEntry = {
       timestamp,
       level,
-      ...rest
+      message: typeof message === 'object' ? message : { message }
     };
 
-    // If message is an object, spread it into the log entry
-    if (typeof message === 'object' && message !== null) {
-      Object.assign(logEntry, message);
-    } else {
-      // For string messages (including printf-style), use the message field
-      logEntry.message = message;
-    }
+    // Add any additional fields
+    Object.entries(rest).forEach(([key, value]) => {
+      if (key !== Symbol.for('splat')) {
+        logEntry[key] = value;
+      }
+    });
 
-    // Remove internal winston splat array if it exists
-    delete logEntry[Symbol.for('splat')];
-    
     return JSON.stringify(logEntry);
   })
 );

@@ -3,7 +3,7 @@ const controllers = require('../controllers');
 module.exports.handler = (event, context, callback) => {
   try {
     // Get the host from the event headers
-    const host = event.headers && event.headers.Host;
+    let host = event.headers && event.headers.Host;
     if (!host) {
       return callback(null, {
         statusCode: 400,
