@@ -11,7 +11,28 @@ const express = require('express');
 const logger = require('../src/connectors/logger');
 
 const app = express();
-app.use(express.json());
+
+// Add CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Parse JSON for POST/PUT/PATCH requests
+const jsonParser = express.json();
+app.post('*', jsonParser);
+app.put('*', jsonParser);
+app.patch('*', jsonParser);
+
+// Server version
+const SERVER_VERSION = '0.1.0';
 
 // Mock OIDC configuration
 const config = {
@@ -19,7 +40,7 @@ const config = {
   authorization_endpoint: 'http://localhost:3000/authorize',
   token_endpoint: 'http://localhost:3000/token',
   userinfo_endpoint: 'http://localhost:3000/userinfo',
-  jwks_uri: 'http://localhost:3000/jwks',
+  jwks_uri: 'http://localhost:3000/.well-known/jwks.json',
   response_types_supported: ['code'],
   subject_types_supported: ['public'],
   id_token_signing_alg_values_supported: ['RS256'],
@@ -41,6 +62,11 @@ const jwks = {
 };
 
 // OIDC endpoints
+// Version endpoint (only available on mock server)
+app.get('/version', (req, res) => {
+  res.json({ version: SERVER_VERSION });
+});
+
 app.get('/.well-known/openid-configuration', (req, res) => {
   logger.debug('Handling OpenID Configuration request', {
     endpoint: '/.well-known/openid-configuration',
@@ -54,7 +80,7 @@ app.get('/.well-known/openid-configuration', (req, res) => {
   res.json(config);
 });
 
-app.get('/jwks', (req, res) => {
+app.get('/.well-known/jwks.json', (req, res) => {
   logger.debug('Handling JWKS request', {
     endpoint: '/jwks',
     headers: req.headers
@@ -67,120 +93,42 @@ app.get('/jwks', (req, res) => {
   res.json(jwks);
 });
 
-app.get('/authorize', (req, res) => {
-  const { response_type, client_id, redirect_uri, scope, state } = req.query;
-  
-  logger.debug('Handling Authorization request', {
-    endpoint: '/authorize',
-    headers: req.headers,
-    query: req.query
-  });
-  
-  logger.info('Authorization requested', {
-    endpoint: '/authorize',
-    query: req.query
-  });
+// Method handlers for each endpoint
+const endpoints = {
+  '/authorize': { methods: ['GET'] },
+  '/token': { methods: ['POST'] },
+  '/userinfo': { methods: ['GET'] }
+};
 
-  // Validate required parameters
-  if (!response_type || !client_id || !redirect_uri) {
-    logger.warn('Missing required parameters', {
-      endpoint: '/authorize',
-      params: { response_type, client_id, redirect_uri }
-    });
-    
-    return res.status(400).json({
-      error: 'invalid_request',
-      error_description: 'Missing required parameters'
-    });
-  }
-
-  // Instead of redirecting, return the URL that would be redirected to
-  const redirectUrl = `${redirect_uri}?code=mock_code&state=${state || ''}`;
-  
-  // Return 302 with Location header
-  res.status(302).json({
-    statusCode: 302,
-    headers: {
-      Location: redirectUrl
+// Generic method handler for all endpoints
+Object.entries(endpoints).forEach(([path, config]) => {
+  // Handle method not allowed
+  app.use(path, (req, res, next) => {
+    if (config.methods.includes(req.method)) {
+      return next();
     }
-  });
-});
-
-app.post('/token', (req, res) => {
-  logger.debug('Handling Token request', {
-    endpoint: '/token',
-    headers: req.headers,
-    body: req.body
-  });
-  
-  logger.info('Token requested', {
-    endpoint: '/token',
-    body: req.body
-  });
-
-  // Validate required parameters
-  if (!req.body.grant_type || !req.body.code || !req.body.redirect_uri) {
-    logger.warn('Missing required parameters', {
-      endpoint: '/token',
-      body: req.body
-    });
-    
-    return res.status(400).json({
+    res.status(405).json({
       error: 'invalid_request',
-      error_description: 'Missing required parameters'
+      error_description: 'Method not allowed'
     });
-  }
-
-  res.json({
-    access_token: 'mock_access_token',
-    token_type: 'Bearer',
-    expires_in: 3600,
-    id_token: 'mock_id_token'
-  });
-});
-
-app.get('/userinfo', (req, res) => {
-  const auth = req.headers.authorization;
-  
-  logger.debug('Handling Userinfo request', {
-    endpoint: '/userinfo',
-    headers: req.headers
-  });
-  
-  logger.info('Userinfo requested', {
-    endpoint: '/userinfo',
-    authorization: auth
   });
 
-  if (!auth || !auth.startsWith('Bearer ')) {
-    logger.warn('Missing or invalid authorization header', {
-      endpoint: '/userinfo',
-      authorization: auth
+  // Handle allowed methods - just pass through without validation
+  config.methods.forEach(method => {
+    app[method.toLowerCase()](path, (req, res) => {
+      logger.info(`${method} ${path} requested`, {
+        endpoint: path,
+        method: method,
+        query: req.query,
+        body: req.body,
+        headers: req.headers
+      });
+      
+      // Pass through with 200 OK
+      res.json({
+        message: `${method} ${path} called`
+      });
     });
-    
-    return res.status(401).json({
-      error: 'invalid_token',
-      error_description: 'Missing or invalid authorization header'
-    });
-  }
-
-  // Validate token (in this case, just check if it's our mock token)
-  if (auth !== 'Bearer mock_access_token') {
-    logger.warn('Invalid token', {
-      endpoint: '/userinfo',
-      authorization: auth
-    });
-    
-    return res.status(401).json({
-      error: 'invalid_token',
-      error_description: 'Invalid token'
-    });
-  }
-
-  res.json({
-    sub: 'mock_user_id',
-    name: 'Mock User',
-    email: 'mock@example.com'
   });
 });
 
