@@ -1,32 +1,15 @@
-const { mockAxios, mockGetAxios, mockAxiosCreate } = require('./sharedMocks');
+const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
 
 describe('GitHub Client - User Operations', () => {
-  let provider;
   let github;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // Store original env
-  const originalEnv = { ...process.env };
-
   beforeAll(() => {
-    // Set environment variables before requiring github
-    process.env.GITHUB_CLIENT_ID = mockValues.GITHUB_CLIENT_ID;
-    process.env.GITHUB_CLIENT_SECRET = mockValues.GITHUB_CLIENT_SECRET;
-    process.env.COGNITO_REDIRECT_URI = mockValues.COGNITO_REDIRECT_URI;
-    process.env.GITHUB_API_URL = mockValues.GITHUB_API_URL;
-    process.env.GITHUB_LOGIN_URL = mockValues.GITHUB_LOGIN_URL;
-
-    // Now require github after env vars are set
     github = require('./github');
-  });
-
-  afterAll(() => {
-    // Restore original env
-    process.env = { ...originalEnv };
   });
 
   describe('getUserDetails', () => {

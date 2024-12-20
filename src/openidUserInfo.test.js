@@ -1,24 +1,21 @@
-const { mockValues } = require('./mocks');
-const { mockAxios } = require('./sharedMocks');
+const {mockAxios} = require('./sharedMocks');
+const {mockValues} = require('./mocks');
 
 describe('openid domain layer - User Info', () => {
   let openid;
   let github;
-  let client;
 
   beforeEach(() => {
     jest.resetModules();
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     openid = require('./openid');
     github = require('./github');
-    client = github();
   });
 
   afterEach(() => {
     jest.resetModules();
-    delete require.cache[require.resolve('./config')];
+    delete require.cache[require.resolve('./openid')];
     delete require.cache[require.resolve('./github')];
-    delete require.cache[require.resolve('./connectors/logger')];
   });
 
   // User Info Tests
@@ -58,13 +55,6 @@ describe('openid domain layer - User Info', () => {
             // Mock all potential retries for user details
             mockAxios.get
               .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              // Mock all potential retries for emails
-              .mockResolvedValueOnce(emailsResponse)
-              .mockResolvedValueOnce(emailsResponse)
-              .mockResolvedValueOnce(emailsResponse)
               .mockResolvedValueOnce(emailsResponse);
 
             const result = await openid.getUserInfo('good_token');
@@ -127,26 +117,11 @@ describe('openid domain layer - User Info', () => {
             const emailsResponse = {
               status: 200,
               headers: {},
-              data: [
-                {
-                  email: mockValues.USER_EMAIL,
-                  primary: false,
-                  verified: true,
-                  visibility: null,
-                }
-              ]
+              data: []  // No emails at all
             };
 
-            // Mock all potential retries for user details
             mockAxios.get
               .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              .mockResolvedValueOnce(userResponse)
-              // Mock all potential retries for emails
-              .mockResolvedValueOnce(emailsResponse)
-              .mockResolvedValueOnce(emailsResponse)
-              .mockResolvedValueOnce(emailsResponse)
               .mockResolvedValueOnce(emailsResponse);
 
             await expect(
@@ -187,12 +162,7 @@ describe('openid domain layer - User Info', () => {
             },
           };
 
-          // Mock all potential retries
-          mockAxios.get
-            .mockRejectedValueOnce(error)
-            .mockRejectedValueOnce(error)
-            .mockRejectedValueOnce(error)
-            .mockRejectedValueOnce(error);
+          mockAxios.get.mockRejectedValue(error);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow('Bad credentials');
 
