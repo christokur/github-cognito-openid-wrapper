@@ -32,7 +32,7 @@ app.put('*', jsonParser);
 app.patch('*', jsonParser);
 
 // Server version
-const SERVER_VERSION = '0.1.0';
+const SERVER_VERSION = '0.1.1';
 
 // Mock OIDC configuration
 const config = {
@@ -150,3 +150,8 @@ app.listen(port, () => {
   logger.info(`Mock OIDC server started on port ${port} with log level ${LOG_LEVEL}`);
   logger.debug('Debug logging enabled');
 });
+
+// Export configuration for other modules
+module.exports = {
+  SERVER_VERSION
+};

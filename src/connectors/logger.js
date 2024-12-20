@@ -8,7 +8,7 @@ const {
 } = require('../config');
 
 // Get log level from environment variable, default to 'info'
-const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
+let LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 
 // Validate log level
 const validLogLevels = ['error', 'warn', 'info', 'debug'];
