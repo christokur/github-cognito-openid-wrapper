@@ -139,7 +139,7 @@ describe('GitHub Client - Error Handling', () => {
           expect(err.statusCode).toBe(400);
           expect(err.type).toBe('github_error');
 
-          expect(mockAxios.post).toHaveBeenCalledWith(
+          const expectedCall = [
             `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
             {
               client_id: mockValues.GITHUB_CLIENT_ID,
@@ -153,9 +153,11 @@ describe('GitHub Client - Error Handling', () => {
                 'Content-Type': 'application/x-www-form-urlencoded'
               },
               timeout: 10000,
-              transformRequest: [(data) => data]
+              transformRequest: expect.any(Array)
             }
-          );
+          ];
+
+          expect(mockAxios.post.mock.calls[0]).toEqual(expectedCall);
         });
     });
 
