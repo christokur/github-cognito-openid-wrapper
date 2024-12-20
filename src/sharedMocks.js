@@ -1,8 +1,9 @@
 const mockAxios = {
-  get: jest.fn(),
-  post: jest.fn(),
+  get: jest.fn(() => Promise.resolve()),
+  post: jest.fn(() => Promise.resolve()),
   create: jest.fn()
 };
+const mockGetAxios = jest.fn(() => mockAxios);
 
 // !AI: Leave this alone
 const noDelay = () => {
@@ -18,8 +19,12 @@ jest.mock('./utils/retry', () => ({
 // !AI: Leave this alone
 
 jest.mock('./helpers', () => ({
-  getAxios: mockAxios,
+  getAxios: mockGetAxios,
   NumericDate: jest.requireActual('./helpers').NumericDate
 }));
 
-module.exports = { mockAxios };
+// Store original env at module level
+const originalEnv = { ...process.env };
+
+// Export originalEnv so tests can use it
+module.exports = { mockAxios, mockGetAxios };
