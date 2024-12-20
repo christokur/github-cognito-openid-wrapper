@@ -17,32 +17,28 @@ if (!validLogLevels.includes(LOG_LEVEL)) {
   LOG_LEVEL = 'info'
 }
 
-const logger = winston.createLogger({
-  level: LOG_LEVEL,
-});
-
 // Common format that handles both structured logging and printf-style placeholders
 const commonFormat = winston.format.combine(
-  winston.format.uncolorize(), // Remove colors
   winston.format.splat(),
   winston.format.timestamp(),
   winston.format.printf(({ level, message, timestamp, ...rest }) => {
     const logEntry = {
       timestamp,
       level,
-      message: typeof message === 'object' ? message : { message }
+      ...(typeof message === 'object' ? message : { message }),
+      ...Object.entries(rest)
+        .filter(([key]) => key !== Symbol.for('splat'))
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     };
-
-    // Add any additional fields
-    Object.entries(rest).forEach(([key, value]) => {
-      if (key !== Symbol.for('splat')) {
-        logEntry[key] = value;
-      }
-    });
 
     return JSON.stringify(logEntry);
   })
 );
+
+const logger = winston.createLogger({
+  level: LOG_LEVEL,
+  format: commonFormat
+});
 
 // Activate Splunk logging if Splunk's env variables are set
 if (SPLUNK_URL) {
@@ -60,15 +56,13 @@ if (SPLUNK_URL) {
   logger.add(
     new SplunkStreamEvent({
       splunk: splunkSettings,
-      format: commonFormat,
-    }),
+      format: commonFormat
+    })
   );
 } else {
   // STDOUT logging for dev/regular servers
   logger.add(
-    new winston.transports.Console({
-      format: commonFormat,
-    }),
+    new winston.transports.Console()
   );
 }
 
