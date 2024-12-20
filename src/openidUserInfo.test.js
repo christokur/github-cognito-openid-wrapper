@@ -1,5 +1,5 @@
 const { mockValues } = require('./mocks');
-const { mockAxios, mockGetAxios } = require('./sharedMocks');
+const { mockAxios } = require('./sharedMocks');
 
 describe('openid domain layer - User Info', () => {
   let openid;
@@ -8,6 +8,7 @@ describe('openid domain layer - User Info', () => {
 
   beforeEach(() => {
     jest.resetModules();
+    jest.resetAllMocks();
     openid = require('./openid');
     github = require('./github');
     client = github();
@@ -20,51 +21,51 @@ describe('openid domain layer - User Info', () => {
     delete require.cache[require.resolve('./connectors/logger')];
   });
 
-  afterAll(() => {
-    // Restore original env
-    process.env = originalEnv;
-    jest.resetAllMocks();
-  });
-
   // User Info Tests
   describe('userinfo function', () => {
     describe('with a good token', () => {
       describe('with complete user details', () => {
         describe('with a primary email', () => {
           test('complete', async () => {
-            const { mockAxios } = require('./sharedMocks');
-            mockAxios.get.mockImplementation((url) => {
-              if (url === `${mockValues.GITHUB_API_URL}/user`) {
-                return Promise.resolve({
-                  status: 200,
-                  headers: {},
-                  data: {
-                    login: mockValues.USER_LOGIN,
-                    id: mockValues.USER_ID,
-                    avatar_url: `${mockValues.GITHUB_API_URL}/images/error/${mockValues.USER_AVATAR}`,
-                    name: mockValues.USER_NAME,
-                    email: mockValues.USER_EMAIL,
-                    html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
-                    blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
-                    updated_at: mockValues.USER_UPDATED_AT,
-                  }
-                });
-              } else if (url === `${mockValues.GITHUB_API_URL}/user/emails`) {
-                return Promise.resolve({
-                  status: 200,
-                  headers: {},
-                  data: [
-                    {
-                      email: mockValues.USER_EMAIL,
-                      primary: true,
-                      verified: true,
-                      visibility: null,
-                    }
-                  ]
-                });
+            const userResponse = {
+              status: 200,
+              headers: {},
+              data: {
+                login: mockValues.USER_LOGIN,
+                id: mockValues.USER_ID,
+                avatar_url: `${mockValues.GITHUB_API_URL}/images/error/${mockValues.USER_AVATAR}`,
+                name: mockValues.USER_NAME,
+                email: mockValues.USER_EMAIL,
+                html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
+                blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
+                updated_at: mockValues.USER_UPDATED_AT,
               }
-              throw new Error(`Unexpected URL: ${url}`);
-            });
+            };
+
+            const emailsResponse = {
+              status: 200,
+              headers: {},
+              data: [
+                {
+                  email: mockValues.USER_EMAIL,
+                  primary: true,
+                  verified: true,
+                  visibility: null,
+                }
+              ]
+            };
+
+            // Mock all potential retries for user details
+            mockAxios.get
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              // Mock all potential retries for emails
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse);
 
             const result = await openid.getUserInfo('good_token');
 
@@ -108,39 +109,45 @@ describe('openid domain layer - User Info', () => {
 
         describe('without a primary email', () => {
           test('fails', async () => {
-            const { mockAxios } = require('./sharedMocks');
-            mockAxios.get.mockImplementation((url) => {
-              if (url === `${mockValues.GITHUB_API_URL}/user`) {
-                return Promise.resolve({
-                  status: 200,
-                  headers: {},
-                  data: {
-                    login: mockValues.USER_LOGIN,
-                    id: mockValues.USER_ID,
-                    avatar_url: `${mockValues.GITHUB_API_URL}/images/error/${mockValues.USER_AVATAR}`,
-                    name: mockValues.USER_NAME,
-                    email: mockValues.USER_EMAIL,
-                    html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
-                    blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
-                    updated_at: mockValues.USER_UPDATED_AT,
-                  }
-                });
-              } else if (url === `${mockValues.GITHUB_API_URL}/user/emails`) {
-                return Promise.resolve({
-                  status: 200,
-                  headers: {},
-                  data: [
-                    {
-                      email: mockValues.USER_EMAIL,
-                      primary: false,
-                      verified: true,
-                      visibility: null,
-                    }
-                  ]
-                });
+            const userResponse = {
+              status: 200,
+              headers: {},
+              data: {
+                login: mockValues.USER_LOGIN,
+                id: mockValues.USER_ID,
+                avatar_url: `${mockValues.GITHUB_API_URL}/images/error/${mockValues.USER_AVATAR}`,
+                name: mockValues.USER_NAME,
+                email: mockValues.USER_EMAIL,
+                html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
+                blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
+                updated_at: mockValues.USER_UPDATED_AT,
               }
-              throw new Error(`Unexpected URL: ${url}`);
-            });
+            };
+
+            const emailsResponse = {
+              status: 200,
+              headers: {},
+              data: [
+                {
+                  email: mockValues.USER_EMAIL,
+                  primary: false,
+                  verified: true,
+                  visibility: null,
+                }
+              ]
+            };
+
+            // Mock all potential retries for user details
+            mockAxios.get
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              .mockResolvedValueOnce(userResponse)
+              // Mock all potential retries for emails
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse)
+              .mockResolvedValueOnce(emailsResponse);
 
             await expect(
               openid.getUserInfo('without_a_primary_email')
@@ -180,8 +187,12 @@ describe('openid domain layer - User Info', () => {
             },
           };
 
-          const { mockAxios } = require('./sharedMocks');
-          mockAxios.get.mockRejectedValue(error);
+          // Mock all potential retries
+          mockAxios.get
+            .mockRejectedValueOnce(error)
+            .mockRejectedValueOnce(error)
+            .mockRejectedValueOnce(error)
+            .mockRejectedValueOnce(error);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow('Bad credentials');
 
@@ -205,7 +216,6 @@ describe('openid domain layer - User Info', () => {
             },
           };
 
-          const { mockAxios } = require('./sharedMocks');
           mockAxios.get.mockRejectedValue(detailsError);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow(

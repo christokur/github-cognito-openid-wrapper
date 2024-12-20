@@ -3,7 +3,6 @@ const mockAxios = {
   post: jest.fn(),
   create: jest.fn()
 };
-const mockGetAxios = jest.fn(() => mockAxios);
 
 // !AI: Leave this alone
 const noDelay = () => {
@@ -19,8 +18,8 @@ jest.mock('./utils/retry', () => ({
 // !AI: Leave this alone
 
 jest.mock('./helpers', () => ({
-  getAxios: mockGetAxios,
+  getAxios: mockAxios,
   NumericDate: jest.requireActual('./helpers').NumericDate
 }));
 
-module.exports = { mockAxios, mockGetAxios };
+module.exports = { mockAxios };

@@ -10,7 +10,7 @@ exports.mockValues = {
   COGNITO_REDIRECT_URI: 'http://localhost/callback',
   GITHUB_API_URL: 'https://api.githube.com',
   GITHUB_LOGIN_URL: 'https://githube.com',
-  GITHUB_DOCS_URL: 'https://docs.github.com',
+  GITHUB_DOCS_URL: 'https://docs.githube.com',
   PORT: '3000',
   COGNITO_JWKS_MAX_AGE: '3600',
   GITHUB_API_VERSION: 'v3',
