@@ -1,18 +1,9 @@
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
 
-const Configuration = require('./config');
-const githubClient = require('./github');
-const { mockValues } = require('./mocks');
-let github;
-
-beforeAll(() => {
-  github = githubClient(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-});
-
 describe('Token Handling', () => {
-  const mockClientId = Configuration.GITHUB_CLIENT_ID;
-  const mockClientSecret = Configuration.GITHUB_CLIENT_SECRET;
+  const mockClientId = mockValues.GITHUB_CLIENT_ID;
+  const mockClientSecret = mockValues.GITHUB_CLIENT_SECRET;
   const mockRedirectUri = mockValues.COGNITO_REDIRECT_URI;
   const mockAccessToken = 'mock-access-token';
   const mockState = 'mock-state';
@@ -28,14 +19,28 @@ describe('Token Handling', () => {
     status: 200
   };
 
+  let Configuration;
+  let github;
+  let client;
+
   beforeEach(() => {
+    jest.resetModules();
     jest.clearAllMocks();
-    mockAxios.post.mockReset();
+    Configuration = require('./config');
+    github = require('./github');
+    client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+    delete require.cache[require.resolve('./config')];
+    delete require.cache[require.resolve('./github')];
+    delete require.cache[require.resolve('./connectors/logger')];
   });
 
   it('should exchange code for token successfully', async () => {
     mockAxios.post.mockResolvedValue(mockResponse);
-    const result = await github.getToken('code', mockState, mockVerifier);
+    const result = await client.getToken('code', mockState, mockVerifier);
     expect(result).toEqual(mockResponse.data);
     expect(mockAxios.post).toHaveBeenCalledWith(
       `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
@@ -51,7 +56,7 @@ describe('Token Handling', () => {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         timeout: expect.any(Number),
-        transformRequest: [(data) => data]
+        transformRequest: expect.any(Array)
       }
     );
   }, 30000);
@@ -67,12 +72,12 @@ describe('Token Handling', () => {
       }
     };
     mockAxios.post.mockRejectedValue(errorResponse);
-    await expect(github.getToken('invalid-code', mockState)).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
+    await expect(client.getToken('invalid-code', mockState)).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
   }, 30000);
 
   it('should handle network errors', async () => {
     const networkError = new Error('Network Error');
     mockAxios.post.mockRejectedValue(networkError);
-    await expect(github.getToken('code', mockState)).rejects.toThrow('Network error occurred while contacting GitHub API');
+    await expect(client.getToken('code', mockState)).rejects.toThrow('Network error occurred while contacting GitHub API');
   }, 30000);
 });
