@@ -65,17 +65,17 @@ class TokenService {
         Configuration.GITHUB_LOGIN_URL
       );
 
-      const githubToken = await githubClientInstance.getToken(code, state, codeVerifier);
+      const githubTokenResponse = await githubClientInstance.getToken(code, state, codeVerifier);
 
       // GitHub returns scopes separated by commas
       // But OAuth wants them to be spaces
       // https://tools.ietf.org/html/rfc6749#section-5.1
       // Also, we need to add openid as a scope,
       // since GitHub will have stripped it
-      const scope = `openid ${githubToken.scope.replace(/,/g, ' ')}`;
+      const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
 
       return {
-        ...githubToken,
+        ...githubTokenResponse,
         scope
       };
     } catch (error) {

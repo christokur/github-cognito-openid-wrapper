@@ -1,6 +1,7 @@
 const qs = require('qs');
 const config = require('./config');
 const { gitHubGet, gitHubPost } = require('./github-api');
+const logger = require('./connectors/logger');
 
 class GitHubClient {
   constructor(apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) {
@@ -18,7 +19,7 @@ class GitHubClient {
       userEmails: `${this.apiBaseUrl}/user/emails`,
       oauthToken: `${this.loginBaseUrl}/login/oauth/access_token`,
       oauthAuthorize: `${this.loginBaseUrl}/login/oauth/authorize`,
-    } ;
+    };
   }
 
   async getUserDetails(accessToken) {
@@ -58,17 +59,22 @@ class GitHubClient {
 
   async getToken(code) {
     const endpoints = this.getApiEndpoints();
-    const data = {
+    const params = {
       client_id: config.GITHUB_CLIENT_ID,
       client_secret: config.GITHUB_CLIENT_SECRET,
       code,
       redirect_uri: config.COGNITO_REDIRECT_URI,
     };
 
+    logger.debug('getToken called with:', { code, data: params });
+
     try {
-      const response = await gitHubPost(endpoints.oauthToken, data);
-      return response.access_token;
+      const response = await gitHubPost(endpoints.oauthToken, params);
+      logger.debug('Response from gitHubPost:', response);
+      // Parse the response if it's a string
+      return typeof response === 'string' ? qs.parse(response) : response;
     } catch (error) {
+      logger.error('Error in getToken:', error);
       throw error;
     }
   }

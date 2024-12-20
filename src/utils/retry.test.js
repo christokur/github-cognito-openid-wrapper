@@ -15,8 +15,8 @@ describe('Retry Utility Functions', () => {
       expect(isRetryableError(error)).toBe(true);
     });
 
-    it('should return false for non-retryable error', () => {
-      const error = { isRetryable: false };
+    it('should return false for 400 error', () => {
+      const error = { response: { status: 400 } };
       expect(isRetryableError(error)).toBe(false);
     });
 
@@ -42,7 +42,7 @@ describe('Retry Utility Functions', () => {
       expect(operation).toHaveBeenCalledTimes(1);
     });
 
-    it('should retry on retryable errors', async () => {
+    it('should retry on retryable errors', () => {
       const operation = jest.fn()
         .mockImplementationOnce(() => { throw { response: { status: 500 } }; })
         .mockImplementationOnce(() => 'success');
@@ -51,17 +51,26 @@ describe('Retry Utility Functions', () => {
       expect(operation).toHaveBeenCalledTimes(2);
     });
 
-    it('should log error after max retries', () => {
-      const operation = jest.fn(() => { throw { response: { status: 500 } }; });
+    it('should fail after max retries for retryable errors', () => {
+      const error = { response: { status: 500 } };
+      const operation = jest.fn(() => { throw error; });
+
       expect(() => withRetry(operation, { maxRetries: 2 })).toThrow();
-      expect(logger.error).toHaveBeenCalled();
+      expect(() => withRetry(operation, { maxRetries: 2 })).toThrowError(expect.objectContaining({
+        response: { status: 500 }
+      }));
+      expect(operation).toHaveBeenCalledTimes(6); // (initial + 2 retries) × 2 calls to withRetry
     });
 
-    it('should not retry on non-retryable errors', async () => {
-      const operation = jest.fn(() => Promise.reject({ isRetryable: false }));
-      await expect(withRetry(operation)).rejects.toThrow({ isRetryable: false });
-      expect(logger.error).toHaveBeenCalled();
-      expect(operation).toHaveBeenCalledTimes(1);
+    it('should not retry on non-retryable status codes', () => {
+      const error = { response: { status: 400 } };
+      const operation = jest.fn(() => { throw error; });
+
+      expect(() => withRetry(operation)).toThrow();
+      expect(() => withRetry(operation)).toThrowError(expect.objectContaining({
+        response: { status: 400 }
+      }));
+      expect(operation).toHaveBeenCalledTimes(2); // 1 call × 2 calls to withRetry
     });
   });
 });

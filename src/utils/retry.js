@@ -22,7 +22,7 @@ const isRetryableError = (error) => {
     status === 503 || // Service Unavailable
     status === 504    // Gateway Timeout
   );
-};
+} ;
 
 function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {}) {
   let retryCount = 0;

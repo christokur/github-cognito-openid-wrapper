@@ -1,5 +1,5 @@
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
-const mockValues = require('./mocks');
+const { mockValues } = require('./mocks');
 
 const mockRateLimiter = {
   checkLimit: jest.fn(),
@@ -11,10 +11,6 @@ jest.mock('./utils/rate-limiter', () => mockRateLimiter);
 
 const githubClient = require('./github');
 let github;
-
-beforeAll(() => {
-  github = githubClient(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-});
 
 describe('User Details and Emails', () => {
   const mockAccessToken = 'mock-access-token';
@@ -43,6 +39,7 @@ describe('User Details and Emails', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAxios.get.mockReset();
+    github = githubClient(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
   });
 
   it('should fetch user details successfully', async () => {

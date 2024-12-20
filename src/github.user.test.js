@@ -3,13 +3,25 @@ const { mockValues } = require('./mocks');
 
 describe('GitHub Client - User Operations', () => {
   let github;
+  let originalEnv;
 
   beforeEach(() => {
+    // Store original env
+    originalEnv = { ...process.env };
+    
+    // Set mock environment variables
+    Object.entries(mockValues).forEach(([key, value]) => {
+      process.env[key] = value;
+    });
+
     jest.clearAllMocks();
+    jest.resetModules();
+    github = require('./github');
   });
 
-  beforeAll(() => {
-    github = require('./github');
+  afterEach(() => {
+    // Restore original env
+    process.env = originalEnv;
   });
 
   describe('getUserDetails', () => {
@@ -24,7 +36,7 @@ describe('GitHub Client - User Operations', () => {
 
       mockAxios.get.mockResolvedValue(mockResponse);
 
-      const client = github();
+      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       const userDetails = await client.getUserDetails('mock_access_token');
       expect(userDetails).toEqual(mockResponse.data);
       expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
@@ -41,7 +53,7 @@ describe('GitHub Client - User Operations', () => {
         response: { status: 404, data: { message: 'Not Found' } },
       });
 
-      const client = github();
+      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       await expect(client.getUserDetails('invalid_token')).rejects.toThrow('Not Found');
     });
   });
@@ -63,7 +75,7 @@ describe('GitHub Client - User Operations', () => {
         data: expectedResponse,
       });
 
-      const client = github();
+      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       const result = await client.getUserEmails(accessToken);
       expect(result).toEqual(expectedResponse);
       expect(mockAxios.get).toHaveBeenCalledWith(
@@ -84,7 +96,7 @@ describe('GitHub Client - User Operations', () => {
         response: { status: 401, data: { message: 'Bad credentials' } },
       });
 
-      const client = github();
+      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       await expect(client.getUserEmails(accessToken)).rejects.toThrow('Bad credentials');
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user/emails`,

@@ -1,29 +1,19 @@
-const mockAxios = {
-  get: jest.fn(),
-  post: jest.fn(),
-  create: jest.fn()
-};
-
-jest.mock('./helpers', () => ({
-  getAxios: jest.fn(() => mockAxios)
-}));
-
-// Mocking process.env values
-process.env.GITHUB_CLIENT_ID = 'mock_client_id';
-process.env.GITHUB_CLIENT_SECRET = 'mock_client_secret';
+const { mockAxios, mockGetAxios } = require('./sharedMocks');
+const { mockValues } = require('./mocks');
 
 const Configuration = require('./config');
 const githubClient = require('./github');
+const { mockValues } = require('./mocks');
 let github;
 
 beforeAll(() => {
-  github = githubClient('https://api.github.com', 'https://github.com');
+  github = githubClient(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
 });
 
 describe('Token Handling', () => {
   const mockClientId = Configuration.GITHUB_CLIENT_ID;
   const mockClientSecret = Configuration.GITHUB_CLIENT_SECRET;
-  const mockRedirectUri = Configuration.COGNITO_REDIRECT_URI;
+  const mockRedirectUri = mockValues.COGNITO_REDIRECT_URI;
   const mockAccessToken = 'mock-access-token';
   const mockState = 'mock-state';
   const mockVerifier = 'mock-verifier';
@@ -48,9 +38,21 @@ describe('Token Handling', () => {
     const result = await github.getToken('code', mockState, mockVerifier);
     expect(result).toEqual(mockResponse.data);
     expect(mockAxios.post).toHaveBeenCalledWith(
-      'https://github.com/login/oauth/access_token',
-      expect.stringContaining('code=code'),
-      expect.any(Object)
+      `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+      {
+        client_id: mockClientId,
+        client_secret: mockClientSecret,
+        code: 'code',
+        redirect_uri: mockRedirectUri
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: expect.any(Number),
+        transformRequest: [(data) => data]
+      }
     );
   }, 30000);
 

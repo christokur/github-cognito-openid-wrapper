@@ -139,23 +139,21 @@ describe('GitHub Client - Error Handling', () => {
           expect(err.statusCode).toBe(400);
           expect(err.type).toBe('github_error');
 
-          const qs = require('qs');
-          const data = {
-            client_id: mockValues.GITHUB_CLIENT_ID,
-            client_secret: mockValues.GITHUB_CLIENT_SECRET,
-            code: 'invalid_code',
-            redirect_uri: mockValues.COGNITO_REDIRECT_URI
-          };
-
           expect(mockAxios.post).toHaveBeenCalledWith(
             `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-            qs.stringify(data),
+            {
+              client_id: mockValues.GITHUB_CLIENT_ID,
+              client_secret: mockValues.GITHUB_CLIENT_SECRET,
+              code: 'invalid_code',
+              redirect_uri: mockValues.COGNITO_REDIRECT_URI
+            },
             {
               headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
               },
-              timeout: 10000
+              timeout: 10000,
+              transformRequest: [(data) => data]
             }
           );
         });
@@ -229,11 +227,6 @@ describe('GitHub Client - Error Handling', () => {
 
     test('should handle error response without primary email', async () => {
       const userDetails = {
-        login: 'octocat',
-        id: 1,
-        avatar_url: `${mockValues.GITHUB_API_URL}/images/error/octocat_happy.gif`,
-        name: 'monalisa octocat',
-        email: 'octocat@github.com',
         html_url: `${mockValues.GITHUB_LOGIN_URL}/octocat`,
         blog: 'https://github.blog',
         updated_at: '2008-01-14T04:33:35Z',
@@ -283,6 +276,7 @@ describe('GitHub Client - Error Handling', () => {
     });
   });
 });
+
 
 afterAll(() => {
   jest.useRealTimers();

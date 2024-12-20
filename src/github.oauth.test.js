@@ -1,12 +1,13 @@
 const qs = require('qs');
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
+const logger = require('./connectors/logger');
 
 describe('GitHub Client - OAuth Operations', () => {
-
   let Configuration;
   let client;
   let github;
+  
   beforeEach(() => {
     jest.resetModules();
     Configuration = require('./config');
@@ -26,45 +27,30 @@ describe('GitHub Client - OAuth Operations', () => {
     const INVALID_CODE = 'invalid_code';
 
     test('with valid code', async () => {
-      mockAxios.post.mockImplementation(async (url, data) => {
-        if (data.code === VALID_CODE) {
-          return {
-            status: 200,
-            data: { access_token: 'mock_access_token' },
-          };
+      const mockResponse = {
+        status: 200,
+        data: {
+          access_token: 'mock_access_token',
+          token_type: 'bearer',
+          scope: 'user:email'
         }
-        return Promise.reject({
-          response: {
-            status: 400,
-            data: {
-              error: 'bad_verification_code',
-              error_description: 'The code passed is incorrect or expired.',
-            },
-          },
-        });
-      });
+      };
+
+      mockAxios.post.mockResolvedValueOnce(mockResponse);
 
       const token = await client.getToken(VALID_CODE);
-      expect(token).toBe('mock_access_token');
+      expect(token).toEqual(mockResponse.data);
     });
 
     test('with invalid code', async () => {
-      mockAxios.post.mockImplementation(async (url, data) => {
-        if (data.code === INVALID_CODE) {
-          return Promise.reject({
-            response: {
-              status: 400,
-              data: {
-                error: 'bad_verification_code',
-                error_description: 'The code passed is incorrect or expired.',
-              },
-            },
-          });
-        }
-        return Promise.resolve({
-          status: 200,
-          data: { access_token: 'mock_access_token' },
-        });
+      mockAxios.post.mockRejectedValueOnce({
+        response: {
+          status: 400,
+          data: {
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.',
+          },
+        },
       });
 
       await expect(client.getToken(INVALID_CODE))

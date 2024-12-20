@@ -28,8 +28,8 @@ describe('openid domain layer - Token', () => {
         data: {
           access_token: 'SOME_TOKEN',
           token_type: 'bearer',
-          scope: 'scope1 scope2'
-        }
+          scope: 'scope1,scope2',
+        },
       };
 
       mockAxios.post.mockResolvedValue(mockResponse);
@@ -48,11 +48,20 @@ describe('openid domain layer - Token', () => {
         token_type: 'bearer'
       });
 
-      expect(mockAxios.post).toHaveBeenCalledWith(
-        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-        expect.stringContaining('code=SOME_CODE'),
-        expect.any(Object)
-      );
+      const postCall = mockAxios.post.mock.calls[0];
+      expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+      expect(postCall[1]).toEqual({
+        client_id: mockValues.GITHUB_CLIENT_ID,
+        client_secret: mockValues.GITHUB_CLIENT_SECRET,
+        code: 'SOME_CODE',
+        redirect_uri: mockValues.COGNITO_REDIRECT_URI
+      });
+      expect(postCall[2].headers).toEqual({
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      });
+      expect(postCall[2].timeout).toBe(10000);
+      expect(typeof postCall[2].transformRequest[0]).toBe('function');
     });
   });
 
@@ -79,11 +88,20 @@ describe('openid domain layer - Token', () => {
         )
       ).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
 
-      expect(mockAxios.post).toHaveBeenCalledWith(
-        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-        expect.stringContaining('code=bad_code'),
-        expect.any(Object)
-      );
+      const postCall = mockAxios.post.mock.calls[0];
+      expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+      expect(postCall[1]).toEqual({
+        client_id: mockValues.GITHUB_CLIENT_ID,
+        client_secret: mockValues.GITHUB_CLIENT_SECRET,
+        code: 'bad_code',
+        redirect_uri: mockValues.COGNITO_REDIRECT_URI
+      });
+      expect(postCall[2].headers).toEqual({
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      });
+      expect(postCall[2].timeout).toBe(10000);
+      expect(typeof postCall[2].transformRequest[0]).toBe('function');
     });
   });
 });

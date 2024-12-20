@@ -1,22 +1,23 @@
-jest.mock('./config', () => ({
-  GITHUB_CLIENT_ID: 'testClientId',
-  GITHUB_CLIENT_SECRET: 'testClientSecret',
-  COGNITO_REDIRECT_URI: 'http://localhost/callback',
-  GITHUB_API_URL: 'http://api.github.com',
-  GITHUB_LOGIN_URL: 'http://github.com',
-  GITHUB_API_VERSION: 'v3',
-  GITHUB_API_TIMEOUT: 10000
-}));
-
+const { mockValues } = require('./mocks');
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 
-const Configuration = require('./config');
-const github = require('./github');
-const { mockValues } = require('./mocks');
-
 describe('GitHub Client - Response Handling', () => {
+
+  let Configuration;
+  let client;
+  let github;
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetModules();
+    Configuration = require('./config');
+    github = require('./github');
+    client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+  });
+  
+  afterEach(() => {
+    jest.resetModules();
+    delete require.cache[require.resolve('./config')];
+    delete require.cache[require.resolve('./github')];
+    delete require.cache[require.resolve('./connectors/logger')];
   });
 
   describe('gitHubGet', () => {
@@ -37,7 +38,7 @@ describe('GitHub Client - Response Handling', () => {
       );
 
       // Verify axios was called correctly
-      expect(mockAxios.get).toHaveBeenCalledWith('http://api.github.com/user', {
+      expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           Authorization: 'token test_token',
@@ -57,11 +58,11 @@ describe('GitHub Client - Response Handling', () => {
         },
       });
 
-      const client = github('http://api.github.com');
+      const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getUserDetails('test_token')).resolves.toEqual({});
 
       // Verify axios was called correctly
-      expect(mockAxios.get).toHaveBeenCalledWith('http://api.github.com/user', {
+      expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           Authorization: 'token test_token',
@@ -75,7 +76,7 @@ describe('GitHub Client - Response Handling', () => {
     test('should handle network error without response object', async () => {
       mockAxios.post.mockRejectedValue(new Error('Network Error'));
 
-      const client = github('http://api.github.com');
+      const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getToken('test_code')).rejects.toThrow(
         'Network error occurred while contacting GitHub API'
       );
