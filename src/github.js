@@ -65,7 +65,7 @@ class GitHubClient {
       redirect_uri: config.COGNITO_REDIRECT_URI,
     };
 
-    const response = await gitHubPost(endpoints.oauthToken, qs.stringify(data));
+    const response = await gitHubPost(endpoints.oauthToken, data);
     return response.access_token;
   }
 
