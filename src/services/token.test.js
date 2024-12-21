@@ -14,6 +14,14 @@ describe('TokenService', () => {
     github = require('../github');
     TokenService = require('./token');
     crypto = require('../crypto');
+    
+    // Mock AuthorizationService.getStoredState
+    jest.mock('./authorization', () => ({
+      getStoredState: jest.fn().mockReturnValue({
+        codeVerifier: 'test-verifier',
+        nonce: 'test-nonce'
+      })
+    }));
   });
 
   afterEach(() => {
@@ -23,6 +31,7 @@ describe('TokenService', () => {
     delete require.cache[require.resolve('../connectors/logger')];
     delete require.cache[require.resolve('./token')];
     delete require.cache[require.resolve('../crypto')];
+    delete require.cache[require.resolve('./authorization')];
   });
 
   const mockCode = 'test-code';
@@ -85,21 +94,30 @@ describe('TokenService', () => {
       });
     });
 
-    it('should handle GitHub API errors', async () => {
-      mockAxios.post.mockRejectedValue({
-        response: {
-          status: 400,
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.'
-          }
-        }
+    it('should exchange code for token successfully with state and code_verifier', async () => {
+      mockAxios.post.mockResolvedValue({
+        status: 200,
+        data: mockGithubToken
       });
 
       const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      await expect(TokenService.getGithubToken(mockCode))
-        .rejects
-        .toThrow('GitHub API responded with a failure');
+      const token = await TokenService.getGithubToken(mockCode, mockState, mockCodeVerifier);
+      expect(token).toEqual({
+        access_token: mockGithubToken.access_token,
+        scope: 'openid user:email repo'
+      });
+    });
+
+    it('should handle GitHub API errors', async () => {
+      const errorMessage = 'Invalid code';
+      mockAxios.post.mockRejectedValue({
+        response: {
+          status: 400,
+          data: { error: errorMessage }
+        }
+      });
+
+      await expect(TokenService.getGithubToken(mockCode)).rejects.toThrow(errorMessage);
     });
   });
 

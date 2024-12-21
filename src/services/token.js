@@ -2,7 +2,7 @@ const logger = require('../connectors/logger');
 const crypto = require('../crypto');
 const githubClient = require('../github');
 const Configuration = require('../config');
-const AuthorizationService = require('../authorization'); // Assuming AuthorizationService is in a separate file
+const AuthorizationService = require('./authorization'); // Assuming AuthorizationService is in a separate file
 
 /**
  * Service for handling token operations
