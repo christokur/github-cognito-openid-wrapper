@@ -74,12 +74,12 @@ const handleGitHubError = (error) => {
       throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
     }
 
-    const status = error.response.status;
-    const statusText = error.response.statusText;
+    const {status} = error.response;
+    const {statusText} = error.response;
     let message = statusText;
 
     logger.error({
-      message: message,
+      message,
       status,
       statusText,
       data: error.response.data

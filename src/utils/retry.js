@@ -3,7 +3,7 @@ const logger = require('../connectors/logger');
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const exponentialBackoff = (retryCount, baseDelay = 1000, maxDelay = 10000) => {
-  const delay = Math.min(baseDelay * Math.pow(2, retryCount), maxDelay);
+  const delay = Math.min(baseDelay * 2**retryCount, maxDelay);
   const jitter = Math.random() * 1000; // Add up to 1s of jitter
   return delay + jitter;
 };

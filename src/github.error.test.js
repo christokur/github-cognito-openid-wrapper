@@ -1,6 +1,6 @@
+const qs = require('qs'); // Add this line to import the qs library
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
-const qs = require('qs'); // Add this line to import the qs library
 
 let github;
 

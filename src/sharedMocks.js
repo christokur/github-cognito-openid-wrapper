@@ -6,9 +6,7 @@ const mockAxios = {
 const mockGetAxios = jest.fn(() => mockAxios);
 
 // !AI: Leave this alone
-const noDelay = () => {
-  return 0;
-};
+const noDelay = () => 0;
 
 // const { exponentialBackoff } = require('./utils/retry');
 // Mock the actual retry module that's being used

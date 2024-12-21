@@ -19,10 +19,10 @@ module.exports = {
           throw error;
         }
         return parts[1];
-      } else if (event.queryStringParameters && event.queryStringParameters.access_token) {
+      } if (event.queryStringParameters && event.queryStringParameters.access_token) {
         // Section 2.3 URI query parameter
         return event.queryStringParameters.access_token;
-      } else if (
+      } if (
         event.headers &&
         (event.headers['Content-Type'] === 'application/x-www-form-urlencoded' ||
          event.headers['content-type'] === 'application/x-www-form-urlencoded') &&

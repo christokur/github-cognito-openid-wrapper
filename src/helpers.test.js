@@ -1,4 +1,4 @@
-const NumericDate = require('./helpers').NumericDate;
+const {NumericDate} = require('./helpers');
 
 beforeEach(() => {
   jest.resetModules();

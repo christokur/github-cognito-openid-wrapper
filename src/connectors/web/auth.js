@@ -19,10 +19,10 @@ module.exports = {
           throw error;
         }
         return parts[1];
-      } else if (req.query.access_token) {
+      } if (req.query.access_token) {
         // Section 2.3 URI query parameter
         return req.query.access_token;
-      } else if (
+      } if (
         req.get('Content-Type') === 'application/x-www-form-urlencoded'
       ) {
         // Section 2.2 form encoded body parameter

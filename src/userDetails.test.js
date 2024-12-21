@@ -10,6 +10,7 @@ const mockRateLimiter = {
 jest.mock('./utils/rate-limiter', () => mockRateLimiter);
 
 const githubClient = require('./github');
+
 let github;
 
 describe('User Details and Emails', () => {

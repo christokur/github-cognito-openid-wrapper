@@ -56,6 +56,7 @@
     "express": "^4.21.2",
     "json-web-key": "^0.4.0",
     "jsonwebtoken": "^9.0.2",
+    "qs": "^6.13.1",
     "source-map": "^0.6.0",
     "source-map-support": "^0.5.21",
     "winston-splunk-httplogger": "^3.1.8"

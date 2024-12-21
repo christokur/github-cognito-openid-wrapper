@@ -55,14 +55,14 @@ const validators = {
     const validScopeRegex = /^[\w.:-]+$/;
     
     if (!scopes.every(scope => validScopeRegex.test(scope))) {
-      throw new OAuthError(errorTypes.INVALID_SCOPE, 'scope contains invalid characters: ' + decodedValue);
+      throw new OAuthError(errorTypes.INVALID_SCOPE, `scope contains invalid characters: ${  decodedValue}`);
     }
     
     return value;
   },
   state: (value) => {
     if (value && !value.match(/^[A-Za-z0-9-._~+/]+=*$/)) {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'state contains invalid characters: ' + value);
+      throw new OAuthError(errorTypes.INVALID_REQUEST, `state contains invalid characters: ${  value}`);
     }
     return value;
   },

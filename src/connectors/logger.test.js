@@ -61,7 +61,7 @@ jest.mock('winston', () => {
     transports: {
       Console,
     },
-    Transport: Transport,
+    Transport,
   };
 });
 

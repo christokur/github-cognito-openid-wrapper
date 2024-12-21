@@ -98,8 +98,6 @@ class GitHubClient {
   }
 }
 
-const githubClient = (apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) => {
-  return new GitHubClient(apiBaseUrl, loginBaseUrl);
-};
+const githubClient = (apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) => new GitHubClient(apiBaseUrl, loginBaseUrl);
 
 module.exports = githubClient;

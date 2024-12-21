@@ -4,7 +4,9 @@ if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCa
   require('source-map-support').install();
 }
 
+const querystring = require('querystring');
 const { VERSION } = require('./version');
+
 const VERSION_CONSUMER = process.env.VERSION_CONSUMER || '0.0.0';
 const VERSION_COMPONENT = process.env.VERSION_COMPONENT || '0.0.0';
 
@@ -17,7 +19,6 @@ const logger = require('../logger');
 const { validate } = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
 const { withRetry } = require('../../utils/retry');
-const querystring = require('querystring');
 
 // Map endpoints to their validation schemas and handlers
 const endpointConfig = {
