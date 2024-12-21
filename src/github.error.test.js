@@ -12,6 +12,23 @@ describe('GitHub Client - Error Handling', () => {
   });
 
   describe('Network and Server Errors', () => {
+    test('should handle empty responses', () => {
+      // Mock the axios response to be null
+      mockAxios.get.mockResolvedValue(undefined);
+
+      const client = github();
+      return client.getUserDetails('token')
+        .then(() => {
+          throw new Error('Expected promise to reject');
+        })
+        .catch(err => {
+          expect(err).toBeTruthy();
+          expect(err.message).toBe('Network error occurred while contacting GitHub API');
+          expect(err.statusCode).toBe(503);
+          expect(err.type).toBe('network_error');
+        });
+    });
+
     test('should handle network errors', () => {
       const networkError = new Error('Network Error');
       // Simulate a network error by ensuring response is undefined
