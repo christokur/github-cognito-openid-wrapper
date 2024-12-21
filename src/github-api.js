@@ -26,7 +26,7 @@ const gitHubPost = (url, data) => {
       'Content-Type': 'application/x-www-form-urlencoded' 
     },
     timeout: Configuration.GITHUB_API_TIMEOUT,
-    transformRequest: [(data) => data] // Prevent axios from auto-encoding
+    //  transformRequest: [(data) => data] // Prevent axios from auto-encoding
   };
   const axios = getAxios();
   return withRetry(() => axios.post(url, data, config))
@@ -38,3 +38,4 @@ module.exports = {
   gitHubGet,
   gitHubPost
 };
+ 

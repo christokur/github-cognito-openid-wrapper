@@ -6,5 +6,5 @@ module.exports.handler = (event, context, callback) => {
   const token = event.headers.Authorization?.replace('Bearer ', '');
   
   // Focus on fetching GitHub user data
-  controllers(callback).userinfo(token);
+  return controllers().userinfo(token);
 };

@@ -17,6 +17,7 @@ const logger = require('../logger');
 const { validate } = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
 const { withRetry } = require('../../utils/retry');
+const querystring = require('querystring');
 
 // Map endpoints to their validation schemas and handlers
 const endpointConfig = {
@@ -24,7 +25,7 @@ const endpointConfig = {
     schema: 'authorize',
     handler: authorize.handler,
     requiresRateLimit: false,
-    allowedMethods: ['GET', 'POST'],
+    allowedMethods: ['GET'],
     cacheControl: 'no-store'
   },
   '/.well-known/openid-configuration': {
@@ -45,8 +46,9 @@ const endpointConfig = {
     schema: 'userinfo',
     handler: userinfo.handler,
     requiresRateLimit: true,
-    allowedMethods: ['GET', 'POST'],
-    cacheControl: 'no-store'
+    allowedMethods: ['GET'],
+    cacheControl: 'no-store',
+    requiresAuth: true
   },
   '/.well-known/jwks.json': {
     schema: null,
@@ -67,30 +69,42 @@ const endpointConfig = {
 // Extract parameters based on HTTP method
 function getParameters(event) {
   const params = {};
-  
+
   // Query parameters
   if (event.queryStringParameters) {
     Object.assign(params, event.queryStringParameters);
   }
-  
+
   // POST body
   if (event.httpMethod === 'POST' && event.body) {
+    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
     try {
-      const body = JSON.parse(event.body);
-      Object.assign(params, body);
+      if (contentType.startsWith('application/x-www-form-urlencoded')) {
+        const body = querystring.parse(event.body);
+        Object.assign(params, body);
+      } else if (contentType.startsWith('application/json')) {
+        const body = JSON.parse(event.body);
+        Object.assign(params, body);
+      } else {
+        logger.warn({
+          message: 'Unsupported content type',
+          contentType
+        });
+      }
     } catch (error) {
       logger.warn({
         message: 'Failed to parse request body',
-        error: error.message
+        error: error.message,
+        contentType
       });
     }
   }
-  
+
   // Authorization header for userinfo endpoint
   if (event.headers && event.headers.Authorization) {
     params.access_token = event.headers.Authorization.replace('Bearer ', '');
   }
-  
+
   return params;
 }
 
@@ -118,9 +132,9 @@ function formatResponse(response, config) {
 }
 
 // Main handler function
-async function processRequest(event, context, callback, config) {
+function processRequest(event, context, callback, config) {
   try {
-    // Check HTTP method
+    // 1. Check HTTP method first
     if (!config.allowedMethods.includes(event.httpMethod)) {
       return callback(null, formatResponse({
         statusCode: 405,
@@ -131,15 +145,24 @@ async function processRequest(event, context, callback, config) {
       }, config));
     }
 
-    // Handle preflight requests
-    if (event.httpMethod === 'OPTIONS') {
-      return callback(null, formatResponse({
-        statusCode: 204
-      }, config));
+    // 2. Check authorization if required
+    if (config.requiresAuth) {
+      const authHeader = event.headers?.Authorization;
+      if (!authHeader) {
+        return callback(null, formatResponse({
+          statusCode: 401,
+          body: JSON.stringify({
+            error: 'unauthorized',
+          error_description: 'No valid access token provided'
+          })
+        }, config));
+      }
     }
 
-    // Get and validate parameters
+    // 3. Get parameters
     const params = getParameters(event);
+
+    // 4. Validate parameters
     if (config.schema) {
       try {
         validate(config.schema, params);
@@ -157,18 +180,17 @@ async function processRequest(event, context, callback, config) {
 
     // Check rate limits if required
     if (config.requiresRateLimit) {
-      await rateLimiter.checkLimit();
+      rateLimiter.checkLimit();
     }
 
     // Wrap handler in retry mechanism
-    const response = await withRetry(
-      () => new Promise((resolve, reject) => {
-        config.handler(event, context, (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        });
-      })
-    );
+    const response = withRetry(() => {
+      try {
+        return config.handler(event, context, callback);
+      } catch (error) {
+        throw error;
+      }
+    });
 
     // Format and return response
     return callback(null, formatResponse(response, config));
@@ -221,7 +243,23 @@ exports.handler = (event, context, callback) => {
   });
 
   // Get endpoint configuration
-  const config = endpointConfig[event.path];
+  logger.info({
+    message: 'Looking up endpoint config',
+    path: event.path,
+    pathType: typeof event.path,
+    pathLength: event.path.length,
+    pathCharCodes: Array.from(event.path).map(c => c.charCodeAt(0)),
+    availableEndpoints: Object.keys(endpointConfig)
+  });
+  const path = event.path.replace(/\/$/, ''); // Remove trailing slash
+  logger.debug({
+    message: 'Path comparison',
+    originalPath: event.path,
+    cleanedPath: path,
+    config: endpointConfig[path],
+    hasConfig: path in endpointConfig
+  });
+  const config = endpointConfig[path];
   if (!config) {
     return callback(null, formatResponse({
       statusCode: 404,

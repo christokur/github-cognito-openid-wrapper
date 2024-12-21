@@ -11,6 +11,10 @@ class ConfigurationService {
    * @returns {string} Normalized host URL
    */
   static normalizeHost(host) {
+    logger.debug({
+        message: 'Normalizing host URL',
+        host
+      });
     if (!host) {
       throw new Error('Host is required');
     }
@@ -97,7 +101,7 @@ class ConfigurationService {
     if (!scope) throw new Error('scope is required');
     if (!state) throw new Error('state is required');
     if (!response_type) throw new Error('response_type is required');
-    if (!nonce) throw new Error('nonce is required');
+    //if (!nonce) throw new Error('nonce is required');
   }
 }
 

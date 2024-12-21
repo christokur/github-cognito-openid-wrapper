@@ -1,5 +1,5 @@
 const base64url = require('base64url');
-const crypto = require('../crypto');
+const crypto = require('crypto');
 
 /**
  * PKCE (Proof Key for Code Exchange) helper functions

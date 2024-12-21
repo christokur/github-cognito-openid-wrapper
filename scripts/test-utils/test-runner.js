@@ -28,6 +28,16 @@ async function runTests(baseUrl, isLocalhost) {
     // Step 2: Discover endpoints
     const config = await discoverEndpoints(baseUrl);
 
+    // Display discovered endpoints
+    logger.section('Discovered Endpoints');
+    const endpointFields = ['issuer', 'authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'jwks_uri'];
+    endpointFields.forEach(field => {
+      if (config[field]) {
+        logger.result(`${field}: ${config[field]}`);
+      }
+    });
+    logger.result(''); // Empty line for readability
+
     // Step 3: Get test definitions
     const endpoints = getTestDefinitions(config);
     results.total = endpoints.length;
@@ -48,7 +58,9 @@ async function runTests(baseUrl, isLocalhost) {
         const response = await testEndpoint(
           baseUrl,
           path,
-          endpoint.method
+          endpoint.method,
+          endpoint.params,
+          endpoint.headers
         );
 
         if (response.status === endpoint.expectedStatus) {
@@ -61,11 +73,14 @@ async function runTests(baseUrl, isLocalhost) {
           });
         } else {
           results.failed++;
-          const error = `Got status ${response.status}, expected ${endpoint.expectedStatus}`;
+          const error = `Result: status ${response.status}, expected ${endpoint.expectedStatus}`;
           results.failures.push({
             endpoint: path,
             method: endpoint.method,
-            error
+            name: endpoint.name,
+            error,
+            expected: endpoint.expectedStatus,
+            actual: response.status
           });
           logger.error(`Test failed`, {
             prefix: 'Test',
@@ -81,7 +96,8 @@ async function runTests(baseUrl, isLocalhost) {
         results.failures.push({
           endpoint: path,
           method: endpoint.method,
-          error: error.message
+          error: error.message,
+          name: endpoint.name
         });
         logger.error(`Test failed`, {
           prefix: 'Test',
@@ -102,6 +118,7 @@ async function runTests(baseUrl, isLocalhost) {
       logger.result('\nFailures:');
       results.failures.forEach(failure => {
         logger.result(`✗ ${failure.method} ${failure.endpoint}`);
+        logger.result(`  ${failure.name}`);
         logger.result(`  ${failure.error}`);
       });
     }

@@ -17,7 +17,19 @@ if (!validLogLevels.includes(LOG_LEVEL)) {
   LOG_LEVEL = 'info'
 }
 
-// Common format that handles both structured logging and printf-style placeholders
+const getCircularReplacer = () => {
+  const seen = new WeakSet();
+  return (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return '[Circular]';
+      }
+      seen.add(value);
+    }
+    return value;
+  };
+};
+
 const commonFormat = winston.format.combine(
   winston.format.splat(),
   winston.format.timestamp(),
@@ -31,7 +43,7 @@ const commonFormat = winston.format.combine(
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     };
 
-    return JSON.stringify(logEntry);
+    return JSON.stringify(logEntry, getCircularReplacer());
   })
 );
 

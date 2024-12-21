@@ -1,12 +1,15 @@
 #!/usr/bin/env node
+const minimist = require('minimist');
+const { PORT_NUMBER } = require('./mock-oidc-server');
+delete require.cache[require.resolve('./mock-oidc-server')];
+delete require.cache[require.resolve('../src/connectors/logger')];
 
 // Parse command line arguments first
-const minimist = require('minimist');
 const argv = minimist(process.argv.slice(2), {
   string: ['url', 'log-level'],
   boolean: ['help'],
   default: {
-    url: 'http://localhost:3000',
+    url: `http://localhost:${PORT_NUMBER}`,
     'log-level': 'info'
   },
   alias: {
@@ -16,9 +19,6 @@ const argv = minimist(process.argv.slice(2), {
 
 // Set log level before requiring any loggers
 process.env.LOG_LEVEL = argv['log-level'];
-
-// Now require our modules
-const { runTests } = require('./test-utils/test-runner');
 const logger = require('./test-utils/test-logger');
 
 // Show help and exit if requested
@@ -35,7 +35,7 @@ Tests OIDC endpoints for correct HTTP method handling:
 Usage: ./test-endpoints.js [options]
 
 Options:
-  --url        Base URL of the OIDC server (default: http://localhost:3000)
+  --url        Base URL of the OIDC server (default: http://localhost:${PORT_NUMBER})
   --log-level  Logging level: error, warn, info, debug (default: info)
   --help       Show this help message
 
@@ -49,17 +49,16 @@ Examples:
   process.exit(0);
 }
 
-// Handle cleanup on exit
-process.on('SIGINT', () => {
-  logger.info('Received interrupt signal', { prefix: 'Process' });
-  process.exit();
-});
-
-// Run the tests
-runTests(argv.url, argv.url.includes('localhost')).catch(error => {
-  logger.error('Test execution failed', {
-    prefix: 'Process',
-    error: error.message
-  });
-  process.exit(1);
-});
+// Main execution
+(async () => {
+  try {
+    const { runTests } = require('./test-utils/test-runner');
+    await runTests(argv.url, argv.url.includes('localhost'));
+  } catch (error) {
+    logger.error('Test execution failed', {
+      prefix: 'Process',
+      error: error.message
+    });
+    process.exit(1);
+  }
+})();

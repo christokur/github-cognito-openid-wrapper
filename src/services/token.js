@@ -8,21 +8,6 @@ const Configuration = require('../config');
  */
 class TokenService {
   /**
-   * Validates the nonce value
-   * @param {string} storedNonce - The original nonce stored during authorization
-   * @param {string} receivedNonce - The nonce received in the callback
-   * @throws {Error} If nonce is missing or invalid
-   */
-  static validateNonce(storedNonce, receivedNonce) {
-    if (!storedNonce || !receivedNonce) {
-      throw new Error('Nonce is required');
-    }
-    if (storedNonce !== receivedNonce) {
-      throw new Error('Invalid nonce');
-    }
-  }
-
-  /**
    * Retrieves JWKS (JSON Web Key Set)
    * @returns {Object} Object containing public keys
    */
@@ -113,23 +98,49 @@ class TokenService {
   /**
    * Processes token exchange and creates response
    * @param {Object} params - Token exchange parameters
+   * @param {string} params.code - Authorization code
+   * @param {string} params.state - State parameter
+   * @param {string} params.host - Issuer host
+   * @param {string} params.codeVerifier - PKCE code verifier
+   * @param {string} [params.nonce] - Optional nonce for ID token
    */
-  static async processTokenExchange({ code, state, host, nonce, storedNonce, codeVerifier }) {
+  static async processTokenExchange({ code, state, host, codeVerifier, nonce = null }) {
     try {
-      // Validate nonce
-      this.validateNonce(storedNonce, nonce);
+      logger.debug({
+        message: 'Starting token exchange process',
+        code,
+        state,
+        host,
+        codeVerifier,
+        nonce
+      });
 
       // Get GitHub token
       const githubToken = await this.getGithubToken(code, state, codeVerifier);
+      logger.debug({
+        message: 'Received GitHub token',
+        githubToken
+      });
 
       // Create ID token
-      const payload = { nonce };
+      const payload = nonce ? { nonce } : {};
       const idToken = this.createIdToken(payload, host);
+      logger.debug({
+        message: 'Created ID token',
+        idToken
+      });
 
-      return {
+      const response = {
         ...githubToken,
         id_token: idToken
       };
+
+      logger.debug({
+        message: 'Token exchange complete',
+        response
+      });
+
+      return response;
     } catch (error) {
       logger.error({
         message: 'Failed to process token exchange',

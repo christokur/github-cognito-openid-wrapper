@@ -13,10 +13,23 @@ module.exports = {
     controllers(responder(res)).token(code, state, req.get('host'));
   },
   jwks: (req, res) => controllers(responder(res)).jwks(),
-  authorize: (req, res) =>
+  authorize: (req, res) => {
+    // Check HTTP method
+    if (req.method !== 'GET') {
+      return res.sendStatus(405);
+    }
+
+    // Validate required parameters
+    const { client_id, scope, state, response_type } = req.query;
+    if (!client_id || !scope || !state || !response_type) {
+      return res.sendStatus(400);
+    }
+
+    // Redirect to GitHub
     responder(res).redirect(
-      `https://github.com/login/oauth/authorize?client_id=${req.query.client_id}&scope=${req.query.scope}&state=${req.query.state}&response_type=${req.query.response_type}`,
-    ),
+      `https://github.com/login/oauth/authorize?client_id=${client_id}&scope=${scope}&state=${state}&response_type=${response_type}`,
+    );
+  },
   openIdConfiguration: (req, res) => {
     controllers(responder(res)).openIdConfiguration(
       auth.getIssuer(req.get('host')),

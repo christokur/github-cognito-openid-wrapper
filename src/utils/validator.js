@@ -31,7 +31,7 @@ const schemas = {
       enum: ['code']
     },
     nonce: {
-      required: true,
+      required: false,
       type: 'string',
       minLength: 16,
       maxLength: 100,

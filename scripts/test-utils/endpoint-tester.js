@@ -1,27 +1,67 @@
 const axios = require('axios');
 const logger = require('./test-logger');
+const querystring = require('querystring');
 
-async function testEndpoint(baseUrl, path, method = 'GET') {
+async function testEndpoint(baseUrl, path, method = 'GET', params = null, headers = null) {
   const url = `${baseUrl}${path}`;
   try {
     logger.debug(`Testing endpoint`, {
       prefix: 'HTTP',
       method,
-      path
+      path,
+      params,
+      headers
     });
 
-    const response = await axios({
+    const config = {
       method,
       url,
-      validateStatus: null // Don't throw on any status code
-    });
+      validateStatus: null, // Don't throw on any status code
+      maxRedirects: 0, // Don't follow redirects
+      headers: headers || {}
+    };
+
+    // Add query parameters for GET requests
+    if (method === 'GET' && params) {
+      config.params = params;
+    }
+    
+    // Add body parameters for POST requests
+    if (method === 'POST' && params) {
+      if (headers && headers['Content-Type'] === 'application/x-www-form-urlencoded') {
+        // For form-urlencoded, encode params as form data string
+        config.data = querystring.stringify(params);
+        logger.debug('Sending form-urlencoded data', {
+          prefix: 'HTTP',
+          data: config.data
+        });
+      } else if (headers && headers['Content-Type'] === 'application/json') {
+        // For JSON, stringify the params
+        const jsonData = JSON.stringify(params);
+        config.data = jsonData;
+        logger.debug('Sending JSON data', {
+          prefix: 'HTTP',
+          data: jsonData
+        });
+      } else {
+        // Default to sending params as is
+        config.data = params;
+        logger.debug('Sending raw data', {
+          prefix: 'HTTP',
+          data: config.data
+        });
+      }
+    }
+
+    const response = await axios(config);
 
     logger.debug(`Received response`, {
       prefix: 'HTTP',
       method,
       path,
       status: response.status,
-      statusText: response.statusText
+      statusText: response.statusText,
+      data: response.data
     });
 
     return response;
@@ -32,7 +72,8 @@ async function testEndpoint(baseUrl, path, method = 'GET') {
         method,
         path,
         status: error.response.status,
-        statusText: error.response.statusText
+        statusText: error.response.statusText,
+        data: error.response.data
       });
       return error.response;
     }
@@ -83,18 +124,12 @@ async function discoverEndpoints(baseUrl) {
       throw new Error(`OpenID configuration missing required endpoints: ${missing.join(', ')}`);
     }
 
-    const endpoints = {
-      authorization_endpoint: response.data.authorization_endpoint,
-      token_endpoint: response.data.token_endpoint,
-      userinfo_endpoint: response.data.userinfo_endpoint
-    };
-
     logger.info(`Successfully discovered endpoints`, {
       prefix: 'Discovery',
-      endpoints
+      endpoints: response.data
     });
 
-    return endpoints;
+    return response.data;
   } catch (error) {
     logger.error(`Failed to discover endpoints`, {
       prefix: 'Discovery',

@@ -20,10 +20,9 @@ module.exports.handler = (event, context, callback) => {
     if (!host.startsWith('http://') && !host.startsWith('https://')) {
       host = `https://${host}`;
     }
-    const response = controllers(callback).openIdConfiguration(host);
-    return callback(null, response);
+    return controllers().openIdConfiguration(host);
   } catch (error) {
-    return callback(null, {
+    return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json'
@@ -32,6 +31,6 @@ module.exports.handler = (event, context, callback) => {
         error: 'server_error',
         error_description: error.message || 'Internal server error'
       })
-    });
+    };
   }
 };

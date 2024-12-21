@@ -5,7 +5,7 @@ module.exports.handler = (event, context, callback) => {
   const params = event.queryStringParameters || {};
   
   // Focus purely on business logic - generating GitHub OAuth URL
-  controllers(callback).authorize(
+  return controllers().authorize(
     params.client_id,
     params.scope,
     params.state,

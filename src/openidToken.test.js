@@ -38,7 +38,7 @@ describe('openid domain layer - Token', () => {
         'SOME_CODE',
         'SOME_STATE',
         'SOME_HOST',
-        'SOME_NONCE'
+        'SOME_VERIFIER'
       );
 
       expect(token).toEqual({
@@ -84,7 +84,7 @@ describe('openid domain layer - Token', () => {
           'bad_code',
           'SOME_STATE',
           'SOME_HOST',
-          'SOME_NONCE'
+          'SOME_VERIFIER'
         )
       ).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
 

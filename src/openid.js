@@ -58,31 +58,26 @@ class OpenIDProvider {
    * @param {string} code - Authorization code
    * @param {string} state - State parameter
    * @param {string} host - Host URL
-   * @param {string} nonce - Nonce value
+   * @param {string} codeVerifier - PKCE code verifier
    */
-  static async getTokens(code, state, host, nonce) {
+  static async getTokens(code, state, host, codeVerifier) {
+    if (!code) {
+      throw new Error('The code parameter is required');
+    }
     try {
       logger.debug({
         message: 'Getting tokens',
         code,
         state,
+        codeVerifier,
         host,
-        nonce,
         memoryUsage: process.memoryUsage()
       });
-
-      const { codeVerifier, nonce: storedNonce } = AuthorizationService.getStoredState();
-
-      if (!codeVerifier) {
-        throw new Error('Code verifier not found');
-      }
 
       const tokenResponse = await TokenService.processTokenExchange({
         code,
         state,
         host,
-        nonce,
-        storedNonce,
         codeVerifier
       });
 

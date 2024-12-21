@@ -14,12 +14,14 @@ class GitHubClient {
   }
 
   getApiEndpoints() {
-    return {
+    const endpoints = {
       userDetails: `${this.apiBaseUrl}/user`,
       userEmails: `${this.apiBaseUrl}/user/emails`,
       oauthToken: `${this.loginBaseUrl}/login/oauth/access_token`,
       oauthAuthorize: `${this.loginBaseUrl}/login/oauth/authorize`,
     };
+    logger.debug('API Endpoints:', endpoints);
+    return endpoints;
   }
 
   async getUserDetails(accessToken) {
@@ -54,6 +56,7 @@ class GitHubClient {
     const endpoints = this.getApiEndpoints();
     console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
     console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
+    logger.debug('Constructed URL:', `${endpoints.oauthAuthorize}?${queryString}`) ;
     return `${endpoints.oauthAuthorize}?${queryString}`;
   }
 

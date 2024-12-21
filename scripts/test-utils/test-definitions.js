@@ -4,10 +4,23 @@ function getTestDefinitions(config) {
   return [
     // Authorization endpoint tests
     {
-      name: 'Authorization GET',
+      name: 'Authorization GET w/ status',
       url: config.authorization_endpoint,
       method: 'GET',
-      expectedStatus: 200
+      expectedStatus: 302,
+      params: {
+        client_id: 'test-client',
+        scope: 'openid',
+        state: '1234567890123456',
+        response_type: 'code'
+      }
+    },
+    {
+      name: 'Authorization GET w/0 status',
+      url: config.authorization_endpoint,
+      method: 'GET',
+      expectedStatus: 400,
+      params: {}
     },
     {
       name: 'Authorization POST',
@@ -29,10 +42,72 @@ function getTestDefinitions(config) {
     },
     // Token endpoint tests
     {
-      name: 'Token POST',
+      name: 'Token POST w/ params & no host',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 200
+      expectedStatus: 400,
+      params: {
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    },
+    {
+      name: 'Token POST w/ JSON params',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 200,
+      params: {
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        host: 'http://localhost:3000'
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    },
+    {
+      name: 'Token POST w/ params & host',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 400,
+      params: {
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        host: 'http://localhost:3000'
+      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    },
+    {
+      name: 'Token POST w/ JSON params and no host',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 200,
+      params: {
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    },
+    {
+      name: 'Token POST w/o params',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 400,
+      params: {},
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     },
     {
       name: 'Token GET',

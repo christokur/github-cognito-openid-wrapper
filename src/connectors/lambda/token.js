@@ -46,57 +46,18 @@ module.exports.handler = (event, context, callback) => {
     });
     const code = validators.required(body.code, 'code');
     const state = body.state ? validators.state(body.state) : undefined;
+    const codeVerifier = validators.required(body.code_verifier, 'code_verifier');
     const host = event.headers.Host;
 
     logger.debug({
       message: 'Calling token controller',
       code,
       state,
+      codeVerifier,
       host
     });
-    
-    const responseCallback = (error, response) => {
-      if (error) {
-        logger.error({
-          message: 'Token controller error',
-          error
-        });
-        const errorResponse = {
-          statusCode: error.statusCode || 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
-          },
-          body: JSON.stringify({
-            error: error.type || 'server_error',
-            error_description: error.message || 'An unexpected error occurred'
-          })
-        };
-        logger.error({
-          message: 'Returning error response to API Gateway',
-          response: errorResponse
-        });
-        callback(null, errorResponse);
-      } else {
-        const successResponse = {
-          statusCode: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
-          },
-          body: JSON.stringify(response)
-        };
-        logger.debug({
-          message: 'Returning success response to API Gateway',
-          response: successResponse
-        });
-        callback(null, successResponse);
-      }
-    };
 
-    controllers(responder(responseCallback)).token(code, state, host);
+    return controllers().token(code, state, host, codeVerifier);
   } catch (error) {
     logger.error({
       message: 'Token handler error',
@@ -118,6 +79,6 @@ module.exports.handler = (event, context, callback) => {
       message: 'Returning error response to API Gateway',
       response: errorResponse
     });
-    callback(null, errorResponse);
+    return errorResponse;
   }
 };

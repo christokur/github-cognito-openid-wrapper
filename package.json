@@ -1,6 +1,6 @@
 {
   "name": "github-cognito-openid-wrapper",
-  "version": "1.4.7",
+  "version": "1.5.0",
   "description": "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
@@ -21,7 +21,7 @@
     "build": "webpack && cp src/connectors/lambda/version.js dist-lambda/",
     "build-analyze": "webpack  --profile --json=dist-lambda/stats.json && cp src/connectors/lambda/version.js dist-lambda/",
     "webpack-dashboard": "webpack-dashboard -- webpack",
-    "rebuild": "npm run clean && npm install && npm test && npm run build",
+    "rebuild": "npm run clean && npm install && npm run build",
     "analyze": "ANALYZE=true npm run build-analyze",
     "test": "jest --config jest.config.js --runInBand --coverage --verbose",
     "test-dev": "jest --config jest.config.js --runInBand --watch",

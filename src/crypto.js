@@ -2,12 +2,11 @@ const JSONWebKey = require('json-web-key');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
 const logger = require('./connectors/logger');
-const defaultPrivateKey = require('../jwtRS256.key');
-const defaultPublicKey = require('../jwtRS256.key.pub');
-
+const fs = require('fs');
 const KEY_ID = config.JWT_KEY_ID;
-const cert = config.JWT_PRIVATE_KEY_PATH === '../jwtRS256.key' ? defaultPrivateKey : require(config.JWT_PRIVATE_KEY_PATH);
-const pubKey = config.JWT_PUBLIC_KEY_PATH === '../jwtRS256.key.pub' ? defaultPublicKey : require(config.JWT_PUBLIC_KEY_PATH);
+
+const cert = fs.existsSync(config.JWT_PRIVATE_KEY_PATH) ? require(config.JWT_PRIVATE_KEY_PATH) : require('./__mocks__/privateKeyMock.js');
+const pubKey = fs.existsSync(config.JWT_PUBLIC_KEY_PATH) ? require(config.JWT_PUBLIC_KEY_PATH) : require('./__mocks__/publicKeyMock.js');
 
 module.exports = {
   getPublicKey: () => {

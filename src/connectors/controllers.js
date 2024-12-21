@@ -49,7 +49,7 @@ const mapError = (error) => {
   };
 };
 
-module.exports = (callback) => ({
+module.exports = () => ({
   authorize: (client_id, scope, state, response_type) => {
     try {
       // Validate and sanitize input
@@ -151,22 +151,24 @@ module.exports = (callback) => ({
     }
   },
 
-  token: (code, state, host) => {
+  token: (code, state, host, codeVerifier) => {
     try {
       logger.debug({
         message: 'Token controller called',
         code,
         state,
         host,
+        codeVerifier,
       });
 
       // Validate and sanitize input
       const validated = validate('token', {
         code,
-        state
+        state,
+        code_verifier: codeVerifier
       });
 
-      const tokens = openid.getTokens(validated.code, validated.state, host);
+      const tokens = openid.getTokens(validated.code, validated.state, host, validated.code_verifier);
       logger.debug({
         message: 'Tokens retrieved',
         tokens,

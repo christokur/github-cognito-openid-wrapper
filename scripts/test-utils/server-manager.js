@@ -1,9 +1,11 @@
 const axios = require('axios');
-const { spawn } = require('child_process');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 const path = require('path');
 const logger = require('./test-logger');
+const { SERVER_VERSION, app, PORT_NUMBER, killOrphanedServer } = require('../mock-oidc-server');
 
-const {SERVER_VERSION} = require('../mock-oidc-server');
+const execAsync = promisify(exec);
 const EXPECTED_SERVER_VERSION = SERVER_VERSION;
 let mockServer = null;
 
@@ -89,27 +91,14 @@ async function startMockServer(baseUrl) {
   logger.info(`Starting mock OIDC server`, {
     prefix: 'Server'
   });
+
+  // Kill any existing servers first
+  await killOrphanedServer();
   
-  if (mockServer) {
-    logger.info(`Stopping existing server`, {
+  mockServer = app.listen(PORT_NUMBER, () => {
+    logger.info(`Mock OIDC server started on port ${PORT_NUMBER} with log level ${process.env.LOG_LEVEL}`, {
       prefix: 'Server'
     });
-    mockServer.kill();
-    mockServer = null;
-  }
-  
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  const serverPath = path.join(__dirname, '..', 'mock-oidc-server.js');
-  logger.info(`Starting server`, {
-    prefix: 'Server',
-    path: serverPath
-  });
-  
-  mockServer = spawn('node', [serverPath, process.env.LOG_LEVEL], {
-    stdio: 'inherit',
-    detached: false,
-    env: { ...process.env }
   });
 
   logger.info(`Waiting for server to start`, {
@@ -156,8 +145,9 @@ async function stopMockServer() {
     logger.info(`Stopping mock server`, {
       prefix: 'Server'
     });
-    mockServer.kill();
+    mockServer.close();
     mockServer = null;
+    await killOrphanedServer();
     logger.info(`Server stopped`, {
       prefix: 'Server'
     });
@@ -193,5 +183,6 @@ module.exports = {
   checkServerRunning,
   startMockServer,
   stopMockServer,
-  ensureServerRunning
+  ensureServerRunning,
+  killOrphanedServer
 };
