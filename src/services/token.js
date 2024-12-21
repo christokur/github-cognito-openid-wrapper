@@ -139,8 +139,31 @@ class TokenService {
         githubToken
       });
 
+      // Get GitHub user info
+      const githubClientInstance = githubClient(
+        Configuration.GITHUB_API_URL,
+        Configuration.GITHUB_LOGIN_URL
+      );
+      const userInfo = await githubClientInstance.getUserDetails(githubToken.access_token);
+      const userEmails = await githubClientInstance.getUserEmails(githubToken.access_token);
+      const primaryEmail = userEmails.find(email => email.primary) || userEmails[0];
+
+      // Create ID token payload with user info
+      const payload = {
+        sub: userInfo.id.toString(),
+        name: userInfo.name,
+        preferred_username: userInfo.login,
+        email: primaryEmail.email,
+        email_verified: primaryEmail.verified,
+        ...(nonce ? { nonce } : {})
+      };
+
+      logger.debug({
+        message: 'Creating ID token with user info',
+        payload
+      });
+
       // Create ID token
-      const payload = nonce ? { nonce } : {};
       const idToken = this.createIdToken(payload, host);
       logger.debug({
         message: 'Created ID token',
