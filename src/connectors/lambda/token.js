@@ -46,7 +46,7 @@ module.exports.handler = (event, context, callback) => {
     });
     const code = validators.required(body.code, 'code');
     const state = body.state ? validators.state(body.state) : undefined;
-    const codeVerifier = validators.required(body.code_verifier, 'code_verifier');
+    const codeVerifier = body.code_verifier ? validators.required(body.code_verifier, 'code_verifier') : undefined;
     const host = event.headers.Host;
 
     logger.debug({

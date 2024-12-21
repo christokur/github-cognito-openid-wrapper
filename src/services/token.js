@@ -2,6 +2,7 @@ const logger = require('../connectors/logger');
 const crypto = require('../crypto');
 const githubClient = require('../github');
 const Configuration = require('../config');
+const AuthorizationService = require('../authorization'); // Assuming AuthorizationService is in a separate file
 
 /**
  * Service for handling token operations
@@ -49,6 +50,22 @@ class TokenService {
         Configuration.GITHUB_API_URL,
         Configuration.GITHUB_LOGIN_URL
       );
+
+      logger.debug({
+        message: 'Getting GitHub token',
+        code,
+        state,
+        codeVerifier: codeVerifier ? '[REDACTED]' : undefined,
+        memoryUsage: process.memoryUsage()
+      });
+
+      // Only verify PKCE if code_verifier was used in the authorization request
+      if (codeVerifier) {
+        const storedState = AuthorizationService.getStoredState();
+        if (!storedState || storedState.codeVerifier !== codeVerifier) {
+          throw new Error('Invalid code verifier');
+        }
+      }
 
       const githubTokenResponse = await githubClientInstance.getToken(code, state, codeVerifier);
 

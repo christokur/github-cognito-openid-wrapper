@@ -46,14 +46,14 @@ const schemas = {
       maxLength: 256
     },
     state: {
-      required: true,
+      required: false,
       type: 'string',
       minLength: 16,
       maxLength: 2048,
       pattern: /^[A-Za-z0-9+/=._-]+$/
     },
     code_verifier: {
-      required: true,
+      required: false,
       type: 'string',
       minLength: 43,
       maxLength: 128,

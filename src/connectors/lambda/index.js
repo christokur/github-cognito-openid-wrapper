@@ -239,7 +239,8 @@ exports.handler = (event, context, callback) => {
     versionComponent: VERSION_COMPONENT,
     path: event.path,
     method: event.httpMethod,
-    requestId: context.awsRequestId,
+    event: event,
+    context: context,
     memoryUsage: process.memoryUsage()
   });
 
