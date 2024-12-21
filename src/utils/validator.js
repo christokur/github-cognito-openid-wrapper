@@ -22,8 +22,8 @@ const schemas = {
       required: true,
       type: 'string',
       minLength: 16,
-      maxLength: 100,
-      pattern: /^[a-zA-Z0-9-_]+$/
+      maxLength: 2048,
+      pattern: /^[A-Za-z0-9+/=._-]+$/
     },
     response_type: {
       required: true,
@@ -49,8 +49,8 @@ const schemas = {
       required: true,
       type: 'string',
       minLength: 16,
-      maxLength: 100,
-      pattern: /^[a-zA-Z0-9-_]+$/
+      maxLength: 2048,
+      pattern: /^[A-Za-z0-9+/=._-]+$/
     },
     code_verifier: {
       required: true,
