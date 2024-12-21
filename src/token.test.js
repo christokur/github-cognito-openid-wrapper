@@ -55,8 +55,7 @@ describe('Token Handling', () => {
           Accept: 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        timeout: expect.any(Number),
-        transformRequest: expect.any(Array)
+        timeout: 10000
       }
     );
   }, 30000);
@@ -80,4 +79,34 @@ describe('Token Handling', () => {
     mockAxios.post.mockRejectedValue(networkError);
     await expect(client.getToken('code', mockState)).rejects.toThrow('Network error occurred while contacting GitHub API');
   }, 30000);
+
+  it('should handle responses with special characters in token', async () => {
+    const responseWithSpecialChars = {
+      data: {
+        access_token: 'test+token&special=true',
+        token_type: 'bearer',
+        scope: 'user:email+repo&more'
+      }
+    };
+    mockAxios.post.mockResolvedValue(responseWithSpecialChars);
+    
+    const result = await client.getToken('code', mockState, mockVerifier);
+    
+    expect(result).toEqual(responseWithSpecialChars.data);
+  });
+
+  it('should handle urlencoded response format', async () => {
+    const urlEncodedResponse = {
+      data: 'access_token=test_token&token_type=bearer&scope=user%3Aemail%2Brepo'
+    };
+    mockAxios.post.mockResolvedValue(urlEncodedResponse);
+    
+    const result = await client.getToken('code', mockState, mockVerifier);
+    
+    expect(result).toEqual({
+      access_token: 'test_token',
+      token_type: 'bearer',
+      scope: 'user:email+repo'
+    });
+  });
 });

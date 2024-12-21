@@ -61,7 +61,6 @@ describe('openid domain layer - Token', () => {
         'Content-Type': 'application/x-www-form-urlencoded'
       });
       expect(postCall[2].timeout).toBe(10000);
-      expect(typeof postCall[2].transformRequest[0]).toBe('function');
     });
   });
 
@@ -101,7 +100,6 @@ describe('openid domain layer - Token', () => {
         'Content-Type': 'application/x-www-form-urlencoded'
       });
       expect(postCall[2].timeout).toBe(10000);
-      expect(typeof postCall[2].transformRequest[0]).toBe('function');
     });
   });
 });

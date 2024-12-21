@@ -1,5 +1,6 @@
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
+const qs = require('qs'); // Add this line to import the qs library
 
 let github;
 
@@ -152,8 +153,7 @@ describe('GitHub Client - Error Handling', () => {
                 Accept: 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
               },
-              timeout: 10000,
-              transformRequest: expect.any(Array)
+              timeout: 10000
             }
           ];
 
@@ -207,6 +207,47 @@ describe('GitHub Client - Error Handling', () => {
           expect(err.statusCode).toBe(401);
           expect(err.type).toBe('github_error');
         });
+    });
+
+    test('should properly URL encode parameters with special characters', async () => {
+      const specialCode = 'test+code&special=true';
+      const expectedEncodedBody = `client_id=mock-client-id&client_secret=mock-client-secret&code=test%2Bcode%26special%3Dtrue&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback`;
+      
+      mockAxios.post.mockResolvedValue({
+        status: 200,
+        data: { access_token: 'test_token' }
+      });
+
+      await github().getToken(specialCode);
+
+      const actualCall = mockAxios.post.mock.calls[0];
+      const actualUrl = actualCall[0];
+      const actualData = actualCall[1];
+      
+      // Verify the URL remains unchanged
+      expect(actualUrl).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+      
+      // Convert the data object to URL encoded string
+      const actualEncodedBody = qs.stringify(actualData);
+      
+      // Verify the body is properly encoded
+      expect(actualEncodedBody).toBe(expectedEncodedBody);
+    });
+
+    test('should properly parse urlencoded response', async () => {
+      const urlEncodedResponse = 'access_token=test_token&token_type=bearer&scope=user%3Aemail';
+      mockAxios.post.mockResolvedValue({
+        status: 200,
+        data: urlEncodedResponse
+      });
+
+      const result = await github().getToken('test_code');
+      
+      expect(result).toEqual({
+        access_token: 'test_token',
+        token_type: 'bearer',
+        scope: 'user:email'
+      });
     });
   });
 
@@ -278,7 +319,6 @@ describe('GitHub Client - Error Handling', () => {
     });
   });
 });
-
 
 afterAll(() => {
   jest.useRealTimers();
