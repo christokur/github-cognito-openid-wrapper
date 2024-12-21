@@ -29,7 +29,7 @@
     "lint": "eslint src --ext .ts,.js --config .eslintrc.json",
     "preinstall": "bash ./scripts/create-key.sh",
     "prebuild-dist": "npm run lint && npm run test",
-    "build-dist": "npm run build",
+    "build-dist": "rm -rf dist* && npm run build",
     "predeploy": "npm run build-dist",
     "prerelease": "npm run lint && npm run test && npm run build",
     "format:base": "prettier \"src/**/*.{ts,js}\"",
