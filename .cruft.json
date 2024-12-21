@@ -88,9 +88,9 @@
       "ruff_extend_exclude": "",
       "ruff_ignore": "",
       "_extensions": [
+        "toolbag.utils.template_expander.extensions.PythonExtension",
         "toolbag.utils.template_expander.extensions.python_extension.PythonExtension",
-        "toolbag.utils.template_expander.extensions.ExpandCookiecutterTemplateExtension",
-        "toolbag.utils.template_expander.extensions.PythonExtension"
+        "toolbag.utils.template_expander.extensions.ExpandCookiecutterTemplateExtension"
       ],
       "_notes": {
         "lists": "Lists have a special meaning for Cookiecutter so we are forced to wrap them in a map or express as a CSV string and split in the template.",
@@ -119,7 +119,7 @@
         "pre-commit": "{ version = '~2.21.0' }",
         "prompt-toolkit": "~3.0.38",
         "pyproject-fmt": "{ version = '~1.8.0' }",
-        "python-toolbag": ">=0.23.32",
+        "python-toolbag": ">=0.24.72",
         "ruff": ">=0.3.0",
         "semver": ">=3.0.0,<4.0.0"
       },
@@ -130,8 +130,8 @@
         "coverage": "{ version = '~7.3.2', extras = ['toml'] }",
         "pytest": "~7.4.2",
         "pytest-cov": "~4.1.0",
-        "pytest-mock": "~3.11.1",
-        "pytest-datadir": "~1.5.3",
+        "pytest-mock": "~3.12.0",
+        "pytest-datadir": "~1.5.0",
         "pytest-stub": "~1.1.0"
       },
       "poetry_settings": {},
