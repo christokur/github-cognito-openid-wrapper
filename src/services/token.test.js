@@ -181,7 +181,7 @@ describe('TokenService', () => {
             status: 200,
             data: mockUserDetails
           });
-        } else if (url.endsWith('/user/emails')) {
+        } if (url.endsWith('/user/emails')) {
           return Promise.resolve({
             status: 200,
             data: mockUserEmails

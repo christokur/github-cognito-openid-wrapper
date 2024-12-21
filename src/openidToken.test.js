@@ -45,7 +45,7 @@ describe('openid domain layer - Token', () => {
               login: 'testuser'
             }
           });
-        } else if (url.endsWith('/user/emails')) {
+        } if (url.endsWith('/user/emails')) {
           return Promise.resolve({
             status: 200,
             data: [{
