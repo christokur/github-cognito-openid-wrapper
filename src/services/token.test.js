@@ -160,13 +160,42 @@ describe('TokenService', () => {
   });
 
   describe('processTokenExchange', () => {
+    const mockUserDetails = {
+      id: 12345,
+      name: 'Test User',
+      login: 'testuser'
+    };
+
+    const mockUserEmails = [
+      {
+        email: 'test@example.com',
+        primary: true,
+        verified: true
+      }
+    ];
+
+    beforeEach(() => {
+      mockAxios.get.mockImplementation((url) => {
+        if (url.endsWith('/user')) {
+          return Promise.resolve({
+            status: 200,
+            data: mockUserDetails
+          });
+        } else if (url.endsWith('/user/emails')) {
+          return Promise.resolve({
+            status: 200,
+            data: mockUserEmails
+          });
+        }
+      });
+    });
+
     it('should process token exchange successfully with nonce', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
         data: mockGithubToken
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       const result = await TokenService.processTokenExchange({
         code: mockCode,
         state: mockState,
@@ -174,9 +203,18 @@ describe('TokenService', () => {
         host: mockHost,
         nonce: mockNonce
       });
+
       expect(result).toBeDefined();
-      expect(result.access_token).toBeDefined();
+      expect(result.access_token).toBe(mockGithubToken.access_token);
       expect(result.id_token).toBeDefined();
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/user'),
+        expect.any(Object)
+      );
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/user/emails'),
+        expect.any(Object)
+      );
     });
 
     it('should process token exchange successfully without nonce', async () => {
@@ -185,38 +223,41 @@ describe('TokenService', () => {
         data: mockGithubToken
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
       const result = await TokenService.processTokenExchange({
         code: mockCode,
         state: mockState,
         codeVerifier: mockCodeVerifier,
         host: mockHost
       });
+
       expect(result).toBeDefined();
-      expect(result.access_token).toBeDefined();
+      expect(result.access_token).toBe(mockGithubToken.access_token);
       expect(result.id_token).toBeDefined();
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/user'),
+        expect.any(Object)
+      );
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/user/emails'),
+        expect.any(Object)
+      );
     });
 
     it('should handle GitHub token errors', async () => {
+      const errorMessage = 'Invalid code';
       mockAxios.post.mockRejectedValue({
         response: {
           status: 400,
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.'
-          }
+          data: { error: errorMessage }
         }
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      await expect(
-        TokenService.processTokenExchange({
-          code: mockCode,
-          state: mockState,
-          codeVerifier: mockCodeVerifier,
-          host: mockHost
-        })
-      ).rejects.toThrow('GitHub API responded with a failure');
+      await expect(TokenService.processTokenExchange({
+        code: mockCode,
+        state: mockState,
+        codeVerifier: mockCodeVerifier,
+        host: mockHost
+      })).rejects.toThrow(errorMessage);
     });
 
     it('should handle ID token creation errors', async () => {
@@ -225,19 +266,17 @@ describe('TokenService', () => {
         data: mockGithubToken
       });
 
+      const errorMessage = 'Failed to create ID token: Mock error';
       jest.spyOn(crypto, 'makeIdToken').mockImplementation(() => {
-        throw new Error('Failed to create ID token: Mock error');
+        throw new Error(errorMessage);
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      await expect(
-        TokenService.processTokenExchange({
-          code: mockCode,
-          state: mockState,
-          codeVerifier: mockCodeVerifier,
-          host: mockHost
-        })
-      ).rejects.toThrow('Failed to create ID token: Mock error');
+      await expect(TokenService.processTokenExchange({
+        code: mockCode,
+        state: mockState,
+        codeVerifier: mockCodeVerifier,
+        host: mockHost
+      })).rejects.toThrow(errorMessage);
     });
   });
 });

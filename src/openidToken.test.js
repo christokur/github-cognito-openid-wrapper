@@ -34,6 +34,29 @@ describe('openid domain layer - Token', () => {
 
       mockAxios.post.mockResolvedValue(mockResponse);
 
+      // Mock user details and emails
+      mockAxios.get.mockImplementation((url) => {
+        if (url.endsWith('/user')) {
+          return Promise.resolve({
+            status: 200,
+            data: {
+              id: 12345,
+              name: 'Test User',
+              login: 'testuser'
+            }
+          });
+        } else if (url.endsWith('/user/emails')) {
+          return Promise.resolve({
+            status: 200,
+            data: [{
+              email: 'test@example.com',
+              primary: true,
+              verified: true
+            }]
+          });
+        }
+      });
+
       const token = await openid.getTokens(
         'SOME_CODE',
         'SOME_STATE',
@@ -61,6 +84,12 @@ describe('openid domain layer - Token', () => {
         'Content-Type': 'application/x-www-form-urlencoded'
       });
       expect(postCall[2].timeout).toBe(10000);
+
+      // Verify user details and emails were requested
+      const getCalls = mockAxios.get.mock.calls;
+      expect(getCalls).toHaveLength(2);
+      expect(getCalls[0][0]).toMatch(/\/user$/);
+      expect(getCalls[1][0]).toMatch(/\/user\/emails$/);
     });
   });
 
