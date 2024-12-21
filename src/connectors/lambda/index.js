@@ -239,8 +239,8 @@ exports.handler = (event, context, callback) => {
     versionComponent: VERSION_COMPONENT,
     path: event.path,
     method: event.httpMethod,
-    event: event,
-    context: context,
+    event,
+    context,
     memoryUsage: process.memoryUsage()
   });
 

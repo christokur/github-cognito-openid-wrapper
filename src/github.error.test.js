@@ -308,7 +308,7 @@ describe('GitHub Client - Error Handling', () => {
   });
 
   describe('API Errors', () => {
-    test('should handle error response with 200 status', () => {
+    test('should handle error response with 200 status and error message', () => {
       mockAxios.get.mockRejectedValue({
         response: {
           status: 200,
@@ -331,7 +331,7 @@ describe('GitHub Client - Error Handling', () => {
         });
     });
 
-    test('should handle error response with 200 status', () => {
+    test('should handle error response with 200 status and data message', () => {
       mockAxios.get.mockRejectedValue({
         response: {
           status: 200,
