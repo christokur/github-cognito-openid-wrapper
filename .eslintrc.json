@@ -46,7 +46,8 @@
         "jest/prefer-to-have-length": "warn",
         "jest/valid-expect": 0,
         "global-require": 0,
-        "no-undef": 0
+        "no-undef": 0,
+        "no-throw-literal": "off"
       }
     }
   ]
