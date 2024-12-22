@@ -5,7 +5,7 @@ module.exports.handler = (event, context) => {
     // Get the host from the event headers
     let host = event.headers && event.headers.Host;
     if (!host) {
-      return callback(null, {
+      return {
         statusCode: 400,
         headers: {
           'Content-Type': 'application/json'
@@ -14,7 +14,7 @@ module.exports.handler = (event, context) => {
           error: 'invalid_request',
           error_description: 'Host header is required'
         })
-      });
+      };
     }
     //  if host already has a `http?://` prefix do nothing else add it
     if (!host.startsWith('http://') && !host.startsWith('https://')) {

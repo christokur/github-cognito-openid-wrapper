@@ -68,11 +68,11 @@ function verifyResponse(response) {
     throw new Error('Invalid status code');
   }
 
-  for (const [key, value] of Object.entries(required.headers)) {
+  Object.entries(required.headers).forEach(([key, value]) => {
     if (response.headers[key] !== value) {
       throw new Error(`Invalid header: ${key}`);
     }
-  }
+  });
 
   if (!response.body) {
     throw new Error('Missing response body');

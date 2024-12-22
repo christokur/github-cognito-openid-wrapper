@@ -193,9 +193,7 @@ function processRequest(event, context, config) {
     }
 
     // Wrap handler in retry mechanism
-    const response = withRetry(() => {
-      return config.handler(event, context);
-    });
+    const response = withRetry(() => config.handler(event, context));
 
     // Format and return response
     return formatResponse(response, config);
