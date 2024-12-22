@@ -40,19 +40,24 @@ describe('Token Handling', () => {
 
   it('should exchange code for token successfully', async () => {
     mockAxios.post.mockResolvedValue(mockResponse);
-    const result = await client.getToken('code', mockState, mockVerifier);
+    const result = await client.getToken('code', mockVerifier);
     expect(result).toEqual(mockResponse.data);
 
     const actualCall = mockAxios.post.mock.calls[0];
     expect(actualCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
 
+    console.log('Actual data:', actualCall[1]);
+    console.log('Parsed data:', Object.fromEntries(new URLSearchParams(actualCall[1])));
+
     const actualData = Object.fromEntries(new URLSearchParams(actualCall[1]));
-    expect(actualData).toEqual({
+    const expectedData = {
       client_id: mockClientId,
       client_secret: mockClientSecret,
       code: 'code',
-      redirect_uri: mockRedirectUri
-    });
+      redirect_uri: mockRedirectUri,
+      code_verifier: mockVerifier
+    };
+    expect(actualData).toEqual(expectedData);
 
     expect(actualCall[2]).toEqual({
       headers: {
@@ -74,13 +79,13 @@ describe('Token Handling', () => {
       }
     };
     mockAxios.post.mockRejectedValue(errorResponse);
-    await expect(client.getToken('invalid-code', mockState)).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
+    await expect(client.getToken('invalid-code', mockVerifier)).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
   }, 30000);
 
   it('should handle network errors', async () => {
     const networkError = new Error('Network Error');
     mockAxios.post.mockRejectedValue(networkError);
-    await expect(client.getToken('code', mockState)).rejects.toThrow('Network error occurred while contacting GitHub API');
+    await expect(client.getToken('code', mockVerifier)).rejects.toThrow('Network error occurred while contacting GitHub API');
   }, 30000);
 
   it('should handle responses with special characters in token', async () => {
@@ -93,7 +98,7 @@ describe('Token Handling', () => {
     };
     mockAxios.post.mockResolvedValue(responseWithSpecialChars);
     
-    const result = await client.getToken('code', mockState, mockVerifier);
+    const result = await client.getToken('code', mockVerifier);
     
     expect(result).toEqual(responseWithSpecialChars.data);
   });
@@ -104,7 +109,7 @@ describe('Token Handling', () => {
     };
     mockAxios.post.mockResolvedValue(urlEncodedResponse);
     
-    const result = await client.getToken('code', mockState, mockVerifier);
+    const result = await client.getToken('code', mockVerifier);
     
     expect(result).toEqual({
       access_token: 'test_token',
