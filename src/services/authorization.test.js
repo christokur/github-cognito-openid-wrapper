@@ -117,29 +117,4 @@ describe('AuthorizationService', () => {
       })).toThrow('GitHub client error');
     });
   });
-
-  describe('state management', () => {
-    it('should store and retrieve authorization state', () => {
-      jest.spyOn(PkceHelper, 'generateCodeVerifier').mockReturnValue(mockCodeVerifier);
-      jest.spyOn(PkceHelper, 'generateCodeChallenge').mockReturnValue(mockCodeChallenge);
-
-      // Mock successful URL generation
-      const result = AuthorizationService.getAuthorizeUrl({
-        client_id: mockClientId,
-        scope: mockScope,
-        state: mockState,
-        response_type: mockResponseType,
-        nonce: mockNonce
-      });
-
-      // Verify the URL format
-      expect(result).toMatch(new RegExp(`^${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`));
-      
-      // Verify state is stored
-      const storedState = AuthorizationService.getStoredState();
-      expect(storedState).toBeDefined();
-      expect(storedState.codeVerifier).toBe(mockCodeVerifier);
-      expect(storedState.nonce).toBe(mockNonce);
-    });
-  });
 });

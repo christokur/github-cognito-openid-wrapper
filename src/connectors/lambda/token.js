@@ -15,7 +15,7 @@ const parseBody = (event) => {
 
   if (event.body) {
     if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
-      const parsedBody = qs.parse(event.body);
+      const parsedBody = typeof event.body === 'string' ? qs.parse(event.body) : event.body;
       logger.debug({
         message: 'Parsed x-www-form-urlencoded data',
         contentType,
@@ -24,7 +24,7 @@ const parseBody = (event) => {
       return parsedBody;
     }
     if (contentType && contentType.startsWith('application/json')) {
-      const parsedBody = JSON.parse(event.body);
+      const parsedBody = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
       logger.debug({
         message: 'Parsed JSON body',
         contentType,
@@ -50,7 +50,11 @@ module.exports.handler = (event, context) => {
     // Validate request using schema
     const validatedData = validate('token', body);
     const { code, state, code_verifier } = validatedData;
-    const host = event.headers.Host;
+    const host = event.headers.Host || event.headers.host;
+
+    if (!host) {
+      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Host header is required');
+    }
 
     logger.debug({
       message: 'Calling token controller',

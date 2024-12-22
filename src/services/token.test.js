@@ -14,14 +14,6 @@ describe('TokenService', () => {
     github = require('../github');
     TokenService = require('./token');
     crypto = require('../crypto');
-    
-    // Mock AuthorizationService.getStoredState
-    jest.mock('./authorization', () => ({
-      getStoredState: jest.fn().mockReturnValue({
-        codeVerifier: 'test-verifier',
-        nonce: 'test-nonce'
-      })
-    }));
   });
 
   afterEach(() => {
@@ -31,7 +23,6 @@ describe('TokenService', () => {
     delete require.cache[require.resolve('../connectors/logger')];
     delete require.cache[require.resolve('./token')];
     delete require.cache[require.resolve('../crypto')];
-    delete require.cache[require.resolve('./authorization')];
   });
 
   const mockCode = 'test-code';

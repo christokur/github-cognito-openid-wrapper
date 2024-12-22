@@ -63,7 +63,7 @@ class GitHubClient {
     return `${endpoints.oauthAuthorize}?${queryString}`;
   }
 
-  async getToken(code) {
+  async getToken(code, codeVerifier) {
     const endpoints = this.getApiEndpoints();
     const params = {
       client_id: config.GITHUB_CLIENT_ID,
@@ -71,6 +71,10 @@ class GitHubClient {
       code,
       redirect_uri: config.COGNITO_REDIRECT_URI,
     };
+
+    if (codeVerifier) {
+      params.code_verifier = codeVerifier;
+    }
 
     logger.debug('getToken called with:', { code, data: params });
 

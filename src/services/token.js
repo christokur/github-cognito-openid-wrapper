@@ -60,27 +60,20 @@ class TokenService {
         memoryUsage: process.memoryUsage()
       });
 
-      // Only verify PKCE if code_verifier was used in the authorization request
-      if (codeVerifier) {
-        const storedState = AuthorizationService.getStoredState();
-        if (!storedState || storedState.codeVerifier !== codeVerifier) {
-          throw new OAuthError(errorTypes.INVALID_GRANT, 'Invalid code verifier');
-        }
-      }
+      // Return a new promise that wraps the GitHub token call
+      return githubClientInstance.getToken(code, codeVerifier).then(githubTokenResponse => {
+        // GitHub returns scopes separated by commas
+        // But OAuth wants them to be spaces
+        // https://tools.ietf.org/html/rfc6749#section-5.1
+        // Also, we need to add openid as a scope,
+        // since GitHub will have stripped it
+        const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
 
-      const githubTokenResponse = githubClientInstance.getToken(code, state, codeVerifier);
-
-      // GitHub returns scopes separated by commas
-      // But OAuth wants them to be spaces
-      // https://tools.ietf.org/html/rfc6749#section-5.1
-      // Also, we need to add openid as a scope,
-      // since GitHub will have stripped it
-      const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
-
-      return {
-        ...githubTokenResponse,
-        scope
-      };
+        return {
+          ...githubTokenResponse,
+          scope
+        };
+      });
     } catch (error) {
       logger.error({
         message: 'Failed to get GitHub token',

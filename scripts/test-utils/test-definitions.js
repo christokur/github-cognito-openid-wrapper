@@ -1,5 +1,6 @@
 const logger = require('../../src/connectors/logger');
 const PkceHelper = require('../../src/utils/pkce');
+const AuthorizationService = require('../../src/services/authorization');
 
 function getTestDefinitions(config) {
   // Generate PKCE values for tests
