@@ -4,17 +4,23 @@ const logger = require('./connectors/logger');
 const { verifyRequest, verifyResponse, verifyIco } = require('./utils/favicon-verifier');
 
 let faviconBuffer;
+let faviconBase64;
 
 // Try webpack-bundled asset first (for Lambda)
 try {
     const webpackAsset = require('./assets/favicon.ico');
-    faviconBuffer = Buffer.from(webpackAsset.default || webpackAsset, 'base64');
+    // Keep the binary buffer for verification
+    faviconBuffer = Buffer.from(webpackAsset.split('base64,')[1], 'base64');
+    // But store the base64 string for response
+    faviconBase64 = webpackAsset.split('base64,')[1];
     logger.info('Loaded favicon from webpack bundle');
 } catch (error) {
     // Fallback to direct file access (for local development)
     try {
         const faviconPath = path.join(__dirname, 'assets', 'favicon.ico');
+        // For filesystem, we need to encode to base64
         faviconBuffer = fs.readFileSync(faviconPath);
+        faviconBase64 = faviconBuffer.toString('base64');
         logger.info('Loaded favicon from filesystem');
     } catch (fsError) {
         logger.error('Failed to load favicon:', fsError);
@@ -41,7 +47,7 @@ function handler(event, context) {
                 'Content-Type': 'image/x-icon',
                 'Cache-Control': 'public, max-age=31536000'
             },
-            body: faviconBuffer.toString('base64'),
+            body: faviconBase64,
             isBase64Encoded: true
         };
 

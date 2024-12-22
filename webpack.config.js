@@ -27,9 +27,11 @@ const baseConfig = {
       },
       {
         test: /\.ico$/,
-        type: 'asset/resource',
+        type: 'asset/inline',
         generator: {
-          filename: '[name][ext]'
+          dataUrl: {
+            encoding: 'base64'
+          }
         }
       }
     ]
