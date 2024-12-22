@@ -131,4 +131,85 @@ describe('openid domain layer - Token', () => {
       expect(postCall[2].timeout).toBe(10000);
     });
   });
+
+  describe('with invalid inputs', () => {
+    let logger;
+    let originalMemoryUsage;
+
+    beforeEach(() => {
+      jest.resetModules();
+      jest.mock('./connectors/logger', () => ({
+        debug: jest.fn(),
+        error: jest.fn()
+      }));
+      logger = require('./connectors/logger');
+      openid = require('./openid');
+
+      // Mock process.memoryUsage
+      originalMemoryUsage = process.memoryUsage;
+      process.memoryUsage = jest.fn().mockReturnValue({
+        rss: 123456,
+        heapTotal: 78910,
+        heapUsed: 11213,
+        external: 14151,
+        arrayBuffers: 16171
+      });
+    });
+
+    afterEach(() => {
+      jest.resetModules();
+      process.memoryUsage = originalMemoryUsage;
+    });
+
+    test('throws error when code is missing', () => {
+      expect(() => openid.getTokens(null, 'state', 'host', 'verifier'))
+        .toThrow('The code parameter is required');
+    });
+
+    test('logs and rethrows error from token exchange with memory usage', async () => {
+      const mockError = new Error('Token exchange failed');
+      mockAxios.post.mockRejectedValue(mockError);
+
+      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
+        .rejects.toThrow('Network error occurred while contacting GitHub API');
+
+      // Verify all error logs in the chain
+      const errorCalls = logger.error.mock.calls;
+      expect(errorCalls.length).toBe(4);
+
+      // First call - GitHub request failed
+      expect(errorCalls[0][0]).toMatchObject({
+        message: 'GitHub request failed',
+        error: expect.objectContaining({
+          message: 'Token exchange failed'
+        })
+      });
+
+      // Second call - Network error occurred
+      expect(errorCalls[1][0]).toMatchObject({
+        message: 'Network error occurred',
+        error: 'Token exchange failed'
+      });
+
+      // Third call - Error in getToken
+      expect(errorCalls[2][0]).toBe('Error in getToken:');
+      expect(errorCalls[2][1]).toBeInstanceOf(Error);
+
+      // Fourth call - Failed to process token exchange with memory usage
+      expect(errorCalls[3][0]).toMatchObject({
+        message: 'Failed to process token exchange',
+        error: 'Network error occurred while contacting GitHub API',
+        memoryUsage: {
+          rss: 123456,
+          heapTotal: 78910,
+          heapUsed: 11213,
+          external: 14151,
+          arrayBuffers: 16171
+        }
+      });
+
+      // Verify process.memoryUsage was called
+      expect(process.memoryUsage).toHaveBeenCalled();
+    });
+  });
 });
