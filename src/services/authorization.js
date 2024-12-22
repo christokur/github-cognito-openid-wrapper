@@ -15,6 +15,15 @@ class AuthorizationService {
    */
   static getAuthorizeUrl({ client_id, scope, state, response_type, nonce }) {
     try {
+      // Validate parameters
+      ConfigurationService.validateAuthorizationParams({
+        client_id,
+        scope,
+        state,
+        response_type,
+        nonce
+      });
+
       const githubClientInstance = githubClient(
         Configuration.GITHUB_API_URL,
         Configuration.GITHUB_LOGIN_URL
