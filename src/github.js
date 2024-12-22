@@ -1,7 +1,10 @@
 const qs = require('qs');
+const querystring = require('querystring');
 const config = require('./config');
+const Configuration = require('./config');
 const { gitHubGet, gitHubPost } = require('./github-api');
 const logger = require('./connectors/logger');
+const { OAuthError, errorTypes } = require('./errors');
 
 class GitHubClient {
   constructor(apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) {
@@ -74,6 +77,15 @@ class GitHubClient {
     try {
       const response = await gitHubPost(endpoints.oauthToken, params);
       logger.debug('Response from gitHubPost:', response);
+      // Check for GitHub error response
+      if (response.error) {
+        logger.error({
+          message: 'GitHub API error',
+          error: response.error,
+          error_description: response.error_description
+        });
+        throw new OAuthError(errorTypes.INVALID_GRANT, response.error_description || response.error);
+      }
       // Parse the response if it's a string
       return typeof response === 'string' ? qs.parse(response) : response;
     } catch (error) {

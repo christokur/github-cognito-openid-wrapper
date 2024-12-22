@@ -1,7 +1,9 @@
 const qs = require('querystring');
 const responder = require('./util/responder');
 const controllers = require('../controllers');
-const { validators, handleError } = require('./util/error-handler');
+const { handleError } = require('./util/error-handler');
+const { OAuthError, errorTypes } = require('../../errors');
+const { validate, schemas } = require('../../utils/validator');
 const logger = require('../logger');
 
 const parseBody = (event) => {
@@ -44,20 +46,21 @@ module.exports.handler = (event, context) => {
       message: 'Validating code from body',
       body
     });
-    const code = validators.required(body.code, 'code');
-    const state = body.state ? validators.state(body.state) : undefined;
-    const codeVerifier = body.code_verifier ? validators.required(body.code_verifier, 'code_verifier') : undefined;
+
+    // Validate request using schema
+    const validatedData = validate('token', body);
+    const { code, state, code_verifier } = validatedData;
     const host = event.headers.Host;
 
     logger.debug({
       message: 'Calling token controller',
       code,
       state,
-      codeVerifier,
+      code_verifier,
       host
     });
 
-    return controllers().token(code, state, host, codeVerifier);
+    return controllers().token(code, state, host, code_verifier);
   } catch (error) {
     logger.error({
       message: 'Token handler error',

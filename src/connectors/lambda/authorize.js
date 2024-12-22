@@ -1,4 +1,7 @@
 const controllers = require('../controllers');
+const { handleError } = require('./util/error-handler');
+const { validators } = require('../../errors');
+const logger = require('../logger');
 
 module.exports.handler = (event, context, callback) => {
   // Parameters are already validated by index.js

@@ -3,7 +3,7 @@ const crypto = require('../crypto');
 const githubClient = require('../github');
 const Configuration = require('../config');
 const AuthorizationService = require('./authorization');
-const { OAuthError, errorTypes } = require('../connectors/lambda/util/error-handler');
+const { OAuthError, errorTypes } = require('../errors');
 
 /**
  * Service for handling token operations
