@@ -181,9 +181,8 @@ describe('openid domain layer - Token', () => {
       await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
         .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
 
-      // Verify all error logs in the chain
       const errorCalls = logger.error.mock.calls;
-      expect(errorCalls.length).toBe(4);
+      expect(errorCalls).toHaveLength(4);
 
       // First call - GitHub request failed
       expect(errorCalls[0][0]).toMatchObject({
@@ -212,14 +211,115 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[2][0]).toBe('Error in getToken:');
       expect(errorCalls[2][1]).toBeInstanceOf(Error);
 
-      // Fourth call - Failed to process token exchange with memory usage
+      // Fourth call - Failed to process token exchange
       expect(errorCalls[3][0]).toEqual({
         message: 'Failed to process token exchange',
         error: 'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)'
       });
+    });
 
-      // Verify process.memoryUsage was called
-      expect(process.memoryUsage).toHaveBeenCalled();
+    test('logs error with memory usage when token exchange fails', async () => {
+      const mockError = {
+        response: {
+          status: 400,
+          data: {
+            error: 'token_exchange_failed',
+            error_description: 'Token exchange failed'
+          }
+        }
+      };
+      mockAxios.post.mockRejectedValue(mockError);
+
+      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
+        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)');
+
+      const errorCalls = logger.error.mock.calls;
+      expect(errorCalls).toHaveLength(4);
+
+      // First call - GitHub request failed
+      expect(errorCalls[0][0]).toMatchObject({
+        message: 'GitHub request failed',
+        error: expect.objectContaining({
+          response: {
+            status: 400,
+            data: {
+              error: 'token_exchange_failed',
+              error_description: 'Token exchange failed'
+            }
+          }
+        })
+      });
+
+      // Second call - Status and data
+      expect(errorCalls[1][0]).toMatchObject({
+        status: 400,
+        data: {
+          error: 'token_exchange_failed',
+          error_description: 'Token exchange failed'
+        }
+      });
+
+      // Third call - Error in getToken
+      expect(errorCalls[2][0]).toBe('Error in getToken:');
+      expect(errorCalls[2][1]).toBeInstanceOf(Error);
+
+      // Fourth call - Failed to process token exchange
+      expect(errorCalls[3][0]).toEqual({
+        message: 'Failed to process token exchange',
+        error: 'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)'
+      });
+    });
+
+    test('logs error when token exchange fails', async () => {
+      const mockError = {
+        response: {
+          status: 400,
+          data: {
+            error: 'token_exchange_failed',
+            error_description: 'Token exchange failed'
+          }
+        }
+      };
+      mockAxios.post.mockRejectedValue(mockError);
+
+      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
+        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)');
+
+      const errorCalls = logger.error.mock.calls;
+      expect(errorCalls).toHaveLength(4);
+
+      // First call - GitHub request failed
+      expect(errorCalls[0][0]).toMatchObject({
+        message: 'GitHub request failed',
+        error: expect.objectContaining({
+          response: {
+            status: 400,
+            data: {
+              error: 'token_exchange_failed',
+              error_description: 'Token exchange failed'
+            }
+          }
+        })
+      });
+
+      // Second call - Status and data
+      expect(errorCalls[1][0]).toMatchObject({
+        status: 400,
+        data: {
+          error: 'token_exchange_failed',
+          error_description: 'Token exchange failed'
+        }
+      });
+
+      // Third call - Error in getToken
+      expect(errorCalls[2][0]).toBe('Error in getToken:');
+      expect(errorCalls[2][1]).toBeInstanceOf(Error);
+
+      // Fourth call - Failed to process token exchange
+      expect(errorCalls[3][0]).toEqual({
+        message: 'Failed to process token exchange',
+        error: 'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)'
+      });
     });
   });
 

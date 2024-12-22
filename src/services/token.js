@@ -32,8 +32,7 @@ class TokenService {
     } catch (error) {
       logger.error({
         message: 'Failed to get JWKS',
-        error: error.message || error,
-        memoryUsage: process.memoryUsage()
+        error: error.message || error
       });
       throw error;
     }
@@ -185,7 +184,7 @@ class TokenService {
           message: 'Failed to process token exchange',
           error: error.message || error
         });
-        throw error;
+        throw new OAuthError(errorTypes.SERVER_ERROR, error.message);
       });
   }
 }
