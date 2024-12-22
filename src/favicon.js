@@ -35,8 +35,8 @@ function handler(event, context) {
                 'Content-Type': 'image/x-icon',
                 'Cache-Control': 'public, max-age=31536000'
             },
-            body: faviconBuffer,
-            isBase64Encoded: false
+            body: faviconBuffer.toString('base64'),
+            isBase64Encoded: true
         };
 
         // Only verify response in debug mode to save CPU
