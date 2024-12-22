@@ -167,11 +167,19 @@ describe('openid domain layer - Token', () => {
     });
 
     test('logs and rethrows error from token exchange with memory usage', async () => {
-      const mockError = new Error('Token exchange failed');
+      const mockError = {
+        response: {
+          status: 400,
+          data: {
+            error: 'bad_verification_code',
+            error_description: 'The code passed is incorrect or expired.'
+          }
+        }
+      };
       mockAxios.post.mockRejectedValue(mockError);
 
       await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
-        .rejects.toThrow('Network error occurred while contacting GitHub API');
+        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
 
       // Verify all error logs in the chain
       const errorCalls = logger.error.mock.calls;
@@ -181,14 +189,23 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[0][0]).toMatchObject({
         message: 'GitHub request failed',
         error: expect.objectContaining({
-          message: 'Token exchange failed'
+          response: {
+            status: 400,
+            data: {
+              error: 'bad_verification_code',
+              error_description: 'The code passed is incorrect or expired.'
+            }
+          }
         })
       });
 
-      // Second call - Network error occurred
+      // Second call - Status and data
       expect(errorCalls[1][0]).toMatchObject({
-        message: 'Network error occurred',
-        error: 'Token exchange failed'
+        status: 400,
+        data: {
+          error: 'bad_verification_code',
+          error_description: 'The code passed is incorrect or expired.'
+        }
       });
 
       // Third call - Error in getToken
@@ -196,20 +213,14 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[2][1]).toBeInstanceOf(Error);
 
       // Fourth call - Failed to process token exchange with memory usage
-      expect(errorCalls[3][0]).toMatchObject({
+      expect(errorCalls[3][0]).toEqual({
         message: 'Failed to process token exchange',
-        error: 'Network error occurred while contacting GitHub API',
-        memoryUsage: {
-          rss: 123456,
-          heapTotal: 78910,
-          heapUsed: 11213,
-          external: 14151,
-          arrayBuffers: 16171
-        }
+        error: 'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)'
       });
 
       // Verify process.memoryUsage was called
       expect(process.memoryUsage).toHaveBeenCalled();
     });
   });
+
 });
