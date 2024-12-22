@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('./connectors/logger');
-const { verifyRequest, verifyResponse } = require('./utils/favicon-verifier');
+const { verifyRequest, verifyResponse, verifyIco } = require('./utils/favicon-verifier');
 
 let faviconBuffer;
 
@@ -27,6 +27,12 @@ function handler(event, context) {
     try {
         // Always verify request as it's a security check
         verifyRequest(event);
+
+        // Verify ICO format before sending
+        if (process.env.LOG_LEVEL === 'debug') {
+            logger.debug('Verifying favicon response');
+            verifyIco(faviconBuffer);
+        }
 
         // Generate response
         const response = {
