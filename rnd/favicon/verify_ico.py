@@ -5,7 +5,6 @@ import re
 import struct
 import sys
 from pathlib import Path
-from typing import Optional
 
 EXPECTED_CLI_ARGS = 2  # Program name + input file path
 MIN_IMAGE_COUNT = 1  # Minimum number of images required in ICO
@@ -34,7 +33,7 @@ def verify_ico_bytes(ico_data: bytes) -> None:
         # Check each directory entry
         offset = 6
         for i in range(header[2]):
-            entry = struct.unpack("BBBBHHII", ico_data[offset:offset+16])
+            entry = struct.unpack("BBBBHHII", ico_data[offset : offset + 16])
             print(f"\nICO Directory Entry {i+1:d}:")
             print(f"Width: {entry[0] or 256:d}")
             print(f"Height: {entry[1] or 256:d}")
@@ -55,7 +54,7 @@ def verify_ico_bytes(ico_data: bytes) -> None:
             raise ValueError("Invalid ICO: Must contain at least one image")
 
     except struct.error as err:
-        raise ValueError(f"Invalid ICO format: {str(err)}") from err
+        raise ValueError(f"Invalid ICO format: {err!s}") from err
 
 
 def extract_base64_from_js(js_file: str | Path) -> str:
@@ -95,10 +94,10 @@ def verify_ico(js_file: str | Path) -> None:
         ico_data = base64.b64decode(base64_data)
         verify_ico_bytes(ico_data)
     except Exception as err:
-        raise ValueError(f"Error verifying ICO format: {str(err)}") from err
+        raise ValueError(f"Error verifying ICO format: {err!s}") from err
 
 
-def process_input_file(input_file: str | Path, output_file: Optional[str | Path] = None) -> None:
+def process_input_file(input_file: str | Path, output_file: str | Path | None = None) -> None:
     """
     Process input file (either .js or .ico) and verify/output ICO data.
 
@@ -138,8 +137,8 @@ if __name__ == "__main__":
 
     try:
         input_file = sys.argv[1]
-        output_file = sys.argv[2] if len(sys.argv) > 2 else None
+        output_file = sys.argv[2] if len(sys.argv) > 2 else None  # noqa: PLR2004
         process_input_file(input_file, output_file)
     except Exception as err:
-        print(f"Error: {str(err)}")
+        print(f"Error: {err!s}")
         sys.exit(1)

@@ -39,7 +39,7 @@ def main() -> None:
     else:
         # Encode the image to Base64 for HTML/JS output
         base64_string = encode_image_to_base64(args.image)
-        
+
         if args.output.endswith(".html"):
             generate_html_file(args.output, base64_string)
         elif args.output.endswith(".js"):

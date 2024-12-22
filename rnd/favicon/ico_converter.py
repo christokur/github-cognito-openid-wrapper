@@ -9,7 +9,7 @@ from PIL import Image
 from .verify_ico import verify_ico_bytes
 
 
-def convert_to_ico(image_path: str | Path, output_path: str | Path = None) -> bytes:
+def convert_to_ico(image_path: str | Path, output_path: str | Path | None = None) -> bytes:
     """
     Convert an image to ICO format and optionally save it to a file.
 
@@ -24,6 +24,7 @@ def convert_to_ico(image_path: str | Path, output_path: str | Path = None) -> by
         FileNotFoundError: If the image file doesn't exist
         IOError: If the image file can't be read
         ValueError: If the file is not a valid image format
+
     """
     try:
         # Convert to Path objects
@@ -53,7 +54,7 @@ def convert_to_ico(image_path: str | Path, output_path: str | Path = None) -> by
 
         # Save to bytes
         ico_buffer = io.BytesIO()
-        img.save(ico_buffer, format='ICO')
+        img.save(ico_buffer, format="ICO")
         ico_bytes = ico_buffer.getvalue()
 
         # Verify the ICO format
@@ -67,5 +68,5 @@ def convert_to_ico(image_path: str | Path, output_path: str | Path = None) -> by
         return ico_bytes
 
     except Exception as e:
-        print(f"Error converting image to ICO: {str(e)}", file=sys.stderr)
+        print(f"Error converting image to ICO: {e!s}", file=sys.stderr)
         raise

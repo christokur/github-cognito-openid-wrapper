@@ -46,8 +46,7 @@ Examples:
   process.exit(0);
 }
 
-// Main execution
-(async () => {
+async function main() {
   try {
     const axios = require('axios');
     const path = require('path');
@@ -55,7 +54,7 @@ Examples:
     const os = require('os');
     const { runTests, displayFaviconReport } = require('./test-utils/test-runner');
     const { testFavicon } = require('./test-utils/endpoint-tester');
-    const { ensureServerRunning } = require('./test-utils/server-manager');
+    const { ensureServerRunning, stopMockServer } = require('./test-utils/server-manager');
 
     // Start mock server if needed
     if (argv.url.includes('localhost')) {
@@ -80,6 +79,12 @@ Examples:
       const { response, analysis } = await testFavicon(argv.url);
       displayFaviconReport(analysis);
     }
+
+    // Stop mock server if we started it
+    if (argv.url.includes('localhost')) {
+      await stopMockServer(argv.url);
+    }
+    process.exit(0);
   } catch (error) {
     logger.error('Test execution failed', {
       prefix: 'Process',
@@ -87,4 +92,6 @@ Examples:
     });
     process.exit(1);
   }
-})();
+}
+
+main();
