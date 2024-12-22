@@ -1,9 +1,20 @@
 const logger = require('./test-logger');
 const { ensureServerRunning, stopMockServer } = require('./server-manager');
-const { testEndpoint, discoverEndpoints } = require('./endpoint-tester');
+const { testEndpoint, testFavicon, discoverEndpoints } = require('./endpoint-tester');
 const { getTestDefinitions } = require('./test-definitions');
 
-async function runTests(baseUrl, isLocalhost) {
+function displayFaviconReport(analysis) {
+  console.log('\n=== Favicon Report ===');
+  console.log('Content Type:', analysis.contentType);
+  console.log('Size:', analysis.size, 'bytes');
+  //console.log('Base64 Payload:', analysis.base64);
+  console.log('Saved to:', analysis.path);
+  console.log('Valid ICO Format:', analysis.isValidICO ? '✓ Yes' : '✗ No');
+  console.log('Cache Control:', analysis.cacheControl || 'Not set');
+  console.log('===================\n');
+}
+
+async function runTests(baseUrl, isLocalhost, options = {}) {
   logger.section('Running OIDC Endpoint Tests');
   
   logger.info('Starting endpoint tests', {
@@ -25,6 +36,42 @@ async function runTests(baseUrl, isLocalhost) {
     // Step 1: Ensure server is running
     serverStarted = await ensureServerRunning(baseUrl, isLocalhost);
     
+    // Step 1: Test favicon (GET only)
+    logger.info('Testing favicon.ico');
+    const { response, analysis } = await testFavicon(baseUrl, options);
+    displayFaviconReport(analysis);
+    
+    if (response.status === 200) {
+      if (analysis.isValidICO) {
+        logger.info('Test passed (method=GET path=/favicon.ico)');
+        results.passed++;
+      } else {
+        logger.error('Test failed: Invalid ICO format', {
+          prefix: 'Favicon',
+          contentType: analysis.contentType,
+          size: analysis.size
+        });
+        results.failed++;
+        results.failures.push({
+          method: 'GET',
+          path: '/favicon.ico',
+          error: 'Invalid ICO format'
+        });
+      }
+    } else {
+      logger.error('Test failed (method=GET path=/favicon.ico)', {
+        status: response.status,
+        expected: 200
+      });
+      results.failed++;
+      results.failures.push({
+        method: 'GET',
+        path: '/favicon.ico',
+        error: `Unexpected status code: ${response.status}`
+      });
+    }
+    results.total++;
+
     // Step 2: Discover endpoints
     const config = await discoverEndpoints(baseUrl);
 
@@ -40,7 +87,7 @@ async function runTests(baseUrl, isLocalhost) {
 
     // Step 3: Get test definitions
     const endpoints = getTestDefinitions(config);
-    results.total = endpoints.length;
+    results.total += endpoints.length;
 
     logger.section('Testing HTTP Methods');
 
@@ -55,7 +102,7 @@ async function runTests(baseUrl, isLocalhost) {
       });
 
       try {
-        const response = await testEndpoint(
+        const { response } = await testEndpoint(
           baseUrl,
           path,
           endpoint.method,
@@ -66,8 +113,8 @@ async function runTests(baseUrl, isLocalhost) {
         // For token endpoint with invalid codes, remote server may return 502
         const isTokenEndpoint = path === '/token';
         const isRemoteServer = !isLocalhost;
-        const isValidStatus = response.status === endpoint.expectedStatus || 
-          (isTokenEndpoint && isRemoteServer && response.status === 502);
+        const isValidStatus = response?.status === endpoint.expectedStatus || 
+          (isTokenEndpoint && isRemoteServer && response?.status === 502);
 
         if (isValidStatus) {
           results.passed++;
@@ -75,19 +122,19 @@ async function runTests(baseUrl, isLocalhost) {
             prefix: 'Test',
             method: endpoint.method,
             path,
-            status: response.status
+            status: response?.status
           });
         } else {
           results.failed++;
-          const error = `Result: status ${response.status}, expected ${endpoint.expectedStatus}`;
+          const error = `Result: status ${response?.status}, expected ${endpoint.expectedStatus}`;
           results.failures.push({
             endpoint: path,
             method: endpoint.method,
             name: endpoint.name,
             error,
             expected: endpoint.expectedStatus,
-            actual: response.status,
-            requestId: response.headers['x-amzn-requestid'] || 'N/A'
+            actual: response?.status,
+            requestId: response?.headers?.['x-amzn-requestid'] || ''
           });
           logger.error(`Test failed`, {
             prefix: 'Test',
@@ -95,8 +142,8 @@ async function runTests(baseUrl, isLocalhost) {
             path,
             error,
             expected: endpoint.expectedStatus,
-            actual: response.status,
-            requestId: response.headers['x-amzn-requestid'] || 'N/A'
+            actual: response?.status,
+            requestId: response?.headers?.['x-amzn-requestid'] || ''
           });
         }
       } catch (error) {
@@ -106,14 +153,14 @@ async function runTests(baseUrl, isLocalhost) {
           method: endpoint.method,
           error: error.message,
           name: endpoint.name,
-          requestId: error.response?.headers?.['x-amzn-requestid'] || 'N/A'
+          requestId: error.response?.headers?.['x-amzn-requestid'] || ''
         });
         logger.error(`Test failed`, {
           prefix: 'Test',
           method: endpoint.method,
           path,
           error: error.message,
-          requestId: error.response?.headers?.['x-amzn-requestid'] || 'N/A'
+          requestId: error.response?.headers?.['x-amzn-requestid'] || ''
         });
       }
     }
@@ -166,5 +213,6 @@ async function runTests(baseUrl, isLocalhost) {
 }
 
 module.exports = {
-  runTests
+  runTests,
+  displayFaviconReport
 };

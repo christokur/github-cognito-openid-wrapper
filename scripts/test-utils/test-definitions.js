@@ -1,6 +1,11 @@
 const logger = require('../../src/connectors/logger');
+const PkceHelper = require('../../src/utils/pkce');
 
 function getTestDefinitions(config) {
+  // Generate PKCE values for tests
+  const codeVerifier = PkceHelper.generateCodeVerifier();
+  const codeChallenge = PkceHelper.generateCodeChallenge(codeVerifier);
+
   return [
     // Authorization endpoint tests
     {
@@ -12,7 +17,9 @@ function getTestDefinitions(config) {
         client_id: 'test-client',
         scope: 'openid',
         state: '1234567890123456',
-        response_type: 'code'
+        response_type: 'code',
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256'
       }
     },
     {
@@ -49,7 +56,7 @@ function getTestDefinitions(config) {
       params: {
         code: 'test-code',
         state: '1234567890123456',
-        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        code_verifier: codeVerifier,
       },
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -63,7 +70,7 @@ function getTestDefinitions(config) {
       params: {
         code: 'test-code',
         state: '1234567890123456',
-        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        code_verifier: codeVerifier,
         host: 'http://localhost:3000'
       },
       headers: {
@@ -78,7 +85,7 @@ function getTestDefinitions(config) {
       params: {
         code: 'test-code',
         state: '1234567890123456',
-        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        code_verifier: codeVerifier,
         host: 'http://localhost:3000'
       },
       headers: {
@@ -93,7 +100,7 @@ function getTestDefinitions(config) {
       params: {
         code: 'test-code',
         state: '1234567890123456',
-        code_verifier: 'test-code-verifier-that-is-at-least-43-characters-long',
+        code_verifier: codeVerifier,
       },
       headers: {
         'Content-Type': 'application/json'
@@ -151,6 +158,16 @@ function getTestDefinitions(config) {
       url: config.userinfo_endpoint,
       method: 'DELETE',
       expectedStatus: 405
+    },
+    // Favicon tests
+    {
+      name: 'Favicon GET',
+      url: `${config.issuer}/favicon.ico`,
+      method: 'GET',
+      expectedStatus: 200,
+      headers: {
+        'Accept': 'image/x-icon'
+      }
     }
   ];
 }

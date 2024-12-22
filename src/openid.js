@@ -60,7 +60,7 @@ class OpenIDProvider {
    * @param {string} host - Host URL
    * @param {string} codeVerifier - PKCE code verifier
    */
-  static async getTokens(code, state, host, codeVerifier) {
+  static getTokens(code, state, host, codeVerifier) {
     if (!code) {
       throw new Error('The code parameter is required');
     }
@@ -74,7 +74,7 @@ class OpenIDProvider {
         memoryUsage: process.memoryUsage()
       });
 
-      const tokenResponse = await TokenService.processTokenExchange({
+      const tokenResponse = TokenService.processTokenExchange({
         code,
         state,
         host,

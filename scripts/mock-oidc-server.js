@@ -6,7 +6,7 @@ const express = require('express');
 const execAsync = promisify(exec);
 
 // Server version
-const SERVER_VERSION = '0.3.2';
+const SERVER_VERSION = '0.3.5';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -102,38 +102,7 @@ app.get('/version', (req, res) => {
 
 // Lambda handler adapter
 const lambdaToExpress = (req, res) => {
-  const event = {
-    path: req.path,
-    httpMethod: req.method,
-    headers: {
-      ...req.headers,
-      Host: `${req.protocol}://${req.get('host')}`
-    },
-    queryStringParameters: req.query,
-    body: req.headers['content-type']?.startsWith('application/json') ? JSON.stringify(req.body) : req.body
-  };
-
-  // Create mock AWS Lambda context
-  const mockContext = {
-    awsRequestId: 'mock-request-' + Date.now(),
-    functionName: 'mock-oidc-server',
-    functionVersion: '$LATEST',
-    invokedFunctionArn: 'mock-arn',
-    memoryLimitInMB: '128',
-    logGroupName: '/mock/lambda/log-group',
-    logStreamName: 'mock-log-stream',
-    identity: null,
-    clientContext: null
-  };
-
-  // Set environment variables for lambda handler
-  process.env.GITHUB_CLIENT_ID = 'mock-client-id';
-  process.env.GITHUB_CLIENT_SECRET = 'mock-client-secret';
-  process.env.COGNITO_REDIRECT_URI = 'http://localhost:3000/callback';
-  process.env.GITHUB_API_URL = 'http://localhost:3000/github-api';
-  process.env.GITHUB_LOGIN_URL = 'http://localhost:3000/github';
-
-  lambda.handler(event, mockContext, (error, result) => {
+  const callback = (error, result) => {
     if (error) {
       logger.error('Lambda handler error', { error: error.message });
       res.status(500).json({
@@ -162,7 +131,38 @@ const lambdaToExpress = (req, res) => {
     } else {
       res.end();
     }
-  });
+  };
+  const event = {
+    path: req.path,
+    httpMethod: req.method,
+    headers: {
+      ...req.headers,
+      Host: `${req.protocol}://${req.get('host')}`
+    },
+    queryStringParameters: req.query,
+    body: req.headers['content-type']?.startsWith('application/json') ? JSON.stringify(req.body) : req.body
+  };
+  // Create mock AWS Lambda context
+  const mockContext = {
+    awsRequestId: 'mock-request-' + Date.now(),
+    functionName: 'mock-oidc-server',
+    functionVersion: '$LATEST',
+    invokedFunctionArn: 'mock-arn',
+    memoryLimitInMB: '128',
+    logGroupName: '/mock/lambda/log-group',
+    logStreamName: 'mock-log-stream',
+    identity: null,
+    clientContext: null
+  };
+
+  // Set environment variables for lambda handler
+  process.env.GITHUB_CLIENT_ID = 'mock-client-id';
+  process.env.GITHUB_CLIENT_SECRET = 'mock-client-secret';
+  process.env.COGNITO_REDIRECT_URI = 'http://localhost:3000/callback';
+  process.env.GITHUB_API_URL = 'http://localhost:3000/github-api';
+  process.env.GITHUB_LOGIN_URL = 'http://localhost:3000/github';
+
+  lambda.handler(event, mockContext, callback);
 };
 
 // Mock GitHub API responses
@@ -209,6 +209,7 @@ app.all('/authorize', lambdaToExpress);
 app.all('/userinfo', lambdaToExpress);
 app.all('/jwks', lambdaToExpress);
 app.all('/.well-known/openid-configuration', lambdaToExpress);
+app.all('/favicon.ico', lambdaToExpress);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -268,5 +269,6 @@ module.exports = {
   SERVER_VERSION,
   app,
   PORT_NUMBER,
-  killOrphanedServer
+  killOrphanedServer,
+  startServer
 };

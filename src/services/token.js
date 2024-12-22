@@ -2,7 +2,8 @@ const logger = require('../connectors/logger');
 const crypto = require('../crypto');
 const githubClient = require('../github');
 const Configuration = require('../config');
-const AuthorizationService = require('./authorization'); // Assuming AuthorizationService is in a separate file
+const AuthorizationService = require('./authorization');
+const { OAuthError, errorTypes } = require('../connectors/lambda/util/error-handler');
 
 /**
  * Service for handling token operations
@@ -44,7 +45,7 @@ class TokenService {
    * @param {string} state - State parameter
    * @param {string} codeVerifier - PKCE code verifier
    */
-  static async getGithubToken(code, state, codeVerifier) {
+  static getGithubToken(code, state, codeVerifier) {
     try {
       const githubClientInstance = githubClient(
         Configuration.GITHUB_API_URL,
@@ -63,11 +64,11 @@ class TokenService {
       if (codeVerifier) {
         const storedState = AuthorizationService.getStoredState();
         if (!storedState || storedState.codeVerifier !== codeVerifier) {
-          throw new Error('Invalid code verifier');
+          throw new OAuthError(errorTypes.INVALID_GRANT, 'Invalid code verifier');
         }
       }
 
-      const githubTokenResponse = await githubClientInstance.getToken(code, state, codeVerifier);
+      const githubTokenResponse = githubClientInstance.getToken(code, state, codeVerifier);
 
       // GitHub returns scopes separated by commas
       // But OAuth wants them to be spaces
@@ -113,81 +114,86 @@ class TokenService {
   }
 
   /**
-   * Processes token exchange and creates response
+   * Process token exchange
    * @param {Object} params - Token exchange parameters
    * @param {string} params.code - Authorization code
    * @param {string} params.state - State parameter
-   * @param {string} params.host - Issuer host
+   * @param {string} params.host - Host URL
    * @param {string} params.codeVerifier - PKCE code verifier
    * @param {string} [params.nonce] - Optional nonce for ID token
    */
-  static async processTokenExchange({ code, state, host, codeVerifier, nonce = null }) {
-    try {
-      logger.debug({
-        message: 'Starting token exchange process',
-        code,
-        state,
-        host,
-        codeVerifier,
-        nonce
+  static processTokenExchange({ code, state, host, codeVerifier, nonce = null }) {
+    logger.debug({
+      message: 'Starting token exchange process',
+      code,
+      state,
+      host,
+      codeVerifier,
+      nonce
+    });
+
+    return this.getGithubToken(code, state, codeVerifier)
+      .then(githubToken => {
+        logger.debug({
+          message: 'Received GitHub token',
+          githubToken
+        });
+
+        const githubClientInstance = githubClient(
+          Configuration.GITHUB_API_URL,
+          Configuration.GITHUB_LOGIN_URL
+        );
+
+        return Promise.all([
+          Promise.resolve(githubToken),
+          githubClientInstance.getUserDetails(githubToken.access_token),
+          githubClientInstance.getUserEmails(githubToken.access_token)
+        ]);
+      })
+      .then(([githubToken, userInfo, userEmails]) => {
+        const primaryEmail = userEmails.find(email => email.primary) || userEmails[0];
+
+        // Create ID token payload with user info
+        const payload = {
+          sub: userInfo.id.toString(),
+          name: userInfo.name,
+          preferred_username: userInfo.login,
+          email: primaryEmail.email,
+          email_verified: primaryEmail.verified,
+          ...(nonce ? { nonce } : {})
+        };
+
+        logger.debug({
+          message: 'Creating ID token with user info',
+          payload
+        });
+
+        // Create ID token
+        const idToken = this.createIdToken(payload, host);
+        logger.debug({
+          message: 'Created ID token',
+          idToken
+        });
+
+        const response = {
+          ...githubToken,
+          id_token: idToken
+        };
+
+        logger.debug({
+          message: 'Token exchange complete',
+          response
+        });
+
+        return response;
+      })
+      .catch(error => {
+        logger.error({
+          message: 'Failed to process token exchange',
+          error: error.message || error
+        });
+        throw error;
       });
-
-      // Get GitHub token
-      const githubToken = await this.getGithubToken(code, state, codeVerifier);
-      logger.debug({
-        message: 'Received GitHub token',
-        githubToken
-      });
-
-      // Get GitHub user info
-      const githubClientInstance = githubClient(
-        Configuration.GITHUB_API_URL,
-        Configuration.GITHUB_LOGIN_URL
-      );
-      const userInfo = await githubClientInstance.getUserDetails(githubToken.access_token);
-      const userEmails = await githubClientInstance.getUserEmails(githubToken.access_token);
-      const primaryEmail = userEmails.find(email => email.primary) || userEmails[0];
-
-      // Create ID token payload with user info
-      const payload = {
-        sub: userInfo.id.toString(),
-        name: userInfo.name,
-        preferred_username: userInfo.login,
-        email: primaryEmail.email,
-        email_verified: primaryEmail.verified,
-        ...(nonce ? { nonce } : {})
-      };
-
-      logger.debug({
-        message: 'Creating ID token with user info',
-        payload
-      });
-
-      // Create ID token
-      const idToken = this.createIdToken(payload, host);
-      logger.debug({
-        message: 'Created ID token',
-        idToken
-      });
-
-      const response = {
-        ...githubToken,
-        id_token: idToken
-      };
-
-      logger.debug({
-        message: 'Token exchange complete',
-        response
-      });
-
-      return response;
-    } catch (error) {
-      logger.error({
-        message: 'Failed to process token exchange',
-        error: error.message || error
-      });
-      throw error;
-    }
   }
 }
 

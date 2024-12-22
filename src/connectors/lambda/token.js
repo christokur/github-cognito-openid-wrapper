@@ -10,7 +10,7 @@ const parseBody = (event) => {
     event
   });
   const contentType = event.headers['content-type'] || event.headers['Content-Type'];
-  
+
   if (event.body) {
     if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
       const parsedBody = qs.parse(event.body);
@@ -37,7 +37,7 @@ const parseBody = (event) => {
   return {};
 };
 
-module.exports.handler = (event, context, callback) => {
+module.exports.handler = (event, context) => {
   try {
     const body = parseBody(event);
     logger.debug({

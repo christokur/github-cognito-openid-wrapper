@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file. See [commit
 
 ### [1.2.1](https://github.com/TimothyJones/github-cognito-openid-wrapper/compare/v1.2.0...v1.2.1) (2023-03-15)
 
-
 ### Bug Fixes
 
 * Always export API base URLs ([bb3ace5](https://github.com/TimothyJones/github-cognito-openid-wrapper/commit/bb3ace5b87aa74200e226e72bfa21f59df90a8d0))
@@ -21,11 +20,9 @@ All notable changes to this project will be documented in this file. See [commit
 
 ## [1.2.0](https://github.com/TimothyJones/github-cognito-openid-wrapper/compare/v1.1.0...v1.2.0) (2020-09-08)
 
-
 ### Features
 
 * allow configuration of github base urls during deployment ([6de104b](https://github.com/TimothyJones/github-cognito-openid-wrapper/commit/6de104b378b2d39105d34938d5a6eb79722430cc))
-
 
 ### Bug Fixes
 

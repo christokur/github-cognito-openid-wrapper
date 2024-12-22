@@ -24,6 +24,13 @@ const baseConfig = {
             loader: 'raw-loader'
           }
         ]
+      },
+      {
+        test: /\.ico$/,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext]'
+        }
       }
     ]
   },

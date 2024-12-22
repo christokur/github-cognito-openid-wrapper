@@ -19,3 +19,4 @@ config.rc
 .ai/**/*
 .windsurfrules
 .clinerules
+**/*/__pycache__

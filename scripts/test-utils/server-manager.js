@@ -3,7 +3,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const path = require('path');
 const logger = require('./test-logger');
-const { SERVER_VERSION, app, PORT_NUMBER, killOrphanedServer } = require('../mock-oidc-server');
+const { SERVER_VERSION, startServer, PORT_NUMBER, killOrphanedServer } = require('../mock-oidc-server');
 
 const execAsync = promisify(exec);
 const EXPECTED_SERVER_VERSION = SERVER_VERSION;
@@ -11,13 +11,29 @@ let mockServer = null;
 
 async function checkServerVersion(baseUrl) {
   try {
-    const response = await axios.get(`${baseUrl}/version`);
+    const url = `http://localhost:${PORT_NUMBER}/version`;
+    logger.debug(`Checking server version at ${url}`, {
+      prefix: 'Server',
+      expectedVersion: EXPECTED_SERVER_VERSION
+    });
+    const response = await axios.get(url);
+    logger.debug(`Server version response`, {
+      prefix: 'Server',
+      version: response.data.version,
+      expectedVersion: EXPECTED_SERVER_VERSION,
+      match: response.data.version === EXPECTED_SERVER_VERSION
+    });
     return { 
       running: true, 
       correctVersion: response.data.version === EXPECTED_SERVER_VERSION,
       version: response.data.version
     };
   } catch (error) {
+    logger.debug(`Failed to check server version`, {
+      prefix: 'Server',
+      error: error.message,
+      stack: error.stack
+    });
     return { running: false, correctVersion: false };
   }
 }
@@ -95,11 +111,7 @@ async function startMockServer(baseUrl) {
   // Kill any existing servers first
   await killOrphanedServer();
   
-  mockServer = app.listen(PORT_NUMBER, () => {
-    logger.info(`Mock OIDC server started on port ${PORT_NUMBER} with log level ${process.env.LOG_LEVEL}`, {
-      prefix: 'Server'
-    });
-  });
+  mockServer = await startServer();
 
   logger.info(`Waiting for server to start`, {
     prefix: 'Server'

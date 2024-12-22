@@ -1,14 +1,26 @@
 const axios = require('axios');
 const logger = require('./test-logger');
 const querystring = require('querystring');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execSync } = require('child_process');
 
-async function testEndpoint(baseUrl, path, method = 'GET', params = null, headers = null) {
-  const url = `${baseUrl}${path}`;
+function isValidICOFormat(data) {
+  return data[0] === 0 && 
+         data[1] === 0 && 
+         data[2] === 1 && 
+         data[3] === 0;
+}
+
+async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, headers = null, options = {}) {
+  const url = baseUrl.endsWith('/') ? `${baseUrl.slice(0, -1)}${urlPath}` : `${baseUrl}${urlPath}`;
   try {
     logger.debug(`Testing endpoint`, {
       prefix: 'HTTP',
       method,
-      path,
+      path: urlPath,
+      url,
       params,
       headers
     });
@@ -18,7 +30,8 @@ async function testEndpoint(baseUrl, path, method = 'GET', params = null, header
       url,
       validateStatus: null, // Don't throw on any status code
       maxRedirects: 0, // Don't follow redirects
-      headers: headers || {}
+      headers: headers || {},
+      responseType: urlPath === '/favicon.ico' ? 'arraybuffer' : 'json'  // Get binary for favicon, JSON for others
     };
 
     // Add query parameters for GET requests
@@ -55,91 +68,74 @@ async function testEndpoint(baseUrl, path, method = 'GET', params = null, header
 
     const response = await axios(config);
 
+    // For favicon, analyze the response
+    if (urlPath === '/favicon.ico' && response.status === 200) {
+      const tempPath = path.join(os.tmpdir(), 'favicon.ico');
+      fs.writeFileSync(tempPath, response.data);
+      logger.result(' Favicon saved to: ' + tempPath);
+
+      // Only preview if openIco option is set and it's a valid ICO
+      if (isValidICOFormat(response.data) && options.openIco) {
+        try {
+          if (process.platform === 'darwin') {
+            execSync(`open ${tempPath}`);
+          }
+        } catch (e) {
+          logger.warn('Could not open image viewer', { error: e.message });
+        }
+      }
+    }
+
     logger.debug(`Received response`, {
       prefix: 'HTTP',
       method,
-      path,
+      path: urlPath,
       status: response.status,
       statusText: response.statusText,
       data: response.data
     });
 
-    return response;
-  } catch (error) {
-    if (error.response) {
-      logger.debug(`Received error response`, {
-        prefix: 'HTTP',
-        method,
-        path,
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
-      });
-      return error.response;
+    if (urlPath === '/favicon.ico') {
+      const faviconPath = path.join(os.tmpdir(), 'favicon.ico');
+      fs.writeFileSync(faviconPath, response.data);
+      
+      return {
+        response,
+        analysis: {
+          contentType: response.headers['content-type'],
+          size: response.data.length,
+          base64: response.data.toString('base64'),
+          path: faviconPath,
+          isValidICO: isValidICOFormat(response.data),
+          cacheControl: response.headers['cache-control']
+        }
+      };
     }
 
-    logger.error(`Request failed`, {
+    return { response };
+  } catch (error) {
+    logger.error('Request failed', {
       prefix: 'HTTP',
+      error: error.message,
+      url,
       method,
-      path,
-      error: error.message
+      params
     });
     throw error;
   }
 }
 
+async function testFavicon(baseUrl, options = {}) {
+  return testEndpoint(baseUrl, '/favicon.ico', 'GET', null, null, options);
+}
+
 async function discoverEndpoints(baseUrl) {
-  logger.info(`Starting endpoint discovery`, {
-    prefix: 'Discovery',
-    url: `${baseUrl}/.well-known/openid-configuration`
-  });
-
-  try {
-    const response = await testEndpoint(baseUrl, '/.well-known/openid-configuration');
-
-    if (response.status !== 200) {
-      logger.error(`OpenID configuration endpoint failed`, {
-        prefix: 'Discovery',
-        status: response.status
-      });
-      throw new Error(`OpenID configuration endpoint failed with status ${response.status}`);
-    }
-
-    if (!response.data || typeof response.data !== 'object') {
-      logger.error(`OpenID configuration returned invalid JSON`, {
-        prefix: 'Discovery'
-      });
-      throw new Error('OpenID configuration endpoint returned invalid JSON');
-    }
-
-    // Check for required endpoints
-    const required = ['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint'];
-    const missing = required.filter(endpoint => !response.data[endpoint]);
-    
-    if (missing.length > 0) {
-      logger.error(`OpenID configuration missing required endpoints`, {
-        prefix: 'Discovery',
-        missing
-      });
-      throw new Error(`OpenID configuration missing required endpoints: ${missing.join(', ')}`);
-    }
-
-    logger.info(`Successfully discovered endpoints`, {
-      prefix: 'Discovery',
-      endpoints: response.data
-    });
-
-    return response.data;
-  } catch (error) {
-    logger.error(`Failed to discover endpoints`, {
-      prefix: 'Discovery',
-      error: error.message
-    });
-    throw error;
-  }
+  const { response } = await testEndpoint(baseUrl, '/.well-known/openid-configuration');
+  return response.data;
 }
 
 module.exports = {
   testEndpoint,
+  testFavicon,
   discoverEndpoints
 };

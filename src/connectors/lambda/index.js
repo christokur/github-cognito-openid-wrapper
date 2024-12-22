@@ -15,6 +15,7 @@ const openIdConfiguration = require('./open-id-configuration');
 const token = require('./token');
 const userinfo = require('./userinfo');
 const jwks = require('./jwks');
+const favicon = require('../../favicon');
 const logger = require('../logger');
 const { validate } = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
@@ -64,6 +65,13 @@ const endpointConfig = {
     requiresRateLimit: false,
     allowedMethods: ['GET'],
     cacheControl: 'public, max-age=86400'
+  },
+  '/favicon.ico': {
+    schema: null,
+    handler: favicon.handler,
+    requiresRateLimit: false,
+    allowedMethods: ['GET'],
+    cacheControl: 'public, max-age=31536000'
   }
 };
 
@@ -133,30 +141,30 @@ function formatResponse(response, config) {
 }
 
 // Main handler function
-function processRequest(event, context, callback, config) {
+function processRequest(event, context, config) {
   try {
     // 1. Check HTTP method first
     if (!config.allowedMethods.includes(event.httpMethod)) {
-      return callback(null, formatResponse({
+      return formatResponse({
         statusCode: 405,
         body: JSON.stringify({
           error: 'method_not_allowed',
           error_description: `Method ${event.httpMethod} not allowed`
         })
-      }, config));
+      }, config);
     }
 
     // 2. Check authorization if required
     if (config.requiresAuth) {
       const authHeader = event.headers?.Authorization;
       if (!authHeader) {
-        return callback(null, formatResponse({
+        return formatResponse({
           statusCode: 401,
           body: JSON.stringify({
             error: 'unauthorized',
           error_description: 'No valid access token provided'
           })
-        }, config));
+        }, config);
       }
     }
 
@@ -168,14 +176,14 @@ function processRequest(event, context, callback, config) {
       try {
         validate(config.schema, params);
       } catch (error) {
-        return callback(null, formatResponse({
+        return formatResponse({
           statusCode: 400,
           body: JSON.stringify({
             error: 'invalid_request',
             error_description: error.message,
             validation_errors: error.errors
           })
-        }, config));
+        }, config);
       }
     }
 
@@ -186,15 +194,11 @@ function processRequest(event, context, callback, config) {
 
     // Wrap handler in retry mechanism
     const response = withRetry(() => {
-      try {
-        return config.handler(event, context, callback);
-      } catch (error) {
-        throw error;
-      }
+      return config.handler(event, context);
     });
 
     // Format and return response
-    return callback(null, formatResponse(response, config));
+    return formatResponse(response, config);
   } catch (error) {
     logger.error({
       message: 'Request processing failed',
@@ -206,7 +210,7 @@ function processRequest(event, context, callback, config) {
 
     // Handle rate limit errors
     if (rateLimiter.isRateLimitError(error)) {
-      return callback(null, formatResponse({
+      return formatResponse({
         statusCode: 429,
         headers: {
           'Retry-After': '60'
@@ -215,17 +219,17 @@ function processRequest(event, context, callback, config) {
           error: 'rate_limit_exceeded',
           error_description: 'Rate limit exceeded. Please try again later.'
         })
-      }, config));
+      }, config);
     }
 
     // Generic error response
-    return callback(null, formatResponse({
+    return formatResponse({
       statusCode: 500,
       body: JSON.stringify({
         error: 'server_error',
         error_description: 'Internal server error'
       })
-    }, config));
+    }, config);
   }
 }
 
@@ -273,5 +277,5 @@ exports.handler = (event, context, callback) => {
   }
 
   // Process request with endpoint-specific configuration
-  return processRequest(event, context, callback, config);
+  return callback(null, processRequest(event, context, config));
 };

@@ -1,6 +1,6 @@
 const controllers = require('../controllers');
 
-module.exports.handler = (event, context, callback) => {
+module.exports.handler = (event, context) => {
   try {
     // Get the host from the event headers
     let host = event.headers && event.headers.Host;
