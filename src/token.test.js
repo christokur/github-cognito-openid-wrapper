@@ -42,22 +42,25 @@ describe('Token Handling', () => {
     mockAxios.post.mockResolvedValue(mockResponse);
     const result = await client.getToken('code', mockState, mockVerifier);
     expect(result).toEqual(mockResponse.data);
-    expect(mockAxios.post).toHaveBeenCalledWith(
-      `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-      {
-        client_id: mockClientId,
-        client_secret: mockClientSecret,
-        code: 'code',
-        redirect_uri: mockRedirectUri
+
+    const actualCall = mockAxios.post.mock.calls[0];
+    expect(actualCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+
+    const actualData = Object.fromEntries(new URLSearchParams(actualCall[1]));
+    expect(actualData).toEqual({
+      client_id: mockClientId,
+      client_secret: mockClientSecret,
+      code: 'code',
+      redirect_uri: mockRedirectUri
+    });
+
+    expect(actualCall[2]).toEqual({
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        timeout: 10000
-      }
-    );
+      timeout: 10000
+    });
   }, 30000);
 
   it('should handle OAuth errors', async () => {

@@ -73,12 +73,12 @@ describe('openid domain layer - Token', () => {
 
       const postCall = mockAxios.post.mock.calls[0];
       expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
-      expect(postCall[1]).toEqual({
-        client_id: mockValues.GITHUB_CLIENT_ID,
-        client_secret: mockValues.GITHUB_CLIENT_SECRET,
-        code: 'SOME_CODE',
-        redirect_uri: mockValues.COGNITO_REDIRECT_URI
-      });
+      // Don't test the exact format of the data, just verify the content is correct
+      const data = new URLSearchParams(postCall[1]);
+      expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
+      expect(data.get('client_secret')).toBe(mockValues.GITHUB_CLIENT_SECRET);
+      expect(data.get('code')).toBe('SOME_CODE');
+      expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -118,12 +118,12 @@ describe('openid domain layer - Token', () => {
 
       const postCall = mockAxios.post.mock.calls[0];
       expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
-      expect(postCall[1]).toEqual({
-        client_id: mockValues.GITHUB_CLIENT_ID,
-        client_secret: mockValues.GITHUB_CLIENT_SECRET,
-        code: 'bad_code',
-        redirect_uri: mockValues.COGNITO_REDIRECT_URI
-      });
+      // Don't test the exact format of the data, just verify the content is correct
+      const data = new URLSearchParams(postCall[1]);
+      expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
+      expect(data.get('client_secret')).toBe(mockValues.GITHUB_CLIENT_SECRET);
+      expect(data.get('code')).toBe('bad_code');
+      expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'

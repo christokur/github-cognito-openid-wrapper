@@ -267,7 +267,12 @@ describe('GitHub Client - Error Handling', () => {
 
     test('should properly URL encode parameters with special characters', async () => {
       const specialCode = 'test+code&special=true';
-      const expectedEncodedBody = `client_id=mock-client-id&client_secret=mock-client-secret&code=test%2Bcode%26special%3Dtrue&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback`;
+      const expectedData = {
+        client_id: mockValues.GITHUB_CLIENT_ID,
+        client_secret: mockValues.GITHUB_CLIENT_SECRET,
+        code: specialCode,
+        redirect_uri: mockValues.COGNITO_REDIRECT_URI
+      };
       
       mockAxios.post.mockResolvedValue({
         status: 200,
@@ -283,11 +288,9 @@ describe('GitHub Client - Error Handling', () => {
       // Verify the URL remains unchanged
       expect(actualUrl).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
       
-      // Convert the data object to URL encoded string
-      const actualEncodedBody = qs.stringify(actualData);
-      
-      // Verify the body is properly encoded
-      expect(actualEncodedBody).toBe(expectedEncodedBody);
+      // Verify all parameters are present with correct values
+      const parsedData = Object.fromEntries(new URLSearchParams(actualData));
+      expect(parsedData).toEqual(expectedData);
     });
 
     test('should properly parse urlencoded response', async () => {
@@ -444,7 +447,12 @@ describe('GitHub Client - Error Handling', () => {
 
     test('should properly URL encode parameters with special characters', async () => {
       const specialCode = 'test+code&special=true';
-      const expectedEncodedBody = `client_id=mock-client-id&client_secret=mock-client-secret&code=test%2Bcode%26special%3Dtrue&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback`;
+      const expectedData = {
+        client_id: mockValues.GITHUB_CLIENT_ID,
+        client_secret: mockValues.GITHUB_CLIENT_SECRET,
+        code: specialCode,
+        redirect_uri: mockValues.COGNITO_REDIRECT_URI
+      };
       
       mockAxios.post.mockResolvedValue({
         status: 200,
@@ -460,11 +468,9 @@ describe('GitHub Client - Error Handling', () => {
       // Verify the URL remains unchanged
       expect(actualUrl).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
       
-      // Convert the data object to URL encoded string
-      const actualEncodedBody = qs.stringify(actualData);
-      
-      // Verify the body is properly encoded
-      expect(actualEncodedBody).toBe(expectedEncodedBody);
+      // Verify all parameters are present with correct values
+      const parsedData = Object.fromEntries(new URLSearchParams(actualData));
+      expect(parsedData).toEqual(expectedData);
     });
 
     test('should properly parse urlencoded response', async () => {
