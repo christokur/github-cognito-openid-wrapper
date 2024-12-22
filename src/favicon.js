@@ -12,7 +12,8 @@ try {
     // Keep the binary buffer for verification
     faviconBuffer = Buffer.from(webpackAsset.split('base64,')[1], 'base64');
     // But store the base64 string for response
-    faviconBase64 = webpackAsset.split('base64,')[1];
+    const [, base64String] = webpackAsset.split('base64,');
+    faviconBase64 = base64String;
     logger.info('Loaded favicon from webpack bundle');
 } catch (error) {
     // Fallback to direct file access (for local development)
