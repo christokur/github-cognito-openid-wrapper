@@ -10,7 +10,7 @@ function defaultExponentialBackoff(retryCount, baseDelay = 1000, maxDelay = 1000
   const jitter = Math.random() * 1000; // Add up to 1s of jitter
   return delay + jitter;
 }
-let exponentialBackoff = defaultExponentialBackoff;
+const exponentialBackoff = defaultExponentialBackoff;
 // Export the default implementation
 module.exports = {
   defaultExponentialBackoff,

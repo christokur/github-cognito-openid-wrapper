@@ -16,7 +16,7 @@ describe('OpenID Configuration Lambda Handler', () => {
     beforeEach(() => {
         jest.resetModules();
         jest.clearAllMocks();
-        logger = require('../../connectors/logger');
+        logger = require("../logger");
         controllers = require('../controllers');
         openIdConfiguration = require('./open-id-configuration');
     });
