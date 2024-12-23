@@ -320,7 +320,23 @@ function processRequest(event, context, config) {
 
     // Check rate limits if required
     if (config.requiresRateLimit) {
-      rateLimiter.checkLimit();
+      try {
+        rateLimiter.checkLimit();
+      } catch (error) {
+        return formatResponse(
+          {
+            statusCode: 429,
+            headers: {
+              'Retry-After': error.retryAfter.toString(),
+            },
+            body: JSON.stringify({
+              error: 'rate_limit_exceeded',
+              error_description: 'Rate limit exceeded',
+            }),
+          },
+          config,
+        );
+      }
     }
 
     // Wrap handler in retry mechanism
@@ -336,23 +352,6 @@ function processRequest(event, context, config) {
       path: event.path,
       requestId: context.awsRequestId,
     });
-
-    // Handle rate limit errors
-    if (rateLimiter.isRateLimitError(error)) {
-      return formatResponse(
-        {
-          statusCode: 429,
-          headers: {
-            'Retry-After': '60',
-          },
-          body: JSON.stringify({
-            error: 'rate_limit_exceeded',
-            error_description: 'Rate limit exceeded. Please try again later.',
-          }),
-        },
-        config,
-      );
-    }
 
     // Generic error response
     return formatResponse(

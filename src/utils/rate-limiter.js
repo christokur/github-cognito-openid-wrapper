@@ -43,9 +43,10 @@ class RateLimiter {
           resetTime: new Date(this.resetTime).toISOString(),
         });
 
-        throw new Error(
-          'GitHub API responded with a failure: 429 (API rate limit exceeded)',
-        );
+        const error = new Error('Rate limit exceeded');
+        error.statusCode = 429;
+        error.retryAfter = Math.ceil(waitTime / 1000);
+        throw error;
       }
     }
   }

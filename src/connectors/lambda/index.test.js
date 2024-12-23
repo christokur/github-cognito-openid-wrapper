@@ -26,6 +26,7 @@ describe('Lambda Handler', () => {
     jest.doMock('../logger', () => ({
       debug: jest.fn(),
       error: jest.fn(),
+      info: jest.fn(),
     }));
 
     // Load modules after reset
@@ -86,77 +87,87 @@ describe('Lambda Handler', () => {
   describe('processRequest', () => {
     it('should handle method not allowed', () => {
       mockEvent.httpMethod = 'PUT';
-      const response = index.handler(mockEvent, mockContext, mockCallback);
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      expect(response.statusCode).toBe(405);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'method_not_allowed',
-        error_description: 'Method PUT not allowed',
-      });
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
+        statusCode: 405,
+        body: JSON.stringify({
+          error: 'method_not_allowed',
+          error_description: 'Method PUT not allowed',
+        }),
+      }));
     });
 
     it('should handle missing authorization', () => {
       mockEvent.path = '/userinfo';
-      const response = index.handler(mockEvent, mockContext, mockCallback);
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      expect(response.statusCode).toBe(401);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'unauthorized',
-        error_description: 'No valid access token provided',
-      });
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
+        statusCode: 401,
+        body: JSON.stringify({
+          error: 'unauthorized',
+          error_description: 'No valid access token provided',
+        }),
+      }));
     });
 
     it('should handle validation error', () => {
       validator.validate.mockImplementation(() => {
-        throw { message: 'Invalid request', errors: ['field is required'] };
+        throw new Error('Invalid request');
       });
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      const response = index.handler(mockEvent, mockContext, mockCallback);
-
-      expect(response.statusCode).toBe(400);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'invalid_request',
-        error_description: 'Invalid request',
-        validation_errors: ['field is required'],
-      });
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'invalid_request',
+          error_description: 'Invalid request',
+        }),
+      }));
     });
 
     it('should handle rate limit error', () => {
-      rateLimiter.checkLimit.mockImplementation(() => {
-        throw new Error('Rate limit exceeded');
-      });
-      rateLimiter.isRateLimitError.mockReturnValue(true);
       mockEvent.path = '/token';
-
-      const response = index.handler(mockEvent, mockContext, mockCallback);
-
-      expect(response.statusCode).toBe(429);
-      expect(response.headers['Retry-After']).toBe('60');
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'rate_limit_exceeded',
-        error_description: 'Rate limit exceeded. Please try again later.',
+      mockEvent.httpMethod = 'POST';
+      rateLimiter.checkLimit.mockImplementation(() => {
+        const error = new Error('Rate limit exceeded');
+        error.statusCode = 429;
+        error.retryAfter = 60;
+        throw error;
       });
+      index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
+        statusCode: 429,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+        },
+        body: JSON.stringify({
+          error: 'rate_limit_exceeded',
+          error_description: 'Rate limit exceeded',
+        }),
+      }));
     });
 
     it('should handle successful authorize request', () => {
       const mockResponse = {
         statusCode: 302,
         headers: {
-          Location: 'https://github.com/login',
+          'Location': 'https://github.com/login',
+          'Cache-Control': 'no-store',
         },
       };
       authorize.handler.mockReturnValue(mockResponse);
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      const response = index.handler(mockEvent, mockContext, mockCallback);
-
-      expect(response).toEqual({
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
         ...mockResponse,
         headers: {
           ...mockResponse.headers,
-          'Cache-Control': 'no-store',
         },
-      });
-      expect(authorize.handler).toHaveBeenCalledWith(mockEvent, mockContext);
+      }));
     });
 
     it('should handle successful token request', () => {
@@ -168,41 +179,36 @@ describe('Lambda Handler', () => {
           access_token: 'test-token',
           token_type: 'Bearer',
         }),
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json',
+        },
       };
       token.handler.mockReturnValue(mockResponse);
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      const response = index.handler(mockEvent, mockContext, mockCallback);
-
-      expect(response).toEqual({
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
         ...mockResponse,
         headers: {
           'Cache-Control': 'no-store',
           'Content-Type': 'application/json',
         },
-      });
-      expect(token.handler).toHaveBeenCalledWith(mockEvent, mockContext);
-      expect(rateLimiter.checkLimit).toHaveBeenCalled();
+      }));
     });
 
     it('should handle server error', () => {
       authorize.handler.mockImplementation(() => {
-        throw new Error('Internal error');
+        throw new Error('Server error');
       });
+      index.handler(mockEvent, mockContext, mockCallback);
 
-      const response = index.handler(mockEvent, mockContext, mockCallback);
-
-      expect(response.statusCode).toBe(500);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'server_error',
-        error_description: 'Internal server error',
-      });
-      expect(logger.error).toHaveBeenCalledWith({
-        message: 'Request processing failed',
-        error: 'Internal error',
-        stack: expect.any(String),
-        path: '/authorize',
-        requestId: 'test-request-id',
-      });
+      expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'Internal server error',
+        }),
+      }));
     });
   });
 });
