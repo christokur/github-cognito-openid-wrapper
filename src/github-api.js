@@ -18,9 +18,8 @@ const gitHubGet = (url, accessToken) => {
     timeout: Configuration.GITHUB_API_TIMEOUT,
   };
   const axios = getAxios();
-  return withRetry(() => axios.get(url, config)
-    .then(handleGitHubResponse)
-    .catch(handleGitHubError)
+  return withRetry(() =>
+    axios.get(url, config).then(handleGitHubResponse).catch(handleGitHubError),
   );
 };
 
@@ -39,10 +38,11 @@ const gitHubPost = (url, data) => {
     //  transformRequest: [(data) => data] // Prevent axios from auto-encoding
   };
   const axios = getAxios();
-  return withRetry(() => 
-    axios.post(url, data, config)
+  return withRetry(() =>
+    axios
+      .post(url, data, config)
       .then(handleGitHubResponse)
-      .catch(handleGitHubError)
+      .catch(handleGitHubError),
   );
 };
 

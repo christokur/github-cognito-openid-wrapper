@@ -83,7 +83,7 @@ class GitHubClient {
       client_secret: config.GITHUB_CLIENT_SECRET,
       code,
       redirect_uri: config.COGNITO_REDIRECT_URI,
-      grant_type: 'authorization_code'
+      grant_type: 'authorization_code',
     };
 
     if (codeVerifier) {
