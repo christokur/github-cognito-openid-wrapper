@@ -44,7 +44,7 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
     serverStarted = await ensureServerRunning(baseUrl, isLocalhost);
     
     // Step 3: Run endpoint tests if not favicon-only mode
-    if (!options.faviconOnly) {
+    if (!options.favicon) {
       // Discover endpoints
       const endpoints = await discoverEndpoints(baseUrl);
       
@@ -150,8 +150,14 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
     
     // Step 2: Run favicon test if requested
     if (options.favicon) {
-      logger.info('Testing favicon.ico');
-      const { response, analysis } = await testFavicon(baseUrl, options);
+      console.log('\n>>> Running Test: Favicon GET <<<');
+      logger.info('Testing endpoint', {
+        prefix: 'Test',
+        method: 'GET',
+        path: '/favicon.ico'
+      });
+
+      const { response, analysis } = await testFavicon(baseUrl, { openIco: options.openIco });
       displayFaviconReport(analysis);
       
       if (response.status === 200) {
@@ -186,7 +192,7 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
       }
     }
 
-    if (!options.faviconOnly) {
+    if (!options.favicon) {
       // Step 5: Print test summary
       logger.section('Test Summary');
       logger.result(`Total Tests: ${results.total}`);
