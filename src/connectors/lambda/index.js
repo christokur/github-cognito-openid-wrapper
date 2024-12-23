@@ -200,16 +200,29 @@ function getParameters(event) {
 }
 
 // Format response with proper headers
-function formatResponse(response, config) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Cache-Control': config.cacheControl,
-    // CORS headers
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': config.allowedMethods.join(','),
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
+function formatResponse(response, config = {}) {
+  const headers = {};
+
+  // Add Content-Type for JSON responses
+  if (response.body && typeof response.body === 'string' && response.body.startsWith('{')) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  // Add optional headers
+  if (config.cacheControl) {
+    headers['Cache-Control'] = config.cacheControl;
+  }
+
+  // Add CORS headers if enabled
+  const cors = config?.cors || false;
+  if (cors) {
+    Object.assign(headers, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': (config.allowedMethods || ['GET']).join(','),
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Max-Age': '86400',
+    });
+  }
 
   // Don't override existing headers
   if (response.headers) {

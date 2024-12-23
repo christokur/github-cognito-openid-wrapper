@@ -26,7 +26,8 @@ describe('formatResponse', () => {
       body: JSON.stringify({ data: 'test' })
     };
     const config = {
-      cacheControl: 'no-store'
+      cacheControl: 'no-store',
+      cors: false
     };
 
     const formatted = formatResponse(response, config);
@@ -49,7 +50,8 @@ describe('formatResponse', () => {
       body: JSON.stringify({ data: 'test' })
     };
     const config = {
-      cacheControl: 'no-store'
+      cacheControl: 'no-store',
+      cors: false
     };
 
     const formatted = formatResponse(response, config);
@@ -72,7 +74,8 @@ describe('formatResponse', () => {
       }
     };
     const config = {
-      cacheControl: 'no-store'
+      cacheControl: 'no-store',
+      cors: false
     };
 
     const formatted = formatResponse(response, config);
@@ -91,7 +94,7 @@ describe('formatResponse', () => {
       body: JSON.stringify({ data: 'test' })
     };
 
-    const formatted = formatResponse(response);
+    const formatted = formatResponse(response, { cors: false });
     expect(formatted).toEqual({
       statusCode: 200,
       headers: {
