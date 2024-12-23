@@ -36,11 +36,18 @@ describe('processRequest', () => {
       path: '/authorize',
       httpMethod: 'GET',
       headers: {},
+      body: null
     };
-    mockContext = {};
+    mockContext = {
+      awsRequestId: '123'
+    };
     config = {
       allowedMethods: ['GET'],
-      handler: jest.fn(),
+      requiresRateLimit: true,
+      handler: jest.fn().mockReturnValue({
+        statusCode: 200,
+        body: JSON.stringify({ success: true })
+      })
     };
   });
 
@@ -100,7 +107,8 @@ describe('processRequest', () => {
 
   it('should handle rate limit error', () => {
     const rateLimitError = new Error('Rate limit exceeded');
-    rateLimitError.headers = { 'Retry-After': '60' };
+    rateLimitError.statusCode = 429;
+    rateLimitError.retryAfter = 60;
 
     rateLimiter.checkLimit.mockImplementation(() => {
       throw rateLimitError;
@@ -113,7 +121,7 @@ describe('processRequest', () => {
     expect(response.headers['Retry-After']).toBe('60');
     expect(JSON.parse(response.body)).toEqual({
       error: 'rate_limit_exceeded',
-      error_description: 'Rate limit exceeded. Please try again later.',
+      error_description: 'Rate limit exceeded',
     });
   });
 

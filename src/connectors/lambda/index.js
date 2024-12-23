@@ -323,19 +323,22 @@ function processRequest(event, context, config) {
       try {
         rateLimiter.checkLimit();
       } catch (error) {
-        return formatResponse(
-          {
-            statusCode: 429,
-            headers: {
-              'Retry-After': error.retryAfter.toString(),
-            },
-            body: JSON.stringify({
-              error: 'rate_limit_exceeded',
+        if (error.statusCode === 429) {
+          return formatResponse(
+            {
+              statusCode: 429,
+              headers: {
+                'Retry-After': error.retryAfter.toString(),
+              },
+              body: JSON.stringify({
+                error: 'rate_limit_exceeded',
               error_description: 'Rate limit exceeded',
-            }),
-          },
-          config,
-        );
+              }),
+            },
+            config,
+          );
+        }
+        throw error;
       }
     }
 
