@@ -78,17 +78,10 @@ class TokenService {
             ...githubTokenResponse,
             scope,
           };
-        })
-        .catch((error) => {
-          logger.error({
-            message: 'Failed to get GitHub token',
-            error: error.message || error,
-          });
-          throw error;
         });
     } catch (error) {
       logger.error({
-        message: 'Failed to get GitHub token',
+        message: 'Failed to get Github token',
         error: error.message || error,
       });
       throw error;
@@ -201,7 +194,7 @@ class TokenService {
       })
       .catch((error) => {
         logger.error({
-          message: 'Failed to process token exchange',
+          message: 'Failed to get Github token',
           error: error.message || error,
         });
         throw new OAuthError(errorTypes.SERVER_ERROR, error.message);

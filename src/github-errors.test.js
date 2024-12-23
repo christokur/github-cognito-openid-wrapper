@@ -225,6 +225,7 @@ describe('GitHub Client - Error Handling', () => {
               client_secret: mockValues.GITHUB_CLIENT_SECRET,
               code: 'invalid_code',
               redirect_uri: mockValues.COGNITO_REDIRECT_URI,
+              grant_type: 'authorization_code',
             },
             {
               headers: {
@@ -296,6 +297,7 @@ describe('GitHub Client - Error Handling', () => {
         client_secret: mockValues.GITHUB_CLIENT_SECRET,
         code: specialCode,
         redirect_uri: mockValues.COGNITO_REDIRECT_URI,
+        grant_type: 'authorization_code',
       };
 
       mockAxios.post.mockResolvedValue({
@@ -414,6 +416,7 @@ describe('GitHub Client - Error Handling', () => {
               client_secret: mockValues.GITHUB_CLIENT_SECRET,
               code: 'invalid_code',
               redirect_uri: mockValues.COGNITO_REDIRECT_URI,
+              grant_type: 'authorization_code',
             },
             {
               headers: {
@@ -485,6 +488,7 @@ describe('GitHub Client - Error Handling', () => {
         client_secret: mockValues.GITHUB_CLIENT_SECRET,
         code: specialCode,
         redirect_uri: mockValues.COGNITO_REDIRECT_URI,
+        grant_type: 'authorization_code',
       };
 
       mockAxios.post.mockResolvedValue({

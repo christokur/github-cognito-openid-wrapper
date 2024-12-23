@@ -224,9 +224,9 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[2][0]).toBe('Error in getToken:');
       expect(errorCalls[2][1]).toBeInstanceOf(Error);
 
-      // Fourth call - Failed to process token exchange
+      // Fourth call - Failed to get Github token
       expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to process token exchange',
+        message: 'Failed to get Github token',
         error:
           'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
       });
@@ -280,9 +280,9 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[2][0]).toBe('Error in getToken:');
       expect(errorCalls[2][1]).toBeInstanceOf(Error);
 
-      // Fourth call - Failed to process token exchange
+      // Fourth call - Failed to get Github token
       expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to process token exchange',
+        message: 'Failed to get Github token',
         error:
           'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
       });
@@ -336,9 +336,9 @@ describe('openid domain layer - Token', () => {
       expect(errorCalls[2][0]).toBe('Error in getToken:');
       expect(errorCalls[2][1]).toBeInstanceOf(Error);
 
-      // Fourth call - Failed to process token exchange
+      // Fourth call - Failed to get Github token
       expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to process token exchange',
+        message: 'Failed to get Github token',
         error:
           'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
       });

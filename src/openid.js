@@ -64,38 +64,29 @@ class OpenIDProvider {
     if (!code) {
       throw new Error('The code parameter is required');
     }
-    try {
-      logger.debug({
-        message: 'Getting tokens',
-        code,
-        state,
-        codeVerifier,
-        host,
-        memoryUsage: process.memoryUsage(),
-      });
+    logger.debug({
+      message: 'Getting tokens',
+      code,
+      state,
+      codeVerifier,
+      host,
+      memoryUsage: process.memoryUsage(),
+    });
 
-      const tokenResponse = TokenService.processTokenExchange({
-        code,
-        state,
-        host,
-        codeVerifier,
-      });
+    const tokenResponse = TokenService.processTokenExchange({
+      code,
+      state,
+      host,
+      codeVerifier,
+    });
 
-      logger.debug({
-        message: 'Token exchange completed',
-        memoryUsage: process.memoryUsage(),
-        tokenResponse,
-      });
+    logger.debug({
+      message: 'Token exchange completed',
+      memoryUsage: process.memoryUsage(),
+      tokenResponse,
+    });
 
-      return tokenResponse;
-    } catch (error) {
-      logger.error({
-        message: 'Failed in token exchange',
-        error: error.message || error,
-        memoryUsage: process.memoryUsage(),
-      });
-      throw error;
-    }
+    return tokenResponse;
   }
 }
 

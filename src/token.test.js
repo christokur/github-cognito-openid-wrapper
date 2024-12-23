@@ -61,6 +61,7 @@ describe('Token Handling', () => {
       code: 'code',
       redirect_uri: mockRedirectUri,
       code_verifier: mockVerifier,
+      grant_type: 'authorization_code'
     };
     expect(actualData).toEqual(expectedData);
 
