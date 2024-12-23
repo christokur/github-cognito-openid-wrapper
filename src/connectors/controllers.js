@@ -43,6 +43,12 @@ const mapError = (error) => {
       },
     };
   }
+  if (error.type && error.statusCode) {
+    return {
+      code: error.type,
+      status: error.statusCode,
+    };
+  }
   return {
     code: OAUTH_ERRORS.SERVER_ERROR,
     status: 500,
@@ -165,6 +171,7 @@ module.exports = () => ({
       const validated = validate('token', {
         code,
         state,
+        host,
         code_verifier: codeVerifier,
       });
 
