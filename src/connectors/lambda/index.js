@@ -87,19 +87,28 @@ function getParameters(event) {
   // POST body
   if (event.httpMethod === 'POST' && event.body) {
     const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+    let { body } = event;
     try {
+      if (event.isBase64Encoded) {
+        body = Buffer.from(body, 'base64').toString();
+      }
       if (contentType.startsWith('application/x-www-form-urlencoded')) {
-        const body = querystring.parse(event.body);
-        Object.assign(params, body);
+        body = querystring.parse(body);
       } else if (contentType.startsWith('application/json')) {
-        const body = JSON.parse(event.body);
-        Object.assign(params, body);
+        body = JSON.parse(body);
       } else {
         logger.warn({
           message: 'Unsupported content type',
           contentType
         });
+        throw new Error('Unsupported content type');
       }
+      Object.assign(params, body);
+      logger.debug({
+        message: 'Parsed request body',
+        contentType,
+        params
+      });
     } catch (error) {
       logger.warn({
         message: 'Failed to parse request body',
@@ -152,6 +161,14 @@ function formatResponse(response, config) {
 // Main handler function
 function processRequest(event, context, config) {
   try {
+    logger.debug({
+      message: 'Processing request',
+      path: event.path,
+      httpMethod: event.httpMethod,
+      headers: event.headers,
+      body: event.body,
+      config,
+    });
     // 1. Check HTTP method first
     if (!config.allowedMethods.includes(event.httpMethod)) {
       return formatResponse({
@@ -180,9 +197,19 @@ function processRequest(event, context, config) {
     // 3. Get parameters
     const params = getParameters(event);
 
+    logger.debug({
+      message: 'Request parameters',
+      params
+    });
+
     // 4. Validate parameters
     if (config.schema) {
       try {
+        logger.debug({
+          message: 'Validating parameters',
+          schema: config.schema,
+          params
+        });
         validate(config.schema, params);
       } catch (error) {
         return formatResponse({

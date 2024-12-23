@@ -1,0 +1,111 @@
+{
+  "timestamp": "2024-12-23T03:53:10.712Z",
+  "level": "info",
+  "message": "Lambda invoked",
+  "version": "1.6.9",
+  "versionConsumer": "0.3.8",
+  "versionComponent": "2.0.32",
+  "path": "/token",
+  "method": "POST",
+  "event": {
+    "resource": "/{proxy+}",
+    "path": "/token",
+    "httpMethod": "POST",
+    "headers": {
+      "Accept-Encoding": "gzip,deflate",
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "Host": "oidc.csdev.infra-area2.com",
+      "User-Agent": "Amazon/Cognito",
+      "x-amz-cognito-request-id": "d48e29ed-a302-4dc8-8cf7-e87f1eb1fb2b",
+      "X-Amzn-Trace-Id": "Root=1-6768dea6-0663b06204b483c5103d1543",
+      "X-Forwarded-For": "52.15.187.99",
+      "X-Forwarded-Port": "443",
+      "X-Forwarded-Proto": "https"
+    },
+    "multiValueHeaders": {
+      "Accept-Encoding": [
+        "gzip,deflate"
+      ],
+      "Content-Type": [
+        "application/x-www-form-urlencoded; charset=UTF-8"
+      ],
+      "Host": [
+        "oidc.csdev.infra-area2.com"
+      ],
+      "User-Agent": [
+        "Amazon/Cognito"
+      ],
+      "x-amz-cognito-request-id": [
+        "d48e29ed-a302-4dc8-8cf7-e87f1eb1fb2b"
+      ],
+      "X-Amzn-Trace-Id": [
+        "Root=1-6768dea6-0663b06204b483c5103d1543"
+      ],
+      "X-Forwarded-For": [
+        "52.15.187.99"
+      ],
+      "X-Forwarded-Port": [
+        "443"
+      ],
+      "X-Forwarded-Proto": [
+        "https"
+      ]
+    },
+    "queryStringParameters": null,
+    "multiValueQueryStringParameters": null,
+    "pathParameters": {
+      "proxy": "token"
+    },
+    "stageVariables": null,
+    "requestContext": {
+      "resourceId": "wiyizr",
+      "resourcePath": "/{proxy+}",
+      "httpMethod": "POST",
+      "extendedRequestId": "DOe6GFBBCYcELOw=",
+      "requestTime": "23/Dec/2024:03:53:10 +0000",
+      "path": "/token",
+      "accountId": "780733454460",
+      "protocol": "HTTP/1.1",
+      "stage": "prod",
+      "domainPrefix": "oidc",
+      "requestTimeEpoch": 1734925990686,
+      "requestId": "918b44ef-be0b-49d1-a516-43c4496b1635",
+      "identity": {
+        "cognitoIdentityPoolId": null,
+        "accountId": null,
+        "cognitoIdentityId": null,
+        "caller": null,
+        "sourceIp": "52.15.187.99",
+        "principalOrgId": null,
+        "accessKey": null,
+        "cognitoAuthenticationType": null,
+        "cognitoAuthenticationProvider": null,
+        "userArn": null,
+        "userAgent": "Amazon/Cognito",
+        "user": null
+      },
+      "domainName": "oidc.csdev.infra-area2.com",
+      "deploymentId": "ejalua",
+      "apiId": "hsj6y5sgg2"
+    },
+    "body": "Z3JhbnRfdHlwZT1hdXRob3JpemF0aW9uX2NvZGUmY2xpZW50X2lkPU92MjNsaWNGTTMyNDhzRGlzeW5OJnJlZGlyZWN0X3VyaT1odHRwcyUzQSUyRiUyRmF1dGguY3NkZXYuaW5mcmEtYXJlYTIuY29tJTJGb2F1dGgyJTJGaWRwcmVzcG9uc2UmY2xpZW50X3NlY3JldD1kZTU0MmVkNDA0YTE2NzFmMGUxZDRhMmFhMDRlMWI0YmJjZTZhNTFlJmNvZGU9MmE5ZWFiYTVlZGZkMGEyZDAyNjE=",
+    "isBase64Encoded": true
+  },
+  "context": {
+    "callbackWaitsForEmptyEventLoop": true,
+    "functionVersion": "$LATEST",
+    "functionName": "B2BSsoServiceStack-UserPoolIdentityProviderGithubi-JNp0j2R2F8Zp",
+    "memoryLimitInMB": "512",
+    "logGroupName": "/aws/lambda/B2BSsoServiceStack-UserPoolIdentityProviderGithubi-JNp0j2R2F8Zp",
+    "logStreamName": "2024/12/23/[$LATEST]4df25e737caf499ca654936b0dbff8b9",
+    "invokedFunctionArn": "arn:aws:lambda:us-east-2:780733454460:function:B2BSsoServiceStack-UserPoolIdentityProviderGithubi-JNp0j2R2F8Zp",
+    "awsRequestId": "6b9bb407-d73f-4dad-b008-31b78b850b81"
+  },
+  "memoryUsage": {
+    "rss": 73822208,
+    "heapTotal": 22093824,
+    "heapUsed": 16183144,
+    "external": 3297918,
+    "arrayBuffers": 65728
+  }
+}
