@@ -15,6 +15,14 @@ const argv = minimist(process.argv.slice(2), {
   }
 });
 
+// Validate no unknown arguments
+const validArgs = ['url', 'log-level', 'help', 'favicon', 'openico', 'h', '_'];
+const unknownArgs = Object.keys(argv).filter(arg => !validArgs.includes(arg));
+if (unknownArgs.length > 0) {
+  console.error(`Error: Unknown argument(s): ${unknownArgs.map(arg => `--${arg}`).join(', ')}`);
+  process.exit(1);
+}
+
 // Set log level before requiring any loggers
 process.env.LOG_LEVEL = argv['log-level'];
 const logger = require('./test-utils/test-logger');

@@ -112,7 +112,9 @@ async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, hea
           base64: response.data.toString('base64'),
           path: faviconPath,
           isValidICO: isValidICOFormat(response.data),
-          cacheControl: response.headers['cache-control']
+          cacheControl: response.headers['cache-control'],
+          requestId: response.headers['x-amzn-requestid'],
+          traceId: response.headers['x-amzn-trace-id']
         }
       };
     }

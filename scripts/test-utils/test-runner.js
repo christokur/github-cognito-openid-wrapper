@@ -11,6 +11,12 @@ function displayFaviconReport(analysis) {
   console.log('Saved to:', analysis.path);
   console.log('Valid ICO Format:', analysis.isValidICO ? '✓ Yes' : '✗ No');
   console.log('Cache Control:', analysis.cacheControl || 'Not set');
+  if (analysis.requestId) {
+    console.log('Request ID:', analysis.requestId);
+  }
+  if (analysis.traceId) {
+    console.log('X-Amzn-Trace-Id:', analysis.traceId);
+  }
   console.log('===================\n');
 }
 

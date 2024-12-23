@@ -3,41 +3,21 @@ const path = require('path');
 const logger = require('./connectors/logger');
 const { verifyRequest, verifyResponse, verifyIco } = require('./utils/favicon-verifier');
 
+let base64Part;
 let faviconBuffer;
-let faviconBase64;
 
 // Try webpack-bundled asset first (for Lambda)
 try {
     const webpackAsset = require('./assets/favicon.ico');
-    // Webpack packs it as "data:image/vnd.microsoft.icon;base64,..."
-    // Extract just the base64 part after the comma
-    const base64Part = webpackAsset.split('base64,')[1];
-    if (!base64Part) {
-        throw new Error('Invalid webpack asset format');
-    }
-    // Keep the binary buffer for verification
-    faviconBuffer = Buffer.from(base64Part, 'base64');
-    // Store base64 string for response
-    faviconBase64 = base64Part;
-    logger.debug('Loaded favicon from webpack bundle', {
-        bufferLength: faviconBuffer.length,
-        base64Length: faviconBase64.length,
-        bufferStart: faviconBuffer.slice(0, 8).toString('hex')
-    });
-    logger.info('Loaded favicon from webpack bundle');
+    // Extract the base64 data from the data URL
+    base64Part = webpackAsset.split('base64,')[1];
 } catch (error) {
     // Fallback to direct file access (for local development)
     try {
         const faviconPath = path.join(__dirname, 'assets', 'favicon.ico');
         // For filesystem, we need to encode to base64
-        faviconBuffer = fs.readFileSync(faviconPath);
-        faviconBase64 = faviconBuffer.toString('base64');
-        logger.debug('Loaded favicon from filesystem', {
-            bufferLength: faviconBuffer.length,
-            base64Length: faviconBase64.length,
-            bufferStart: faviconBuffer.slice(0, 8).toString('hex')
-        });
-        logger.info('Loaded favicon from filesystem');
+        const faviconBin = fs.readFileSync(faviconPath);
+        base64Part = faviconBin.toString('base64');
     } catch (fsError) {
         logger.error('Failed to load favicon:', fsError);
         throw fsError;
@@ -50,14 +30,38 @@ function handler(event, context) {
         // Always verify request as it's a security check
         verifyRequest(event);
 
-        // Generate response
+        if (!base64Part) {
+            logger.error('Invalid asset format', {
+                assetStart: webpackAsset.substring(0, 50)
+            });
+            throw new Error('Invalid asset format');
+        }
+        // Decode base64 to binary buffer
+        faviconBuffer = Buffer.from(base64Part, 'base64');
+        logger.debug('Loaded favicon from base64 string', {
+            base64Length: base64Part.length,
+            bufferLength: faviconBuffer.length,
+            bufferStart: faviconBuffer.subarray(0, 8).toString('hex')
+        });
+        logger.info('Loaded favicon from base64 string');
+
+        // Verify the ICO format
+        if (process.env.LOG_LEVEL === 'debug') {
+            logger.debug('Verifying ICO format', {
+                firstBytes: faviconBuffer.subarray(0, 4).toString('hex'),
+                expectedBytes: '00000100'
+            });
+            verifyIco(faviconBuffer);
+        }
+
+        // Generate response with the binary buffer directly encoded to base64
         const response = {
             statusCode: 200,
             headers: {
                 'Content-Type': 'image/x-icon',
                 'Cache-Control': 'public, max-age=31536000'
             },
-            body: faviconBase64,
+            body: faviconBuffer.toString('base64'),
             isBase64Encoded: true
         };
 
@@ -69,7 +73,7 @@ function handler(event, context) {
                 isBase64Encoded: response.isBase64Encoded,
                 bodyLength: response.body.length,
                 decodedLength: Buffer.from(response.body, 'base64').length,
-                firstBytes: Buffer.from(response.body, 'base64').slice(0, 4)
+                firstBytes: Buffer.from(response.body, 'base64').subarray(0, 4).toString('hex')
             });
         }
 
