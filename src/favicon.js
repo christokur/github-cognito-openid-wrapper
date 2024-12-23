@@ -54,7 +54,7 @@ function handler(event, context) {
         const response = {
             statusCode: 200,
             headers: {
-                'Content-Type': 'image/x-icon; charset=utf-8',
+                'Content-Type': 'image/x-icon',
                 'Cache-Control': 'public, max-age=31536000'
             },
             body: faviconBase64,

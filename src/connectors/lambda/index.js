@@ -134,6 +134,15 @@ function formatResponse(response, config) {
     Object.assign(headers, response.headers);
   }
 
+  // Handle binary responses (e.g., favicon)
+  if (response.isBase64Encoded) {
+    return {
+      ...response,
+      headers
+    };
+  }
+
+  // Handle JSON responses
   return {
     ...response,
     headers
