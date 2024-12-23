@@ -10,7 +10,13 @@ let faviconBuffer;
 try {
     const webpackAsset = require('./assets/favicon.ico');
     // Extract the base64 data from the data URL
-    base64Part = webpackAsset.split('base64,')[1];
+    [,base64Part] = webpackAsset.split('base64,');
+    if (!base64Part) {
+        logger.error('Invalid asset format', {
+            assetStart: webpackAsset.substring(0, 50)
+        });
+        throw new Error('Invalid asset format');
+    }
 } catch (error) {
     // Fallback to direct file access (for local development)
     try {
@@ -30,12 +36,6 @@ function handler(event, context) {
         // Always verify request as it's a security check
         verifyRequest(event);
 
-        if (!base64Part) {
-            logger.error('Invalid asset format', {
-                assetStart: webpackAsset.substring(0, 50)
-            });
-            throw new Error('Invalid asset format');
-        }
         // Decode base64 to binary buffer
         faviconBuffer = Buffer.from(base64Part, 'base64');
         logger.debug('Loaded favicon from base64 string', {
