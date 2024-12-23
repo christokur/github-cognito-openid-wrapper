@@ -6,12 +6,14 @@ const mockAxios = {
 const mockGetAxios = jest.fn(() => mockAxios);
 
 // !AI: Leave this alone
-const noDelay = () => 0;
+const noDelay = () => {
+  return 0;
+}
 
 // const { exponentialBackoff } = require('./utils/retry');
 // Mock the actual retry module that's being used
-jest.mock('./utils/retry', () => ({
-  ...jest.requireActual('./utils/retry'),
+jest.mock('./utils/backoff', () => ({
+  ...jest.requireActual('./utils/backoff'),
   exponentialBackoff: noDelay,
 }));
 // !AI: Leave this alone
@@ -25,4 +27,4 @@ jest.mock('./helpers', () => ({
 const originalEnv = { ...process.env };
 
 // Export originalEnv so tests can use it
-module.exports = { mockAxios, mockGetAxios };
+module.exports = { mockAxios, mockGetAxios, noDelay };

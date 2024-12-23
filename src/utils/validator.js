@@ -91,6 +91,7 @@ class ValidationError extends Error {
     this.name = 'ValidationError';
     this.field = field;
     this.value = value;
+    this.statusCode = 400;
   }
 }
 
@@ -200,7 +201,12 @@ function validate(schemaName, data) {
   if (errors.length > 0) {
     const error = new Error('Validation failed');
     error.name = 'ValidationError';
+    error.statusCode = 400;
+    error.code = 'invalid_request';
     error.errors = errors;
+    errors.forEach((err) => {
+      err.statusCode = 400;
+    });
     throw error;
   }
 

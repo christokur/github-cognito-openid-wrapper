@@ -1,189 +1,208 @@
-const { parseBody } = require('./index');
-const logger = require('../logger');
+const { mockAxios } = require('../../sharedMocks');
+const { mockValues } = require('../../mocks');
 
-jest.mock('../logger', () => ({
-  debug: jest.fn(),
-  error: jest.fn(),
-}));
+// Declare intercept variables
+let logger;
+let rateLimiter;
+let validator;
+let authorize;
+let openIdConfiguration;
+let token;
+let userinfo;
+let jwks;
+let favicon;
+let index;
 
-describe('parseBody', () => {
+describe('Lambda Handler', () => {
+  let mockEvent;
+  let mockContext;
+  let mockCallback;
+
   beforeEach(() => {
+    jest.resetModules();
     jest.clearAllMocks();
-  });
 
-  describe('form-urlencoded data', () => {
-    const formEvent = {
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      body: 'code=test_code&state=test_state',
-      isBase64Encoded: false,
+    // Mock logger
+    jest.doMock('../logger', () => ({
+      debug: jest.fn(),
+      error: jest.fn(),
+    }));
+
+    // Load modules after reset
+    logger = require('../logger');
+    rateLimiter = require('../../utils/rate-limiter');
+    validator = require('../../utils/validator');
+    authorize = require('./authorize');
+    openIdConfiguration = require('./open-id-configuration');
+    token = require('./token');
+    userinfo = require('./userinfo');
+    jwks = require('./jwks');
+    favicon = require('../../favicon');
+
+    // Create mock functions
+    rateLimiter.checkLimit = jest.fn();
+    rateLimiter.isRateLimitError = jest.fn();
+    validator.validate = jest.fn();
+
+    // Setup mock handlers
+    authorize.handler = jest.fn();
+    openIdConfiguration.handler = jest.fn();
+    token.handler = jest.fn();
+    userinfo.handler = jest.fn();
+    jwks.handler = jest.fn();
+    favicon.handler = jest.fn();
+
+    // Setup default mock event and context
+    mockEvent = {
+      path: '/authorize',
+      httpMethod: 'GET',
+      headers: {},
+      queryStringParameters: {},
     };
-
-    it('should parse form data and set javascript content type', () => {
-      const { body, contentType } = parseBody(formEvent);
-
-      expect(body).toEqual({
-        code: 'test_code',
-        state: 'test_state',
-      });
-      expect(formEvent.headers['content-type']).toBe('application/javascript');
-      expect(formEvent.body).toBe(body);
-    });
-
-    it('should be idempotent when called multiple times', () => {
-      const first = parseBody(formEvent);
-      const second = parseBody(formEvent);
-
-      expect(first.body).toEqual(second.body);
-      expect(first.contentType).toEqual(second.contentType);
-      expect(typeof first.body).toBe('object');
-    });
-
-    it('should handle malformed form data', () => {
-      const badFormEvent = {
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-        },
-        body: 'not=valid=form&data',
-        isBase64Encoded: false,
-      };
-
-      const { body } = parseBody(badFormEvent);
-      expect(typeof body).toBe('object');
-      expect(body).toEqual({ not: 'valid=form', data: '' });
-    });
-  });
-
-  describe('JSON data', () => {
-    const jsonEvent = {
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        code: 'test_code',
-        state: 'test_state',
-      }),
-      isBase64Encoded: false,
+    mockContext = {
+      awsRequestId: 'test-request-id',
     };
+    mockCallback = jest.fn();
 
-    it('should parse JSON and set javascript content type', () => {
-      const { body, contentType } = parseBody(jsonEvent);
-
-      expect(body).toEqual({
-        code: 'test_code',
-        state: 'test_state',
-      });
-      expect(jsonEvent.headers['content-type']).toBe('application/javascript');
-      expect(jsonEvent.body).toBe(body);
-    });
-
-    it('should be idempotent when called multiple times', () => {
-      const first = parseBody(jsonEvent);
-      const second = parseBody(jsonEvent);
-
-      expect(first.body).toEqual(second.body);
-      expect(first.contentType).toEqual(second.contentType);
-      expect(typeof first.body).toBe('object');
-    });
-
-    it('should handle invalid JSON', () => {
-      const badJsonEvent = {
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: '{ invalid json }',
-        isBase64Encoded: false,
-      };
-
-      const { body } = parseBody(badJsonEvent);
-      expect(body).toBe('{ invalid json }'); // Keep original on parse error
-      expect(badJsonEvent.headers['content-type']).toBe('application/json');
-    });
+    // Require index after mocking
+    index = require('./index');
   });
 
-  describe('base64 encoded data', () => {
-    const base64Event = {
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      body: Buffer.from('code=test_code&state=test_state').toString('base64'),
-      isBase64Encoded: true,
-    };
-
-    it('should decode base64 and parse form data', () => {
-      const { body } = parseBody(base64Event);
-
-      expect(body).toEqual({
-        code: 'test_code',
-        state: 'test_state',
-      });
-      expect(base64Event.isBase64Encoded).toBe(false);
-      expect(base64Event.headers['content-type']).toBe(
-        'application/javascript',
-      );
-    });
-
-    it('should be idempotent with base64 data', () => {
-      const first = parseBody(base64Event);
-      const second = parseBody(base64Event);
-
-      expect(first.body).toEqual(second.body);
-      expect(typeof first.body).toBe('object');
-      expect(base64Event.isBase64Encoded).toBe(false);
-    });
-
-    it('should handle invalid base64', () => {
-      const badBase64Event = {
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-        },
-        body: 'not-valid-base64',
-        isBase64Encoded: true,
-      };
-
-      const { body } = parseBody(badBase64Event);
-      expect(body).toBe('not-valid-base64'); // Keep original on decode error
-      expect(badBase64Event.isBase64Encoded).toBe(true);
-    });
+  afterEach(() => {
+    jest.resetModules();
+    delete require.cache[require.resolve('../logger')];
+    delete require.cache[require.resolve('../../utils/rate-limiter')];
+    delete require.cache[require.resolve('../../utils/validator')];
+    delete require.cache[require.resolve('./authorize')];
+    delete require.cache[require.resolve('./open-id-configuration')];
+    delete require.cache[require.resolve('./token')];
+    delete require.cache[require.resolve('./userinfo')];
+    delete require.cache[require.resolve('./jwks')];
+    delete require.cache[require.resolve('../../favicon')];
+    delete require.cache[require.resolve('./index')];
+    jest.dontMock('../logger');
   });
 
-  describe('edge cases', () => {
-    it('should handle missing body', () => {
-      const emptyEvent = {
-        headers: {},
-      };
+  describe('processRequest', () => {
+    it('should handle method not allowed', () => {
+      mockEvent.httpMethod = 'PUT';
+      const response = index.handler(mockEvent, mockContext, mockCallback);
 
-      const { body, contentType } = parseBody(emptyEvent);
-      expect(body).toBeUndefined();
-      expect(contentType).toBe('');
+      expect(response.statusCode).toBe(405);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'method_not_allowed',
+        error_description: 'Method PUT not allowed',
+      });
     });
 
-    it('should handle missing content-type', () => {
-      const noTypeEvent = {
-        headers: {},
-        body: 'some data',
-      };
+    it('should handle missing authorization', () => {
+      mockEvent.path = '/userinfo';
+      const response = index.handler(mockEvent, mockContext, mockCallback);
 
-      const { body, contentType } = parseBody(noTypeEvent);
-      expect(body).toBe('some data');
-      expect(contentType).toBe('');
+      expect(response.statusCode).toBe(401);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'unauthorized',
+        error_description: 'No valid access token provided',
+      });
     });
 
-    it('should handle missing headers', () => {
-      const noHeadersEvent = {
-        body: 'some data',
-      };
+    it('should handle validation error', () => {
+      validator.validate.mockImplementation(() => {
+        throw { message: 'Invalid request', errors: ['field is required'] };
+      });
 
-      const { body, contentType } = parseBody(noHeadersEvent);
-      expect(body).toBe('some data');
-      expect(contentType).toBe('');
+      const response = index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'invalid_request',
+        error_description: 'Invalid request',
+        validation_errors: ['field is required'],
+      });
     });
 
-    it('should handle null event', () => {
-      const { body, contentType } = parseBody(null);
-      expect(body).toBeUndefined();
-      expect(contentType).toBe('');
+    it('should handle rate limit error', () => {
+      rateLimiter.checkLimit.mockImplementation(() => {
+        throw new Error('Rate limit exceeded');
+      });
+      rateLimiter.isRateLimitError.mockReturnValue(true);
+      mockEvent.path = '/token';
+
+      const response = index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(response.statusCode).toBe(429);
+      expect(response.headers['Retry-After']).toBe('60');
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'rate_limit_exceeded',
+        error_description: 'Rate limit exceeded. Please try again later.',
+      });
+    });
+
+    it('should handle successful authorize request', () => {
+      const mockResponse = {
+        statusCode: 302,
+        headers: {
+          Location: 'https://github.com/login',
+        },
+      };
+      authorize.handler.mockReturnValue(mockResponse);
+
+      const response = index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(response).toEqual({
+        ...mockResponse,
+        headers: {
+          ...mockResponse.headers,
+          'Cache-Control': 'no-store',
+        },
+      });
+      expect(authorize.handler).toHaveBeenCalledWith(mockEvent, mockContext);
+    });
+
+    it('should handle successful token request', () => {
+      mockEvent.path = '/token';
+      mockEvent.httpMethod = 'POST';
+      const mockResponse = {
+        statusCode: 200,
+        body: JSON.stringify({
+          access_token: 'test-token',
+          token_type: 'Bearer',
+        }),
+      };
+      token.handler.mockReturnValue(mockResponse);
+
+      const response = index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(response).toEqual({
+        ...mockResponse,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(token.handler).toHaveBeenCalledWith(mockEvent, mockContext);
+      expect(rateLimiter.checkLimit).toHaveBeenCalled();
+    });
+
+    it('should handle server error', () => {
+      authorize.handler.mockImplementation(() => {
+        throw new Error('Internal error');
+      });
+
+      const response = index.handler(mockEvent, mockContext, mockCallback);
+
+      expect(response.statusCode).toBe(500);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'server_error',
+        error_description: 'Internal server error',
+      });
+      expect(logger.error).toHaveBeenCalledWith({
+        message: 'Request processing failed',
+        error: 'Internal error',
+        stack: expect.any(String),
+        path: '/authorize',
+        requestId: 'test-request-id',
+      });
     });
   });
 });

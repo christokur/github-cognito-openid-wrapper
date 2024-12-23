@@ -20,7 +20,7 @@ const userinfo = require('./userinfo');
 const jwks = require('./jwks');
 const favicon = require('../../favicon');
 const logger = require('../logger');
-const { validate } = require('../../utils/validator');
+const validator = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
 const { withRetry } = require('../../utils/retry');
 
@@ -78,8 +78,8 @@ const endpointConfig = {
   },
 };
 
-// Export parseBody for reuse in other handlers
-exports.parseBody = (event) => {
+// Define functions
+function parseBody(event) {
   if (!event) {
     logger.debug({
       message: 'parseBody received null event',
@@ -169,9 +169,8 @@ exports.parseBody = (event) => {
     }
   }
   return { body, contentType };
-};
+}
 
-// Extract parameters based on HTTP method
 function getParameters(event) {
   const params = {};
 
@@ -182,7 +181,7 @@ function getParameters(event) {
 
   // body
   if (event.body) {
-    const { body: parsedBody, contentType } = exports.parseBody(event);
+    const { body: parsedBody, contentType } = parseBody(event);
     logger.debug({
       message: 'Parsed request body',
       contentType,
@@ -290,13 +289,13 @@ function processRequest(event, context, config) {
           schema: config.schema,
           params,
         });
-        validate(config.schema, params);
+        validator.validate(config.schema, params);
       } catch (error) {
         return formatResponse(
           {
-            statusCode: 400,
+            statusCode: error.statusCode || 400,
             body: JSON.stringify({
-              error: 'invalid_request',
+              error: error.code || 'invalid_request',
               error_description: error.message,
               validation_errors: error.errors,
             }),
@@ -356,8 +355,7 @@ function processRequest(event, context, config) {
   }
 }
 
-// Main Lambda handler
-exports.handler = (event, context, callback) => {
+function handler(event, context, callback) {
   // Log request details
   logger.info({
     message: 'Lambda invoked',
@@ -374,13 +372,13 @@ exports.handler = (event, context, callback) => {
   // Get endpoint configuration
   logger.info({
     message: 'Looking up endpoint config',
-    path: event.path,
+    path: event.path || '',
     pathType: typeof event.path,
-    pathLength: event.path.length,
-    pathCharCodes: Array.from(event.path).map((c) => c.charCodeAt(0)),
+    pathLength: event.path ? event.path.length : 0,
+    pathCharCodes: event.path ? Array.from(event.path).map((c) => c.charCodeAt(0)) : [],
     availableEndpoints: Object.keys(endpointConfig),
   });
-  const path = event.path.replace(/\/$/, ''); // Remove trailing slash
+  const path = event.path ? event.path.replace(/\/$/, '') : ''; // Remove trailing slash
   logger.debug({
     message: 'Path comparison',
     originalPath: event.path,
@@ -406,5 +404,18 @@ exports.handler = (event, context, callback) => {
   }
 
   // Process request with endpoint-specific configuration
-  return callback(null, processRequest(event, context, config));
+  const response = processRequest(event, context, config);
+  if (typeof callback === 'function') {
+    return callback(null, response);
+  }
+  return response;
+}
+
+// Export all functions
+module.exports = {
+  parseBody,
+  getParameters,
+  formatResponse,
+  processRequest,
+  handler,
 };

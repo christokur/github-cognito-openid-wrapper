@@ -1,15 +1,11 @@
 const logger = require('../connectors/logger');
+const backoff = require('./backoff');
 
 const wait = (ms) => {
   const start = Date.now();
   while (Date.now() - start < ms) {
     // Busy wait
   }
-};
-const exponentialBackoff = (retryCount, baseDelay = 1000, maxDelay = 10000) => {
-  const delay = Math.min(baseDelay * 2 ** retryCount, maxDelay);
-  const jitter = Math.random() * 1000; // Add up to 1s of jitter
-  return delay + jitter;
 };
 
 const isRetryableError = (error) => {
@@ -52,7 +48,7 @@ function withRetry(
       }
 
       retryCount++;
-      const delay = exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
+      const delay = backoff.exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
       logger.debug({
         message: `Retrying operation (attempt ${retryCount}/${maxRetries})`,
         delay,
@@ -67,5 +63,4 @@ function withRetry(
 module.exports = {
   withRetry,
   isRetryableError,
-  exponentialBackoff,
 };
