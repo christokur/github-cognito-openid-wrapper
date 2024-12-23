@@ -60,7 +60,7 @@ describe('RateLimiter', () => {
       rateLimiter.retryAfter = 0;
 
       expect(() => rateLimiter.checkLimit()).toThrow(
-        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+        'Rate limit exceeded',
       );
     });
 
@@ -70,7 +70,7 @@ describe('RateLimiter', () => {
       rateLimiter.retryAfter = 1000;
 
       expect(() => rateLimiter.checkLimit()).toThrow(
-        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+        'Rate limit exceeded',
       );
     });
   });
