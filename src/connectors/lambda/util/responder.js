@@ -3,11 +3,11 @@ const logger = require('../../logger');
 module.exports = (callback) => ({
   success: (response) => {
     logger.info({
-      message: 'Success response'
+      message: 'Success response',
     });
     logger.debug({
       message: 'Response was: ',
-      response
+      response,
     });
     callback(null, {
       statusCode: 200,
@@ -20,11 +20,11 @@ module.exports = (callback) => ({
   error: (err) => {
     logger.error({
       message: 'Error response',
-      error: err.message || err
+      error: err.message || err,
     });
     const errorResponse = {
       error: err.type || 'server_error',
-      error_description: err.message || 'An unexpected error occurred'
+      error_description: err.message || 'An unexpected error occurred',
     };
     callback(null, {
       statusCode: err.statusCode || 400,
@@ -32,17 +32,17 @@ module.exports = (callback) => ({
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
-        'Pragma': 'no-cache'
+        Pragma: 'no-cache',
       },
     });
   },
   redirect: (url) => {
     logger.info({
-      message: 'Redirect response'
+      message: 'Redirect response',
     });
     logger.debug({
       message: 'Redirect response to',
-      url
+      url,
     });
     callback(null, {
       statusCode: 302,

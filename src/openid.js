@@ -49,7 +49,7 @@ class OpenIDProvider {
       scope,
       state,
       response_type,
-      nonce
+      nonce,
     });
   }
 
@@ -71,19 +71,20 @@ class OpenIDProvider {
         state,
         codeVerifier,
         host,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       const tokenResponse = TokenService.processTokenExchange({
         code,
         state,
         host,
-        codeVerifier
+        codeVerifier,
       });
 
       logger.debug({
         message: 'Token exchange completed',
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
+        tokenResponse,
       });
 
       return tokenResponse;
@@ -91,7 +92,7 @@ class OpenIDProvider {
       logger.error({
         message: 'Failed in token exchange',
         error: error.message || error,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
       throw error;
     }
@@ -103,5 +104,5 @@ module.exports = {
   getUserInfo: OpenIDProvider.getUserInfo,
   getJwks: OpenIDProvider.getJwks,
   getConfigFor: OpenIDProvider.getConfigFor,
-  getAuthorizeUrl: OpenIDProvider.getAuthorizeUrl
+  getAuthorizeUrl: OpenIDProvider.getAuthorizeUrl,
 };

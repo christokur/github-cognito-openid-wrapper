@@ -28,7 +28,7 @@ describe('TokenService', () => {
   const mockCode = 'test-code';
   const mockGithubToken = {
     access_token: 'test-token',
-    scope: 'user:email,repo'
+    scope: 'user:email,repo',
   };
   const mockNonce = 'test-nonce';
   const mockState = 'test-state';
@@ -63,7 +63,7 @@ describe('TokenService', () => {
         .then(() => {
           throw new Error('Expected promise to reject');
         })
-        .catch(err => {
+        .catch((err) => {
           expect(err).toBeTruthy();
           expect(err.message).toBe(errorMessage);
         });
@@ -74,28 +74,38 @@ describe('TokenService', () => {
     it('should exchange code for token successfully', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
-        data: mockGithubToken
+        data: mockGithubToken,
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
       const token = await TokenService.getGithubToken(mockCode);
       expect(token).toEqual({
         access_token: mockGithubToken.access_token,
-        scope: 'openid user:email repo'
+        scope: 'openid user:email repo',
       });
     });
 
     it('should exchange code for token successfully with state and code_verifier', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
-        data: mockGithubToken
+        data: mockGithubToken,
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      const token = await TokenService.getGithubToken(mockCode, mockState, mockCodeVerifier);
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
+      const token = await TokenService.getGithubToken(
+        mockCode,
+        mockState,
+        mockCodeVerifier,
+      );
       expect(token).toEqual({
         access_token: mockGithubToken.access_token,
-        scope: 'openid user:email repo'
+        scope: 'openid user:email repo',
       });
     });
 
@@ -104,18 +114,20 @@ describe('TokenService', () => {
       mockAxios.post.mockRejectedValue({
         response: {
           status: 400,
-          data: { error: errorMessage }
-        }
+          data: { error: errorMessage },
+        },
       });
 
-      await expect(TokenService.getGithubToken(mockCode)).rejects.toThrow(errorMessage);
+      await expect(TokenService.getGithubToken(mockCode)).rejects.toThrow(
+        errorMessage,
+      );
     });
   });
 
   describe('createIdToken', () => {
     const payload = {
       sub: 'test-subject',
-      email: 'test@example.com'
+      email: 'test@example.com',
     };
 
     it('should create ID token successfully', async () => {
@@ -143,7 +155,7 @@ describe('TokenService', () => {
         .then(() => {
           throw new Error('Expected promise to reject');
         })
-        .catch(err => {
+        .catch((err) => {
           expect(err).toBeTruthy();
           expect(err.message).toBe(errorMessage);
         });
@@ -154,15 +166,15 @@ describe('TokenService', () => {
     const mockUserDetails = {
       id: 12345,
       name: 'Test User',
-      login: 'testuser'
+      login: 'testuser',
     };
 
     const mockUserEmails = [
       {
         email: 'test@example.com',
         primary: true,
-        verified: true
-      }
+        verified: true,
+      },
     ];
 
     beforeEach(() => {
@@ -170,12 +182,13 @@ describe('TokenService', () => {
         if (url.endsWith('/user')) {
           return Promise.resolve({
             status: 200,
-            data: mockUserDetails
+            data: mockUserDetails,
           });
-        } if (url.endsWith('/user/emails')) {
+        }
+        if (url.endsWith('/user/emails')) {
           return Promise.resolve({
             status: 200,
-            data: mockUserEmails
+            data: mockUserEmails,
           });
         }
       });
@@ -184,7 +197,7 @@ describe('TokenService', () => {
     it('should process token exchange successfully with nonce', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
-        data: mockGithubToken
+        data: mockGithubToken,
       });
 
       const result = await TokenService.processTokenExchange({
@@ -192,7 +205,7 @@ describe('TokenService', () => {
         state: mockState,
         codeVerifier: mockCodeVerifier,
         host: mockHost,
-        nonce: mockNonce
+        nonce: mockNonce,
       });
 
       expect(result).toBeDefined();
@@ -200,25 +213,25 @@ describe('TokenService', () => {
       expect(result.id_token).toBeDefined();
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user/emails'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     it('should process token exchange successfully without nonce', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
-        data: mockGithubToken
+        data: mockGithubToken,
       });
 
       const result = await TokenService.processTokenExchange({
         code: mockCode,
         state: mockState,
         codeVerifier: mockCodeVerifier,
-        host: mockHost
+        host: mockHost,
       });
 
       expect(result).toBeDefined();
@@ -226,11 +239,11 @@ describe('TokenService', () => {
       expect(result.id_token).toBeDefined();
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user/emails'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -239,22 +252,24 @@ describe('TokenService', () => {
       mockAxios.post.mockRejectedValue({
         response: {
           status: 400,
-          data: { error: errorMessage }
-        }
+          data: { error: errorMessage },
+        },
       });
 
-      await expect(TokenService.processTokenExchange({
-        code: mockCode,
-        state: mockState,
-        codeVerifier: mockCodeVerifier,
-        host: mockHost
-      })).rejects.toThrow(errorMessage);
+      await expect(
+        TokenService.processTokenExchange({
+          code: mockCode,
+          state: mockState,
+          codeVerifier: mockCodeVerifier,
+          host: mockHost,
+        }),
+      ).rejects.toThrow(errorMessage);
     });
 
     it('should handle ID token creation errors', async () => {
       mockAxios.post.mockResolvedValue({
         status: 200,
-        data: mockGithubToken
+        data: mockGithubToken,
       });
 
       const errorMessage = 'Failed to create ID token: Mock error';
@@ -262,12 +277,14 @@ describe('TokenService', () => {
         throw new Error(errorMessage);
       });
 
-      await expect(TokenService.processTokenExchange({
-        code: mockCode,
-        state: mockState,
-        codeVerifier: mockCodeVerifier,
-        host: mockHost
-      })).rejects.toThrow(errorMessage);
+      await expect(
+        TokenService.processTokenExchange({
+          code: mockCode,
+          state: mockState,
+          codeVerifier: mockCodeVerifier,
+          host: mockHost,
+        }),
+      ).rejects.toThrow(errorMessage);
     });
   });
 });

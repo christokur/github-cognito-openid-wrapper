@@ -6,8 +6,12 @@ const logger = require('./connectors/logger');
 
 const KEY_ID = config.JWT_KEY_ID;
 
-const cert = fs.existsSync(config.JWT_PRIVATE_KEY_PATH) ? require(config.JWT_PRIVATE_KEY_PATH) : require('./__mocks__/privateKeyMock.js');
-const pubKey = fs.existsSync(config.JWT_PUBLIC_KEY_PATH) ? require(config.JWT_PUBLIC_KEY_PATH) : require('./__mocks__/publicKeyMock.js');
+const cert = fs.existsSync(config.JWT_PRIVATE_KEY_PATH)
+  ? require(config.JWT_PRIVATE_KEY_PATH)
+  : require('./__mocks__/privateKeyMock.js');
+const pubKey = fs.existsSync(config.JWT_PUBLIC_KEY_PATH)
+  ? require(config.JWT_PUBLIC_KEY_PATH)
+  : require('./__mocks__/publicKeyMock.js');
 
 module.exports = {
   getPublicKey: () => {
@@ -20,9 +24,9 @@ module.exports = {
     } catch (error) {
       logger.error({
         message: 'Failed to get public key',
-        error: error.message || error
+        error: error.message || error,
       });
-      throw new Error(`Failed to get public key: ${  error.message || error}`);
+      throw new Error(`Failed to get public key: ${error.message || error}`);
     }
   },
 
@@ -35,7 +39,7 @@ module.exports = {
       };
       logger.debug({
         message: 'Signing payload',
-        payload: enrichedPayload
+        payload: enrichedPayload,
       });
       return jwt.sign(enrichedPayload, cert, {
         expiresIn: '1h',
@@ -45,9 +49,9 @@ module.exports = {
     } catch (error) {
       logger.error({
         message: 'Failed to create ID token',
-        error: error.message || error
+        error: error.message || error,
       });
-      throw new Error(`Failed to create ID token: ${  error.message || error}`);
+      throw new Error(`Failed to create ID token: ${error.message || error}`);
     }
   },
 };

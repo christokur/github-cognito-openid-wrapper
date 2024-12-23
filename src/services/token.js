@@ -17,7 +17,7 @@ class TokenService {
     try {
       logger.debug({
         message: 'Getting JWKS',
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       const keys = [crypto.getPublicKey()];
@@ -25,14 +25,14 @@ class TokenService {
       logger.debug({
         message: 'Retrieved JWKS',
         keyCount: keys.length,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       return { keys };
     } catch (error) {
       logger.error({
         message: 'Failed to get JWKS',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }
@@ -48,7 +48,7 @@ class TokenService {
     try {
       const githubClientInstance = githubClient(
         Configuration.GITHUB_API_URL,
-        Configuration.GITHUB_LOGIN_URL
+        Configuration.GITHUB_LOGIN_URL,
       );
 
       logger.debug({
@@ -56,27 +56,40 @@ class TokenService {
         code,
         state,
         codeVerifier: codeVerifier ? '[REDACTED]' : undefined,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       // Return a new promise that wraps the GitHub token call
-      return githubClientInstance.getToken(code, codeVerifier).then(githubTokenResponse => {
-        // GitHub returns scopes separated by commas
-        // But OAuth wants them to be spaces
-        // https://tools.ietf.org/html/rfc6749#section-5.1
-        // Also, we need to add openid as a scope,
-        // since GitHub will have stripped it
-        const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
+      return githubClientInstance
+        .getToken(code, codeVerifier)
+        .then((githubTokenResponse) => {
+          logger.debug({
+            message: 'Got GitHub response',
+            githubTokenResponse,
+          });
+          // GitHub returns scopes separated by commas
+          // But OAuth wants them to be spaces
+          // https://tools.ietf.org/html/rfc6749#section-5.1
+          // Also, we need to add openid as a scope,
+          // since GitHub will have stripped it
+          const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
 
-        return {
-          ...githubTokenResponse,
-          scope
-        };
-      });
+          return {
+            ...githubTokenResponse,
+            scope,
+          };
+        })
+        .catch((error) => {
+          logger.error({
+            message: 'Failed to get GitHub token',
+            error: error.message || error,
+          });
+          throw error;
+        });
     } catch (error) {
       logger.error({
         message: 'Failed to get GitHub token',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }
@@ -92,14 +105,14 @@ class TokenService {
     try {
       logger.debug({
         message: 'Creating ID token with payload',
-        payload
+        payload,
       });
 
       return crypto.makeIdToken(payload, host);
     } catch (error) {
       logger.error({
         message: 'Failed to create ID token',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }
@@ -114,36 +127,43 @@ class TokenService {
    * @param {string} params.codeVerifier - PKCE code verifier
    * @param {string} [params.nonce] - Optional nonce for ID token
    */
-  static processTokenExchange({ code, state, host, codeVerifier, nonce = null }) {
+  static processTokenExchange({
+    code,
+    state,
+    host,
+    codeVerifier,
+    nonce = null,
+  }) {
     logger.debug({
       message: 'Starting token exchange process',
       code,
       state,
       host,
       codeVerifier,
-      nonce
+      nonce,
     });
 
     return this.getGithubToken(code, state, codeVerifier)
-      .then(githubToken => {
+      .then((githubToken) => {
         logger.debug({
           message: 'Received GitHub token',
-          githubToken
+          githubToken,
         });
 
         const githubClientInstance = githubClient(
           Configuration.GITHUB_API_URL,
-          Configuration.GITHUB_LOGIN_URL
+          Configuration.GITHUB_LOGIN_URL,
         );
 
         return Promise.all([
           Promise.resolve(githubToken),
           githubClientInstance.getUserDetails(githubToken.access_token),
-          githubClientInstance.getUserEmails(githubToken.access_token)
+          githubClientInstance.getUserEmails(githubToken.access_token),
         ]);
       })
       .then(([githubToken, userInfo, userEmails]) => {
-        const primaryEmail = userEmails.find(email => email.primary) || userEmails[0];
+        const primaryEmail =
+          userEmails.find((email) => email.primary) || userEmails[0];
 
         // Create ID token payload with user info
         const payload = {
@@ -152,37 +172,37 @@ class TokenService {
           preferred_username: userInfo.login,
           email: primaryEmail.email,
           email_verified: primaryEmail.verified,
-          ...(nonce ? { nonce } : {})
+          ...(nonce ? { nonce } : {}),
         };
 
         logger.debug({
           message: 'Creating ID token with user info',
-          payload
+          payload,
         });
 
         // Create ID token
         const idToken = this.createIdToken(payload, host);
         logger.debug({
           message: 'Created ID token',
-          idToken
+          idToken,
         });
 
         const response = {
           ...githubToken,
-          id_token: idToken
+          id_token: idToken,
         };
 
         logger.debug({
           message: 'Token exchange complete',
-          response
+          response,
         });
 
         return response;
       })
-      .catch(error => {
+      .catch((error) => {
         logger.error({
           message: 'Failed to process token exchange',
-          error: error.message || error
+          error: error.message || error,
         });
         throw new OAuthError(errorTypes.SERVER_ERROR, error.message);
       });

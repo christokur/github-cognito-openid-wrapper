@@ -30,6 +30,7 @@ process.env.COGNITO_REDIRECT_URI = 'http://localhost:3000/callback';
 process.env.GITHUB_API_URL = 'http://localhost:3000/github-api'; // Use mock GitHub API
 process.env.GITHUB_LOGIN_URL = 'http://localhost:3000/github'; // Use mock GitHub endpoint
 
+const githubApiMock = require('./test-utils/github-api-mock');
 const logger = require('../src/connectors/logger');
 const lambda = require('../src/connectors/lambda');
 
@@ -178,42 +179,58 @@ const lambdaToExpress = (req, res) => {
   lambda.handler(event, mockContext, callback);
 };
 
-// Mock GitHub API responses
-const mockGitHubResponses = {
-  accessToken: {
-    access_token: 'mock-access-token',
-    token_type: 'bearer',
-    scope: 'user:email'
-  },
-  user: {
-    id: 12345,
-    login: 'test-user',
-    name: 'Test User',
-    email: 'test@example.com'
-  },
-  emails: [
-    {
-      email: 'test@example.com',
-      primary: true,
-      verified: true
-    }
-  ]
-};
-
 // Mock GitHub API endpoints
-app.post('/github/login/oauth/access_token', (req, res) => {
+app.post('/github/login/oauth/access_token', async (req, res) => {
   logger.debug('Mock GitHub token endpoint called', { body: req.body });
-  res.json(mockGitHubResponses.accessToken);
+  
+  try {
+    const mockAxios = githubApiMock.getAxios();
+    const response = await mockAxios.post('/login/oauth/access_token', req.body);
+    
+    // GitHub returns form-urlencoded response
+    res.set('Content-Type', 'application/x-www-form-urlencoded');
+    res.send(`access_token=${response.data.access_token}&token_type=${response.data.token_type}&scope=${response.data.scope}`);
+  } catch (error) {
+    logger.error('Mock GitHub token error', { error: error.message });
+    res.status(error.response?.status || 500).json(error.response?.data || {
+      error: 'server_error',
+      error_description: error.message
+    });
+  }
 });
 
-app.get('/github-api/user', (req, res) => {
+app.get('/github-api/user', async (req, res) => {
   logger.debug('Mock GitHub user endpoint called');
-  res.json(mockGitHubResponses.user);
+  
+  try {
+    const mockAxios = githubApiMock.getAxios();
+    const response = await mockAxios.get('/user', {
+      headers: req.headers
+    });
+    res.json(response.data);
+  } catch (error) {
+    logger.error('Mock GitHub user error', { error: error.message });
+    res.status(error.response?.status || 500).json(error.response?.data || {
+      message: error.message
+    });
+  }
 });
 
-app.get('/github-api/user/emails', (req, res) => {
+app.get('/github-api/user/emails', async (req, res) => {
   logger.debug('Mock GitHub emails endpoint called');
-  res.json(mockGitHubResponses.emails);
+  
+  try {
+    const mockAxios = githubApiMock.getAxios();
+    const response = await mockAxios.get('/user/emails', {
+      headers: req.headers
+    });
+    res.json(response.data);
+  } catch (error) {
+    logger.error('Mock GitHub emails error', { error: error.message });
+    res.status(error.response?.status || 500).json(error.response?.data || {
+      message: error.message
+    });
+  }
 });
 
 // OIDC endpoints (handled by Lambda)

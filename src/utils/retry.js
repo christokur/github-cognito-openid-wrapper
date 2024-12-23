@@ -7,13 +7,13 @@ const wait = (ms) => {
   }
 };
 const exponentialBackoff = (retryCount, baseDelay = 1000, maxDelay = 10000) => {
-  const delay = Math.min(baseDelay * 2**retryCount, maxDelay);
+  const delay = Math.min(baseDelay * 2 ** retryCount, maxDelay);
   const jitter = Math.random() * 1000; // Add up to 1s of jitter
   return delay + jitter;
 };
 
 const isRetryableError = (error) => {
-  const retry = error?.isRetryable || true
+  const retry = error?.isRetryable || true;
   if (!retry) return false; // Custom errors can be marked as non-retryable
   if (!error.response) return true; // Network errors are retryable
 
@@ -24,11 +24,14 @@ const isRetryableError = (error) => {
     status === 500 || // Internal Server Error
     status === 502 || // Bad Gateway
     status === 503 || // Service Unavailable
-    status === 504    // Gateway Timeout
+    status === 504 // Gateway Timeout
   );
-} ;
+};
 
-function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {}) {
+function withRetry(
+  operation,
+  { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {},
+) {
   let retryCount = 0;
   let result;
   let error;
@@ -43,7 +46,7 @@ function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 100
         logger.error({
           message: 'Operation failed after retries',
           error: error.message,
-          retryCount
+          retryCount,
         });
         throw error;
       }
@@ -52,7 +55,7 @@ function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 100
       const delay = exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
       logger.debug({
         message: `Retrying operation (attempt ${retryCount}/${maxRetries})`,
-        delay
+        delay,
       });
       wait(delay);
     }
@@ -64,5 +67,5 @@ function withRetry(operation, { maxRetries = 3, baseDelay = 1000, maxDelay = 100
 module.exports = {
   withRetry,
   isRetryableError,
-  exponentialBackoff
+  exponentialBackoff,
 };

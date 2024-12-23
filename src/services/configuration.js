@@ -12,9 +12,9 @@ class ConfigurationService {
    */
   static normalizeHost(host) {
     logger.debug({
-        message: 'Normalizing host URL',
-        host
-      });
+      message: 'Normalizing host URL',
+      host,
+    });
     if (!host) {
       throw new Error('Host is required');
     }
@@ -34,7 +34,7 @@ class ConfigurationService {
       logger.debug({
         message: 'Getting OpenID configuration',
         host,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       const normalizedHost = this.normalizeHost(host);
@@ -45,7 +45,7 @@ class ConfigurationService {
         token_endpoint: `${normalizedHost}/token`,
         token_endpoint_auth_methods_supported: [
           'client_secret_basic',
-          'private_key_jwt'
+          'private_key_jwt',
         ],
         token_endpoint_auth_signing_alg_values_supported: ['RS256'],
         userinfo_endpoint: `${normalizedHost}/userinfo`,
@@ -69,15 +69,15 @@ class ConfigurationService {
           'email_verified',
           'updated_at',
           'iss',
-          'aud'
+          'aud',
         ],
-        code_challenge_methods_supported: ['plain', 'S256']
+        code_challenge_methods_supported: ['plain', 'S256'],
       };
 
       logger.debug({
         message: 'Retrieved OpenID configuration',
         configuration,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
 
       return configuration;
@@ -85,7 +85,7 @@ class ConfigurationService {
       logger.error({
         message: 'Failed to get OpenID configuration',
         error: error.message || error,
-        memoryUsage: process.memoryUsage()
+        memoryUsage: process.memoryUsage(),
       });
       throw error;
     }
@@ -96,7 +96,13 @@ class ConfigurationService {
    * @param {Object} params - Authorization parameters
    * @throws {Error} If any required parameter is missing
    */
-  static validateAuthorizationParams({ client_id, scope, state, response_type, nonce }) {
+  static validateAuthorizationParams({
+    client_id,
+    scope,
+    state,
+    response_type,
+    nonce,
+  }) {
     if (!client_id) throw new Error('client_id is required');
     if (!scope) throw new Error('scope is required');
     if (!state) throw new Error('state is required');

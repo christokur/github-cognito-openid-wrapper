@@ -1,0 +1,66 @@
+{
+  "timestamp": "2024-12-23T16:32:25.919Z",
+  "level": "debug",
+  "message": "Generating test definitions",
+  "config": {
+    "issuer": "http://localhost:3000",
+    "authorization_endpoint": "http://localhost:3000/authorize",
+    "token_endpoint": "http://localhost:3000/token",
+    "token_endpoint_auth_methods_supported": [
+      "client_secret_basic",
+      "private_key_jwt"
+    ],
+    "token_endpoint_auth_signing_alg_values_supported": [
+      "RS256"
+    ],
+    "userinfo_endpoint": "http://localhost:3000/userinfo",
+    "jwks_uri": "http://localhost:3000/.well-known/jwks.json",
+    "scopes_supported": [
+      "openid",
+      "read:user",
+      "user:email"
+    ],
+    "response_types_supported": [
+      "code",
+      "code id_token"
+    ],
+    "response_modes_supported": [
+      "query",
+      "fragment"
+    ],
+    "grant_types_supported": [
+      "authorization_code"
+    ],
+    "subject_types_supported": [
+      "public"
+    ],
+    "userinfo_signing_alg_values_supported": [
+      "none"
+    ],
+    "id_token_signing_alg_values_supported": [
+      "RS256"
+    ],
+    "request_object_signing_alg_values_supported": [
+      "none"
+    ],
+    "claims_supported": [
+      "sub",
+      "name",
+      "preferred_username",
+      "profile",
+      "picture",
+      "website",
+      "email",
+      "email_verified",
+      "updated_at",
+      "iss",
+      "aud"
+    ],
+    "code_challenge_methods_supported": [
+      "plain",
+      "S256"
+    ]
+  },
+  "codeVerifier": "jixq-vem-UhVweCeg_ZldCBwD17WNJ-t-Xuq2H_NZAE",
+  "codeChallenge": "qgmVQyN4SWhCq3a7l2d5Eqa-3FHnBN4ymcz1Ka6qlI4"
+}

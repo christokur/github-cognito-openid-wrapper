@@ -20,16 +20,18 @@ describe('openid domain layer - Authorization', () => {
   test('Redirects to the authorization URL', () => {
     const state = 'test-state';
     const nonce = 'test-nonce';
-    
+
     const url = openid.getAuthorizeUrl(
       mockValues.GITHUB_CLIENT_ID,
       'user:email',
       state,
       'code',
-      nonce
+      nonce,
     );
 
-    expect(url).toContain(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`);
+    expect(url).toContain(
+      `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`,
+    );
     expect(url).toContain(`client_id=${mockValues.GITHUB_CLIENT_ID}`);
     expect(url).toContain('scope=user%3Aemail');
     expect(url).toContain(`state=${state}`);

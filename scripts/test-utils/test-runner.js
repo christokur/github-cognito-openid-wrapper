@@ -27,7 +27,8 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
     prefix: 'Config',
     baseUrl,
     isLocalhost,
-    logLevel: process.env.LOG_LEVEL
+    logLevel: process.env.LOG_LEVEL,
+    testFilters: options.testFilters || []
   });
 
   let serverStarted = false;
@@ -42,164 +43,188 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
     // Step 1: Ensure server is running
     serverStarted = await ensureServerRunning(baseUrl, isLocalhost);
     
-    // Step 1: Test favicon (GET only)
-    logger.info('Testing favicon.ico');
-    const { response, analysis } = await testFavicon(baseUrl, options);
-    displayFaviconReport(analysis);
+    // Step 3: Run endpoint tests if not favicon-only mode
+    if (!options.faviconOnly) {
+      // Discover endpoints
+      const endpoints = await discoverEndpoints(baseUrl);
+      
+      // Add isLocalhost flag to endpoints config
+      endpoints.isLocalhost = isLocalhost;
+      
+      // Get test definitions
+      const tests = getTestDefinitions(endpoints);
+
+      // Filter tests if test filters are provided
+      const testsToRun = options.testFilters && options.testFilters.length > 0
+        ? tests.filter(test => 
+            options.testFilters.some(filter => 
+              test.name.toLowerCase().includes(filter.toLowerCase())
+            )
+          )
+        : tests;
+
+      logger.info(`Running ${testsToRun.length} tests`, {
+        prefix: 'Config',
+        totalTests: tests.length,
+        filteredTests: testsToRun.length,
+        filters: options.testFilters || []
+      });
+
+      // Run all tests in sequence
+      for (const test of testsToRun) {
+        console.log(`\n>>> Running Test: ${test.name} <<<`);
+        logger.info(`Testing endpoint`, {
+          prefix: 'Test',
+          method: test.method,
+          path: test.url.replace(baseUrl, ''),
+          expectedStatus: test.expectedStatus
+        });
+
+        try {
+          const { response } = await testEndpoint(
+            baseUrl,
+            test.url.replace(baseUrl, ''),
+            test.method,
+            test.params,
+            test.headers
+          );
+
+          // For token endpoint with invalid codes, remote server may return 502
+          const isTokenEndpoint = test.url.replace(baseUrl, '') === '/token';
+          const isRemoteServer = !isLocalhost;
+          const isValidStatus = response?.status === test.expectedStatus || 
+            (isTokenEndpoint && isRemoteServer && response?.status === 502);
+
+          if (isValidStatus) {
+            logger.info(`Test passed`, {
+              prefix: 'Test',
+              method: test.method,
+              path: test.url.replace(baseUrl, ''),
+              status: response?.status
+            });
+            results.passed++;
+            console.log(`<<< Test Complete: ${test.name} - PASSED >>>`);
+          } else {
+            logger.error(`Test failed`, {
+              prefix: 'Test',
+              method: test.method,
+              path: test.url.replace(baseUrl, ''),
+              error: `Result: status ${response?.status}, expected ${test.expectedStatus}`,
+              expected: test.expectedStatus,
+              actual: response?.status,
+              requestId: response?.headers?.['x-amzn-requestid'] || ''
+            });
+            results.failed++;
+            results.failures.push({
+              endpoint: test.url.replace(baseUrl, ''),
+              method: test.method,
+              name: test.name,
+              error: `Result: status ${response?.status}, expected ${test.expectedStatus}`,
+              expected: test.expectedStatus,
+              actual: response?.status,
+              requestId: response?.headers?.['x-amzn-requestid'] || ''
+            });
+            console.log(`<<< Test Complete: ${test.name} - FAILED >>>`);
+          }
+        } catch (error) {
+          results.failed++;
+          results.failures.push({
+            endpoint: test.url.replace(baseUrl, ''),
+            method: test.method,
+            error: error.message,
+            name: test.name,
+            requestId: error.response?.headers?.['x-amzn-requestid'] || ''
+          });
+          logger.error(`Test failed`, {
+            prefix: 'Test',
+            method: test.method,
+            path: test.url.replace(baseUrl, ''),
+            error: error.message,
+            requestId: error.response?.headers?.['x-amzn-requestid'] || ''
+          });
+          console.log(`<<< Test Complete: ${test.name} - FAILED >>>`);
+        }
+        results.total++;
+      }
+    }
     
-    if (response.status === 200) {
-      if (analysis.isValidICO) {
-        logger.info('Test passed (method=GET path=/favicon.ico)');
-        results.passed++;
+    // Step 2: Run favicon test if requested
+    if (options.favicon) {
+      logger.info('Testing favicon.ico');
+      const { response, analysis } = await testFavicon(baseUrl, options);
+      displayFaviconReport(analysis);
+      
+      if (response.status === 200) {
+        results.total++;
+        if (analysis.isValidICO) {
+          logger.info('Test passed (method=GET path=/favicon.ico)');
+          results.passed++;
+        } else {
+          logger.error('Test failed: Invalid ICO format', {
+            prefix: 'Favicon',
+            contentType: analysis.contentType,
+            size: analysis.size
+          });
+          results.failed++;
+          results.failures.push({
+            method: 'GET',
+            path: '/favicon.ico',
+            error: 'Invalid ICO format'
+          });
+        }
       } else {
-        logger.error('Test failed: Invalid ICO format', {
-          prefix: 'Favicon',
-          contentType: analysis.contentType,
-          size: analysis.size
+        logger.error('Test failed (method=GET path=/favicon.ico)', {
+          status: response.status,
+          expected: 200
         });
         results.failed++;
         results.failures.push({
           method: 'GET',
           path: '/favicon.ico',
-          error: 'Invalid ICO format'
-        });
-      }
-    } else {
-      logger.error('Test failed (method=GET path=/favicon.ico)', {
-        status: response.status,
-        expected: 200
-      });
-      results.failed++;
-      results.failures.push({
-        method: 'GET',
-        path: '/favicon.ico',
-        error: `Unexpected status code: ${response.status}`
-      });
-    }
-    results.total++;
-
-    // Step 2: Discover endpoints
-    const config = await discoverEndpoints(baseUrl);
-
-    // Display discovered endpoints
-    logger.section('Discovered Endpoints');
-    const endpointFields = ['issuer', 'authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'jwks_uri'];
-    endpointFields.forEach(field => {
-      if (config[field]) {
-        logger.result(`${field}: ${config[field]}`);
-      }
-    });
-    logger.result(''); // Empty line for readability
-
-    // Step 3: Get test definitions
-    const endpoints = getTestDefinitions(config);
-    results.total += endpoints.length;
-
-    logger.section('Testing HTTP Methods');
-
-    // Step 4: Run tests for each endpoint
-    for (const endpoint of endpoints) {
-      const path = endpoint.url.replace(baseUrl, '');
-      logger.info(`Testing endpoint`, {
-        prefix: 'Test',
-        method: endpoint.method,
-        path,
-        expectedStatus: endpoint.expectedStatus
-      });
-
-      try {
-        const { response } = await testEndpoint(
-          baseUrl,
-          path,
-          endpoint.method,
-          endpoint.params,
-          endpoint.headers
-        );
-
-        // For token endpoint with invalid codes, remote server may return 502
-        const isTokenEndpoint = path === '/token';
-        const isRemoteServer = !isLocalhost;
-        const isValidStatus = response?.status === endpoint.expectedStatus || 
-          (isTokenEndpoint && isRemoteServer && response?.status === 502);
-
-        if (isValidStatus) {
-          results.passed++;
-          logger.info(`Test passed`, {
-            prefix: 'Test',
-            method: endpoint.method,
-            path,
-            status: response?.status
-          });
-        } else {
-          results.failed++;
-          const error = `Result: status ${response?.status}, expected ${endpoint.expectedStatus}`;
-          results.failures.push({
-            endpoint: path,
-            method: endpoint.method,
-            name: endpoint.name,
-            error,
-            expected: endpoint.expectedStatus,
-            actual: response?.status,
-            requestId: response?.headers?.['x-amzn-requestid'] || ''
-          });
-          logger.error(`Test failed`, {
-            prefix: 'Test',
-            method: endpoint.method,
-            path,
-            error,
-            expected: endpoint.expectedStatus,
-            actual: response?.status,
-            requestId: response?.headers?.['x-amzn-requestid'] || ''
-          });
-        }
-      } catch (error) {
-        results.failed++;
-        results.failures.push({
-          endpoint: path,
-          method: endpoint.method,
-          error: error.message,
-          name: endpoint.name,
-          requestId: error.response?.headers?.['x-amzn-requestid'] || ''
-        });
-        logger.error(`Test failed`, {
-          prefix: 'Test',
-          method: endpoint.method,
-          path,
-          error: error.message,
-          requestId: error.response?.headers?.['x-amzn-requestid'] || ''
+          error: `Unexpected status code: ${response.status}`
         });
       }
     }
 
-    // Step 5: Print test summary
-    logger.section('Test Summary');
-    logger.result(`Total Tests: ${results.total}`);
-    logger.result(`Passed: ${results.passed}`);
-    logger.result(`Failed: ${results.failed}`);
-    
-    if (results.failures.length > 0) {
-      logger.result('\nFailures:');
-      results.failures.forEach(failure => {
-        logger.result(`✗ ${failure.method} ${failure.endpoint}`);
-        logger.result(`  ${failure.name}`);
-        logger.result(`  ${failure.error}`);
-        if (failure.requestId) {
-          logger.result(`  Request ID: ${failure.requestId}`);
-        }
+    if (!options.faviconOnly) {
+      // Step 5: Print test summary
+      logger.section('Test Summary');
+      logger.result(`Total Tests: ${results.total}`);
+      logger.result(`Passed: ${results.passed}`);
+      logger.result(`Failed: ${results.failed}`);
+      
+      if (results.failures.length > 0) {
+        logger.result('\nFailures:');
+        results.failures.forEach(failure => {
+          logger.result(`✗ ${failure.method} ${failure.endpoint}`);
+          logger.result(`  ${failure.name}`);
+          logger.result(`  ${failure.error}`);
+          if (failure.requestId) {
+            logger.result(`  Request ID: ${failure.requestId}`);
+          }
+        });
+      }
+      logger.result(''); // Empty line for readability
+
+      logger.info('Test suite completed', {
+        prefix: 'Summary',
+        total: results.total,
+        passed: results.passed,
+        failed: results.failed
       });
-    }
-    logger.result(''); // Empty line for readability
 
-    logger.info('Test suite completed', {
-      prefix: 'Summary',
-      total: results.total,
-      passed: results.passed,
-      failed: results.failed
-    });
+      // Exit with error if any tests failed
+      if (results.failed > 0) {
+        process.exit(1);
+      }
 
-    // Exit with error if any tests failed
-    if (results.failed > 0) {
-      process.exit(1);
+    } else if (options.favicon) {
+      logger.info('Test suite completed', {
+        prefix: 'Summary',
+        total: results.total,
+        passed: results.passed,
+        failed: results.failed
+      });
     }
 
   } catch (error) {

@@ -20,9 +20,7 @@ class UserInfoService {
       profile: userDetails.html_url,
       picture: userDetails.avatar_url,
       website: userDetails.blog,
-      updated_at: NumericDate(
-        new Date(Date.parse(userDetails.updated_at))
-      )
+      updated_at: NumericDate(new Date(Date.parse(userDetails.updated_at))),
     };
   }
 
@@ -33,13 +31,13 @@ class UserInfoService {
    * @throws {Error} If no primary email is found
    */
   static findPrimaryEmail(userEmails) {
-    const primaryEmail = userEmails.find(email => email.primary);
+    const primaryEmail = userEmails.find((email) => email.primary);
     if (!primaryEmail) {
       throw new Error('User did not have a primary email address');
     }
     return {
       email: primaryEmail.email,
-      email_verified: primaryEmail.verified
+      email_verified: primaryEmail.verified,
     };
   }
 
@@ -51,37 +49,38 @@ class UserInfoService {
     try {
       const githubClientInstance = githubClient(
         config.GITHUB_API_URL,
-        config.GITHUB_LOGIN_URL
+        config.GITHUB_LOGIN_URL,
       );
 
-      const userDetails = await githubClientInstance.getUserDetails(accessToken);
+      const userDetails =
+        await githubClientInstance.getUserDetails(accessToken);
       logger.debug({
         message: 'Fetched user details',
-        userDetails
+        userDetails,
       });
 
       const claims = this.mapToClaims(userDetails);
       logger.debug({
         message: 'Resolved claims',
-        claims
+        claims,
       });
 
       const userEmails = await githubClientInstance.getUserEmails(accessToken);
       logger.debug({
         message: 'Fetched user emails',
-        userEmails
+        userEmails,
       });
 
       const emailClaims = this.findPrimaryEmail(userEmails);
 
       return {
         ...claims,
-        ...emailClaims
+        ...emailClaims,
       };
     } catch (error) {
       logger.error({
         message: 'Failed to fetch user info',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }

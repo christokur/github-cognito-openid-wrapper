@@ -43,18 +43,18 @@ jest.mock('winston', () => {
             });
           }
           return info;
-        }
+        },
       })),
       timestamp: jest.fn(() => ({
         transform: (info) => {
           info.timestamp = '2024-12-18T10:54:09.036Z';
           return info;
-        }
+        },
       })),
       printf: jest.fn((fn) => {
         mockPrintfFn = fn;
         return {
-          transform: (info) => fn(info)
+          transform: (info) => fn(info),
         };
       }),
     },
@@ -108,19 +108,21 @@ describe('Logger', () => {
         level: 'info',
         message: 'Test message: %s',
         timestamp: '2024-12-18T10:54:09.036Z',
-        [Symbol.for('splat')]: ['value1']
+        [Symbol.for('splat')]: ['value1'],
       };
 
       // Apply the transforms in order
       const splatted = winstonInstance.format.splat().transform(info);
-      const timestamped = winstonInstance.format.timestamp().transform(splatted);
+      const timestamped = winstonInstance.format
+        .timestamp()
+        .transform(splatted);
       const logEntry = mockPrintfFn(timestamped);
 
       const parsed = JSON.parse(logEntry);
       expect(parsed).toEqual({
         timestamp: '2024-12-18T10:54:09.036Z',
         level: 'info',
-        message: 'Test message: value1'
+        message: 'Test message: value1',
       });
     });
 
@@ -129,19 +131,22 @@ describe('Logger', () => {
         level: 'debug',
         message: 'Token controller called with code: %s, state: %s, host: %s',
         timestamp: '2024-12-18T10:54:09.036Z',
-        [Symbol.for('splat')]: ['abc123', 'xyz789', 'example.com']
+        [Symbol.for('splat')]: ['abc123', 'xyz789', 'example.com'],
       };
 
       // Apply the transforms in order
       const splatted = winstonInstance.format.splat().transform(info);
-      const timestamped = winstonInstance.format.timestamp().transform(splatted);
+      const timestamped = winstonInstance.format
+        .timestamp()
+        .transform(splatted);
       const logEntry = mockPrintfFn(timestamped);
 
       const parsed = JSON.parse(logEntry);
       expect(parsed).toEqual({
         timestamp: '2024-12-18T10:54:09.036Z',
         level: 'debug',
-        message: 'Token controller called with code: abc123, state: xyz789, host: example.com'
+        message:
+          'Token controller called with code: abc123, state: xyz789, host: example.com',
       });
     });
 
@@ -150,19 +155,21 @@ describe('Logger', () => {
         level: 'info',
         message: 'Response data: %j',
         timestamp: '2024-12-18T10:54:09.036Z',
-        [Symbol.for('splat')]: [{ key: 'value' }]
+        [Symbol.for('splat')]: [{ key: 'value' }],
       };
 
       // Apply the transforms in order
       const splatted = winstonInstance.format.splat().transform(info);
-      const timestamped = winstonInstance.format.timestamp().transform(splatted);
+      const timestamped = winstonInstance.format
+        .timestamp()
+        .transform(splatted);
       const logEntry = mockPrintfFn(timestamped);
 
       const parsed = JSON.parse(logEntry);
       expect(parsed).toEqual({
         timestamp: '2024-12-18T10:54:09.036Z',
         level: 'info',
-        message: 'Response data: {"key":"value"}'
+        message: 'Response data: {"key":"value"}',
       });
     });
   });
@@ -179,9 +186,9 @@ describe('Logger', () => {
         message: {
           action: 'user_login',
           userId: '123',
-          status: 'success'
+          status: 'success',
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -192,7 +199,7 @@ describe('Logger', () => {
         level: 'info',
         action: 'user_login',
         userId: '123',
-        status: 'success'
+        status: 'success',
       });
     });
 
@@ -203,11 +210,11 @@ describe('Logger', () => {
           action: 'token_exchange',
           details: {
             grantType: 'authorization_code',
-            scope: 'openid profile'
+            scope: 'openid profile',
           },
-          status: 'success'
+          status: 'success',
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -219,9 +226,9 @@ describe('Logger', () => {
         action: 'token_exchange',
         details: {
           grantType: 'authorization_code',
-          scope: 'openid profile'
+          scope: 'openid profile',
         },
-        status: 'success'
+        status: 'success',
       });
     });
 
@@ -233,10 +240,10 @@ describe('Logger', () => {
           error: error.message,
           stack: error.stack,
           context: {
-            requestId: 'req-123'
-          }
+            requestId: 'req-123',
+          },
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -248,8 +255,8 @@ describe('Logger', () => {
         error: 'Test error',
         stack: error.stack,
         context: {
-          requestId: 'req-123'
-        }
+          requestId: 'req-123',
+        },
       });
     });
 
@@ -257,9 +264,9 @@ describe('Logger', () => {
       const info = {
         level: 'debug',
         message: {
-          message: 'Simple string message'
+          message: 'Simple string message',
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -268,7 +275,7 @@ describe('Logger', () => {
       expect(parsed).toEqual({
         timestamp: '2024-12-18T10:54:09.036Z',
         level: 'debug',
-        message: 'Simple string message'
+        message: 'Simple string message',
       });
     });
 
@@ -277,9 +284,9 @@ describe('Logger', () => {
         level: 'debug',
         message: {
           message: 'Message with data',
-          data: { foo: 'bar' }
+          data: { foo: 'bar' },
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -289,7 +296,7 @@ describe('Logger', () => {
         timestamp: '2024-12-18T10:54:09.036Z',
         level: 'debug',
         message: 'Message with data',
-        data: { foo: 'bar' }
+        data: { foo: 'bar' },
       });
     });
 
@@ -301,14 +308,14 @@ describe('Logger', () => {
           data: {
             id: 123,
             nested: {
-              value: 'test'
-            }
+              value: 'test',
+            },
           },
           headers: {
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
         },
-        timestamp: '2024-12-18T10:54:09.036Z'
+        timestamp: '2024-12-18T10:54:09.036Z',
       };
 
       const logEntry = mockPrintfFn(info);
@@ -321,12 +328,12 @@ describe('Logger', () => {
         data: {
           id: 123,
           nested: {
-            value: 'test'
-          }
+            value: 'test',
+          },
         },
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
     });
   });

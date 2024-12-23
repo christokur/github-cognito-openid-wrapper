@@ -7,7 +7,7 @@ const schemas = {
       required: true,
       type: 'string',
       pattern: /^[a-zA-Z0-9-_]+$/,
-      maxLength: 100
+      maxLength: 100,
     },
     scope: {
       required: true,
@@ -15,59 +15,59 @@ const schemas = {
       validate: (value) => {
         const validScopes = ['openid', 'user', 'user:email', 'read:user'];
         const scopes = value.split(' ');
-        return scopes.every(scope => validScopes.includes(scope));
-      }
+        return scopes.every((scope) => validScopes.includes(scope));
+      },
     },
     state: {
       required: true,
       type: 'string',
       minLength: 16,
       maxLength: 2048,
-      pattern: /^[A-Za-z0-9+/=._-]+$/
+      pattern: /^[A-Za-z0-9+/=._-]+$/,
     },
     response_type: {
       required: true,
       type: 'string',
-      enum: ['code']
+      enum: ['code'],
     },
     nonce: {
       required: false,
       type: 'string',
       minLength: 16,
       maxLength: 100,
-      pattern: /^[a-zA-Z0-9-_]+$/
-    }
+      pattern: /^[a-zA-Z0-9-_]+$/,
+    },
   },
   token: {
     code: {
       required: true,
       type: 'string',
       pattern: /^[a-zA-Z0-9-_]+$/,
-      maxLength: 256
+      maxLength: 256,
     },
     state: {
       required: false,
       type: 'string',
       minLength: 16,
       maxLength: 2048,
-      pattern: /^[A-Za-z0-9+/=._-]+$/
+      pattern: /^[A-Za-z0-9+/=._-]+$/,
     },
     code_verifier: {
       required: false,
       type: 'string',
       minLength: 43,
       maxLength: 128,
-      pattern: /^[A-Za-z0-9-._~]+$/
-    }
+      pattern: /^[A-Za-z0-9-._~]+$/,
+    },
   },
   userinfo: {
     access_token: {
       required: true,
       type: 'string',
       pattern: /^[a-zA-Z0-9-_]+$/,
-      maxLength: 256
-    }
-  }
+      maxLength: 256,
+    },
+  },
 };
 
 // Sanitization functions
@@ -82,7 +82,7 @@ const sanitizers = {
     // Ensure scopes are space-separated and unique
     const scopes = new Set(value.split(/\s+/).filter(Boolean));
     return Array.from(scopes).join(' ');
-  }
+  },
 };
 
 class ValidationError extends Error {
@@ -96,7 +96,10 @@ class ValidationError extends Error {
 
 function validateField(field, value, rules) {
   // Required check
-  if (rules.required && (value === undefined || value === null || value === '')) {
+  if (
+    rules.required &&
+    (value === undefined || value === null || value === '')
+  ) {
     throw new ValidationError(`${field} is required`, field, value);
   }
 
@@ -110,7 +113,7 @@ function validateField(field, value, rules) {
     throw new ValidationError(
       `${field} must be of type ${rules.type}`,
       field,
-      value
+      value,
     );
   }
 
@@ -120,21 +123,21 @@ function validateField(field, value, rules) {
       throw new ValidationError(
         `${field} must be at least ${rules.minLength} characters`,
         field,
-        value
+        value,
       );
     }
     if (rules.maxLength && value.length > rules.maxLength) {
       throw new ValidationError(
         `${field} must not exceed ${rules.maxLength} characters`,
         field,
-        value
+        value,
       );
     }
     if (rules.pattern && !rules.pattern.test(value)) {
       throw new ValidationError(
         `${field} contains invalid characters`,
         field,
-        value
+        value,
       );
     }
   }
@@ -144,7 +147,7 @@ function validateField(field, value, rules) {
     throw new ValidationError(
       `${field} must be one of: ${rules.enum.join(', ')}`,
       field,
-      value
+      value,
     );
   }
 
@@ -153,7 +156,7 @@ function validateField(field, value, rules) {
     throw new ValidationError(
       `${field} failed custom validation`,
       field,
-      value
+      value,
     );
   }
 }
@@ -185,7 +188,7 @@ function validate(schemaName, data) {
           message: 'Validation error',
           field: error.field,
           value: error.value,
-          error: error.message
+          error: error.message,
         });
       } else {
         throw error;
@@ -204,7 +207,7 @@ function validate(schemaName, data) {
   logger.debug({
     message: 'Validation successful',
     schemaName,
-    sanitized
+    sanitized,
   });
 
   return sanitized;
@@ -213,5 +216,5 @@ function validate(schemaName, data) {
 module.exports = {
   validate,
   ValidationError,
-  schemas
+  schemas,
 };

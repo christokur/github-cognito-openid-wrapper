@@ -4,7 +4,9 @@ module.exports = {
   getBearerToken: (event) => {
     try {
       // This method implements https://tools.ietf.org/html/rfc6750
-      const authHeader = event.headers ? event.headers.Authorization || event.headers.authorization : null;
+      const authHeader = event.headers
+        ? event.headers.Authorization || event.headers.authorization
+        : null;
       if (authHeader) {
         // Section 2.1 Authorization request header
         // Should be of the form 'Bearer <token>'
@@ -14,22 +16,30 @@ module.exports = {
           const error = new Error('Invalid Authorization header format');
           logger.error({
             message: 'Invalid Authorization header',
-            header: authHeader
+            header: authHeader,
           });
           throw error;
         }
         return parts[1];
-      } if (event.queryStringParameters && event.queryStringParameters.access_token) {
+      }
+      if (
+        event.queryStringParameters &&
+        event.queryStringParameters.access_token
+      ) {
         // Section 2.3 URI query parameter
         return event.queryStringParameters.access_token;
-      } if (
+      }
+      if (
         event.headers &&
-        (event.headers['Content-Type'] === 'application/x-www-form-urlencoded' ||
-         event.headers['content-type'] === 'application/x-www-form-urlencoded') &&
+        (event.headers['Content-Type'] ===
+          'application/x-www-form-urlencoded' ||
+          event.headers['content-type'] ===
+            'application/x-www-form-urlencoded') &&
         event.body
       ) {
         // Section 2.2 form encoded body parameter
-        const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+        const body =
+          typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
         return body.access_token;
       }
       const error = new Error('No token specified in request');
@@ -37,14 +47,14 @@ module.exports = {
         message: 'Missing access token',
         event: {
           headers: event.headers,
-          queryStringParameters: event.queryStringParameters
-        }
+          queryStringParameters: event.queryStringParameters,
+        },
       });
       throw error;
     } catch (error) {
       logger.error({
         message: 'Failed to get bearer token',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }
@@ -53,7 +63,7 @@ module.exports = {
   getIssuer: (host) => {
     if (!host) {
       logger.error({
-        message: 'Missing host parameter'
+        message: 'Missing host parameter',
       });
       throw new Error('Host parameter is required');
     }

@@ -20,7 +20,7 @@ describe('RateLimiter', () => {
         'x-ratelimit-remaining': '4000',
         'x-ratelimit-limit': '5000',
         'x-ratelimit-reset': '1641081600', // 2022-01-02T00:00:00.000Z
-        'retry-after': '3600'
+        'retry-after': '3600',
       };
 
       rateLimiter.updateLimits(headers);
@@ -36,7 +36,7 @@ describe('RateLimiter', () => {
         remaining: rateLimiter.remaining,
         total: rateLimiter.total,
         resetTime: rateLimiter.resetTime,
-        retryAfter: rateLimiter.retryAfter
+        retryAfter: rateLimiter.retryAfter,
       };
 
       rateLimiter.updateLimits({});
@@ -59,7 +59,9 @@ describe('RateLimiter', () => {
       rateLimiter.resetTime = Date.now() + 1000;
       rateLimiter.retryAfter = 0;
 
-      expect(() => rateLimiter.checkLimit()).toThrow('GitHub API responded with a failure: 429 (API rate limit exceeded)');
+      expect(() => rateLimiter.checkLimit()).toThrow(
+        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+      );
     });
 
     test('should throw rate limit error when retry-after is specified', () => {
@@ -67,7 +69,9 @@ describe('RateLimiter', () => {
       rateLimiter.resetTime = Date.now();
       rateLimiter.retryAfter = 1000;
 
-      expect(() => rateLimiter.checkLimit()).toThrow('GitHub API responded with a failure: 429 (API rate limit exceeded)');
+      expect(() => rateLimiter.checkLimit()).toThrow(
+        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+      );
     });
   });
 
@@ -75,8 +79,8 @@ describe('RateLimiter', () => {
     test('should identify 429 status as rate limit error', () => {
       const error = {
         response: {
-          status: 429
-        }
+          status: 429,
+        },
       };
       expect(rateLimiter.isRateLimitError(error)).toBe(true);
     });
@@ -86,9 +90,9 @@ describe('RateLimiter', () => {
         response: {
           status: 403,
           data: {
-            message: 'API rate limit exceeded'
-          }
-        }
+            message: 'API rate limit exceeded',
+          },
+        },
       };
       expect(rateLimiter.isRateLimitError(error)).toBe(true);
     });
@@ -98,9 +102,9 @@ describe('RateLimiter', () => {
         response: {
           status: 403,
           data: {
-            message: 'Forbidden'
-          }
-        }
+            message: 'Forbidden',
+          },
+        },
       };
       expect(rateLimiter.isRateLimitError(error)).toBe(false);
     });
@@ -113,8 +117,8 @@ describe('RateLimiter', () => {
     test('should handle errors without data object', () => {
       const error = {
         response: {
-          status: 403
-        }
+          status: 403,
+        },
       };
       expect(rateLimiter.isRateLimitError(error)).toBe(false);
     });

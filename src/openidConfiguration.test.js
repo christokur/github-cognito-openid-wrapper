@@ -82,7 +82,7 @@ describe('openid domain layer - Configuration', () => {
             'iss',
             'aud',
           ],
-          code_challenge_methods_supported: ['plain', 'S256']
+          code_challenge_methods_supported: ['plain', 'S256'],
         });
       });
 

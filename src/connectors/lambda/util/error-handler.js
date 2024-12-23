@@ -8,7 +8,7 @@ function handleError(error, callback) {
   if (error instanceof ValidationError) {
     oauthError = new OAuthError(
       errorTypes.INVALID_REQUEST,
-      `${error.field} ${error.message}`
+      `${error.field} ${error.message}`,
     );
   } else if (error instanceof OAuthError) {
     oauthError = error;
@@ -16,7 +16,7 @@ function handleError(error, callback) {
     logger.error('Unexpected error:', error);
     oauthError = new OAuthError(
       errorTypes.SERVER_ERROR,
-      'An unexpected error occurred'
+      'An unexpected error occurred',
     );
   }
 
@@ -24,16 +24,16 @@ function handleError(error, callback) {
     statusCode: oauthError.statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store',
     },
-    body: JSON.stringify(formatOAuthError(oauthError))
+    body: JSON.stringify(formatOAuthError(oauthError)),
   };
 
   logger.error({
     message: 'Error handling request',
     error: error.message,
     stack: error.stack,
-    response
+    response,
   });
 
   callback(null, response);
@@ -42,5 +42,5 @@ function handleError(error, callback) {
 module.exports = {
   OAuthError,
   errorTypes,
-  handleError
+  handleError,
 };

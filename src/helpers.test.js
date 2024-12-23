@@ -1,4 +1,4 @@
-const {NumericDate} = require('./helpers');
+const { NumericDate } = require('./helpers');
 
 beforeEach(() => {
   jest.resetModules();
@@ -19,7 +19,7 @@ describe('validateConfig', () => {
     process.env.GITHUB_CLIENT_ID = 'test_client_id';
     const { validateConfig } = require('./helpers');
     expect(() => validateConfig()).toThrow(
-      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string'
+      'Environment variable GITHUB_CLIENT_SECRET must be set and be a string',
     );
   });
 
@@ -33,7 +33,7 @@ describe('validateConfig', () => {
 
     const { validateConfig } = require('./helpers');
     expect(() => validateConfig()).toThrow(
-      'Environment variable COGNITO_JWKS_MAX_AGE must be set and be a number'
+      'Environment variable COGNITO_JWKS_MAX_AGE must be set and be a number',
     );
   });
 });
@@ -50,7 +50,7 @@ describe('ensureString', () => {
   it('should throw an error if the variable is undefined', () => {
     const { ensureString } = require('./helpers');
     expect(() => ensureString('NONEXISTENT_VAR')).toThrow(
-      'Environment variable NONEXISTENT_VAR must be set and be a string'
+      'Environment variable NONEXISTENT_VAR must be set and be a string',
     );
   });
 
@@ -66,7 +66,7 @@ describe('ensureNumber', () => {
     process.env.PORT = 'not-a-number';
     const { ensureNumber } = require('./helpers');
     expect(() => ensureNumber('PORT')).toThrow(
-      'Environment variable PORT must be set and be a number'
+      'Environment variable PORT must be set and be a number',
     );
   });
 
@@ -82,7 +82,7 @@ describe('ensureNumber SOME_NUMBER', () => {
     process.env.SOME_NUMBER = 'not-a-number';
     const { ensureNumber } = require('./helpers');
     expect(() => ensureNumber('SOME_NUMBER')).toThrow(
-      'Environment variable SOME_NUMBER must be set and be a number'
+      'Environment variable SOME_NUMBER must be set and be a number',
     );
   });
 });

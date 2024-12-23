@@ -8,7 +8,7 @@ describe('GitHub Client - User Operations', () => {
   beforeEach(() => {
     // Store original env
     originalEnv = { ...process.env };
-    
+
     // Set mock environment variables
     Object.entries(mockValues).forEach(([key, value]) => {
       process.env[key] = value;
@@ -30,22 +30,28 @@ describe('GitHub Client - User Operations', () => {
         data: {
           id: '12345',
           login: 'testuser',
-          name: 'Test User'
-        }
+          name: 'Test User',
+        },
       };
 
       mockAxios.get.mockResolvedValue(mockResponse);
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
       const userDetails = await client.getUserDetails('mock_access_token');
       expect(userDetails).toEqual(mockResponse.data);
-      expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          Authorization: 'token mock_access_token',
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        `${mockValues.GITHUB_API_URL}/user`,
+        {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token mock_access_token',
+          },
+          timeout: 10000,
         },
-        timeout: 10000
-      });
+      );
     });
 
     test('should handle error response for user details', async () => {
@@ -53,8 +59,13 @@ describe('GitHub Client - User Operations', () => {
         response: { status: 404, data: { message: 'Not Found' } },
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      await expect(client.getUserDetails('invalid_token')).rejects.toThrow('Not Found');
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
+      await expect(client.getUserDetails('invalid_token')).rejects.toThrow(
+        'Not Found',
+      );
     });
   });
 
@@ -75,7 +86,10 @@ describe('GitHub Client - User Operations', () => {
         data: expectedResponse,
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
       const result = await client.getUserEmails(accessToken);
       expect(result).toEqual(expectedResponse);
       expect(mockAxios.get).toHaveBeenCalledWith(
@@ -85,8 +99,8 @@ describe('GitHub Client - User Operations', () => {
             Accept: 'application/vnd.github.v3+json',
             Authorization: `token ${accessToken}`,
           },
-          timeout: 10000
-        }
+          timeout: 10000,
+        },
       );
     });
 
@@ -96,8 +110,13 @@ describe('GitHub Client - User Operations', () => {
         response: { status: 401, data: { message: 'Bad credentials' } },
       });
 
-      const client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
-      await expect(client.getUserEmails(accessToken)).rejects.toThrow('Bad credentials');
+      const client = github(
+        mockValues.GITHUB_API_URL,
+        mockValues.GITHUB_LOGIN_URL,
+      );
+      await expect(client.getUserEmails(accessToken)).rejects.toThrow(
+        'Bad credentials',
+      );
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user/emails`,
         {
@@ -105,8 +124,8 @@ describe('GitHub Client - User Operations', () => {
             Accept: 'application/vnd.github.v3+json',
             Authorization: `token ${accessToken}`,
           },
-          timeout: 10000
-        }
+          timeout: 10000,
+        },
       );
     });
   });

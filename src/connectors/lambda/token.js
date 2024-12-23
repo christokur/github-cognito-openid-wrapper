@@ -1,33 +1,46 @@
 const qs = require('querystring');
-const responder = require('./util/responder');
 const controllers = require('../controllers');
 const { OAuthError, errorTypes } = require('../../errors');
 const logger = require('../logger');
 
 module.exports.handler = (event, context) => {
   try {
-    const {body} = event;
+    const { parseBody } = require('./index');
+    const { body, contentType } = parseBody(event);
+
     logger.debug({
       message: 'Processing token request',
-      body
+      body,
+      contentType,
     });
 
-    // Check content type
-    const contentType = event.headers['Content-Type'] || event.headers['content-type'];
-    if (contentType !== 'application/json') {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Content-Type must be application/json');
+    // Validate request body
+    if (!body || typeof body !== 'object') {
+      throw new OAuthError(
+        errorTypes.INVALID_REQUEST,
+        'Request body is required',
+      );
     }
 
-    // Validate required fields
-    if (!body || typeof body !== 'object' || Object.keys(body).length === 0) {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Request body is required');
-    }
-
-    const { code, state, code_verifier } = body;
-    const host = event.headers.Host || event.headers.host;
-
+    // Validate host header first
+    const host = event.headers && (event.headers.Host || event.headers.host);
     if (!host) {
-      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Host header is required');
+      throw new OAuthError(
+        errorTypes.INVALID_REQUEST,
+        'Host header is required',
+      );
+    }
+
+    // Validate required parameters
+    const { code, state, code_verifier } = body;
+    const requiredParams = ['code'];
+    const missingParams = requiredParams.filter((param) => !body[param]);
+
+    if (missingParams.length > 0) {
+      throw new OAuthError(
+        errorTypes.INVALID_REQUEST,
+        `Missing required parameters: ${missingParams.join(', ')}`,
+      );
     }
 
     logger.debug({
@@ -35,30 +48,41 @@ module.exports.handler = (event, context) => {
       code,
       state,
       code_verifier,
-      host
+      host,
     });
 
-    return controllers().token(code, state, host, code_verifier);
+    const response = controllers().token(code, state, host, code_verifier);
+
+    // Ensure error responses have correct status code
+    if (response.body) {
+      const responseBody = JSON.parse(response.body);
+      if (responseBody.error === errorTypes.INVALID_REQUEST) {
+        response.statusCode = 400;
+      }
+    }
+
+    return response;
   } catch (error) {
     logger.error({
       message: 'Token handler error',
-      error: error.message || error
+      error: error.message || error,
     });
+
     const errorResponse = {
-      statusCode: error.statusCode || (error.type === errorTypes.INVALID_REQUEST ? 400 : 500),
+      statusCode: error.statusCode || 500,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
-        'Pragma': 'no-cache'
+        Pragma: 'no-cache',
       },
       body: JSON.stringify({
         error: error.type || 'server_error',
-        error_description: error.message || 'An unexpected error occurred'
-      })
+        error_description: error.message || 'An unexpected error occurred',
+      }),
     };
     logger.error({
       message: 'Returning error response to API Gateway',
-      response: errorResponse
+      response: errorResponse,
     });
     return errorResponse;
   }

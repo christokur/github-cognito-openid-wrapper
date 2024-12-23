@@ -7,7 +7,10 @@ const logger = require('./connectors/logger');
 const { OAuthError, errorTypes } = require('./errors');
 
 class GitHubClient {
-  constructor(apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) {
+  constructor(
+    apiBaseUrl = config.GITHUB_API_URL,
+    loginBaseUrl = config.GITHUB_LOGIN_URL,
+  ) {
     this.apiBaseUrl = apiBaseUrl || config.GITHUB_API_URL;
     this.loginBaseUrl = loginBaseUrl || config.GITHUB_LOGIN_URL;
 
@@ -37,7 +40,14 @@ class GitHubClient {
     return await gitHubGet(endpoints.userEmails, accessToken);
   }
 
-  getAuthorizeUrl(client_id, scope, state, response_type, nonce, codeChallenge) {
+  getAuthorizeUrl(
+    client_id,
+    scope,
+    state,
+    response_type,
+    nonce,
+    codeChallenge,
+  ) {
     const params = {
       client_id,
       scope,
@@ -59,7 +69,10 @@ class GitHubClient {
     const endpoints = this.getApiEndpoints();
     console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
     console.log(`Generated URL: ${endpoints.oauthAuthorize}?${queryString}`);
-    logger.debug('Constructed URL:', `${endpoints.oauthAuthorize}?${queryString}`) ;
+    logger.debug(
+      'Constructed URL:',
+      `${endpoints.oauthAuthorize}?${queryString}`,
+    );
     return `${endpoints.oauthAuthorize}?${queryString}`;
   }
 
@@ -70,6 +83,7 @@ class GitHubClient {
       client_secret: config.GITHUB_CLIENT_SECRET,
       code,
       redirect_uri: config.COGNITO_REDIRECT_URI,
+      grant_type: 'authorization_code'
     };
 
     if (codeVerifier) {
@@ -79,6 +93,7 @@ class GitHubClient {
     logger.debug('getToken called with:', { code, data: params });
 
     try {
+      logger.debug('Posting to gitHubPost:', params);
       const response = await gitHubPost(endpoints.oauthToken, params);
       logger.debug('Response from gitHubPost:', response);
       // Check for GitHub error response
@@ -86,9 +101,12 @@ class GitHubClient {
         logger.error({
           message: 'GitHub API error',
           error: response.error,
-          error_description: response.error_description
+          error_description: response.error_description,
         });
-        throw new OAuthError(errorTypes.INVALID_GRANT, response.error_description || response.error);
+        throw new OAuthError(
+          errorTypes.INVALID_GRANT,
+          response.error_description || response.error,
+        );
       }
       // Parse the response if it's a string
       return typeof response === 'string' ? qs.parse(response) : response;
@@ -103,17 +121,20 @@ class GitHubClient {
       this.getUserDetails(accessToken),
       this.getUserEmails(accessToken),
     ]);
-    const primaryEmail = userEmails.find(email => email.primary);
+    const primaryEmail = userEmails.find((email) => email.primary);
     if (!primaryEmail) {
       throw new Error('User did not have a primary email address');
     }
     return {
       ...userDetails,
-      email: primaryEmail.email
+      email: primaryEmail.email,
     };
   }
 }
 
-const githubClient = (apiBaseUrl = config.GITHUB_API_URL, loginBaseUrl = config.GITHUB_LOGIN_URL) => new GitHubClient(apiBaseUrl, loginBaseUrl);
+const githubClient = (
+  apiBaseUrl = config.GITHUB_API_URL,
+  loginBaseUrl = config.GITHUB_LOGIN_URL,
+) => new GitHubClient(apiBaseUrl, loginBaseUrl);
 
 module.exports = githubClient;

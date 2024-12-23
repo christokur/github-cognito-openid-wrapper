@@ -4,7 +4,7 @@ const { mockValues } = require('./mocks');
 const mockRateLimiter = {
   checkLimit: jest.fn(),
   updateLimits: jest.fn(),
-  isRateLimitError: jest.fn().mockReturnValue(false)
+  isRateLimitError: jest.fn().mockReturnValue(false),
 };
 
 jest.mock('./utils/rate-limiter', () => mockRateLimiter);
@@ -19,10 +19,10 @@ describe('User Details and Emails', () => {
     data: {
       id: '12345',
       login: 'testuser',
-      name: 'Test User'
+      name: 'Test User',
     },
     headers: {},
-    status: 200
+    status: 200,
   };
 
   const mockEmailsResponse = {
@@ -30,17 +30,20 @@ describe('User Details and Emails', () => {
       {
         email: 'test@example.com',
         primary: true,
-        verified: true
-      }
+        verified: true,
+      },
     ],
     headers: {},
-    status: 200
+    status: 200,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockAxios.get.mockReset();
-    github = githubClient(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
+    github = githubClient(
+      mockValues.GITHUB_API_URL,
+      mockValues.GITHUB_LOGIN_URL,
+    );
   });
 
   it('should fetch user details successfully', async () => {
@@ -60,26 +63,33 @@ describe('User Details and Emails', () => {
       response: {
         status: 403,
         data: {
-          message: 'API rate limit exceeded'
+          message: 'API rate limit exceeded',
         },
         headers: {
-          'x-ratelimit-remaining': '0'
-        }
-      }
+          'x-ratelimit-remaining': '0',
+        },
+      },
     };
     mockRateLimiter.isRateLimitError.mockReturnValue(true);
     mockRateLimiter.checkLimit.mockImplementation(() => {
-      throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
+      throw new Error(
+        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+      );
     });
     mockAxios.get.mockRejectedValue(rateLimitError);
 
-    return github.getUserDetails(mockAccessToken)
+    return github
+      .getUserDetails(mockAccessToken)
       .then(() => {
         throw new Error('Expected promise to reject');
       })
-      .catch(err => {
-        expect(err.message).toBe('GitHub API responded with a failure: 429 (API rate limit exceeded)');
-        expect(mockRateLimiter.updateLimits).toHaveBeenCalledWith(rateLimitError.response.headers);
+      .catch((err) => {
+        expect(err.message).toBe(
+          'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+        );
+        expect(mockRateLimiter.updateLimits).toHaveBeenCalledWith(
+          rateLimitError.response.headers,
+        );
       });
   }, 30000);
 });

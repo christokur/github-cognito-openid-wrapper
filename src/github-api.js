@@ -5,37 +5,48 @@ const { handleGitHubResponse, handleGitHubError } = require('./github-errors');
 const Configuration = require('./config');
 
 const gitHubGet = (url, accessToken) => {
-  logger.debug({ message: 'Making GitHub API request', url, accessToken: accessToken ? '[REDACTED]' : undefined });
-  const config = { 
-    headers: { 
+  logger.debug({
+    message: 'Making GitHub API GET request',
+    url,
+    accessToken,
+  });
+  const config = {
+    headers: {
       Accept: `application/vnd.github.${Configuration.GITHUB_API_VERSION}+json`,
-      Authorization: `token ${accessToken}` 
+      Authorization: `token ${accessToken}`,
     },
-    timeout: Configuration.GITHUB_API_TIMEOUT
+    timeout: Configuration.GITHUB_API_TIMEOUT,
   };
   const axios = getAxios();
-  return withRetry(() => axios.get(url, config))
+  return withRetry(() => axios.get(url, config)
     .then(handleGitHubResponse)
-    .catch(handleGitHubError);
+    .catch(handleGitHubError)
+  );
 };
 
 const gitHubPost = (url, data) => {
-  const config = { 
-    headers: { 
+  logger.debug({
+    message: 'Making GitHub API POST request',
+    url,
+    data,
+  });
+  const config = {
+    headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded' 
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
     timeout: Configuration.GITHUB_API_TIMEOUT,
     //  transformRequest: [(data) => data] // Prevent axios from auto-encoding
   };
   const axios = getAxios();
-  return withRetry(() => axios.post(url, data, config))
-    .then(handleGitHubResponse)
-    .catch(handleGitHubError);
+  return withRetry(() => 
+    axios.post(url, data, config)
+      .then(handleGitHubResponse)
+      .catch(handleGitHubError)
+  );
 };
 
 module.exports = {
   gitHubGet,
-  gitHubPost
+  gitHubPost,
 };
- 

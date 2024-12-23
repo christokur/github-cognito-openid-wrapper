@@ -33,13 +33,18 @@ function verifyRequest(event) {
  */
 function verifyIco(buffer) {
   // Check ICO header
-  if (buffer[0] !== 0 || buffer[1] !== 0 || buffer[2] !== 1 || buffer[3] !== 0) {
+  if (
+    buffer[0] !== 0 ||
+    buffer[1] !== 0 ||
+    buffer[2] !== 1 ||
+    buffer[3] !== 0
+  ) {
     logger.debug('ICO header check failed', {
       byte0: buffer[0],
       byte1: buffer[1],
       byte2: buffer[2],
       byte3: buffer[3],
-      expected: [0, 0, 1, 0]
+      expected: [0, 0, 1, 0],
     });
     return false;
   }
@@ -48,7 +53,7 @@ function verifyIco(buffer) {
     reservedBytes: [buffer[0], buffer[1]],
     typeBytes: [buffer[2], buffer[3]],
     bufferLength: buffer.length,
-    bufferStart: buffer.slice(0, 8).toString('hex')
+    bufferStart: buffer.slice(0, 8).toString('hex'),
   });
 
   return true;
@@ -65,8 +70,8 @@ function verifyResponse(response) {
     statusCode: 200,
     headers: {
       'Content-Type': 'image/x-icon',
-      'Cache-Control': 'public, max-age=31536000'
-    }
+      'Cache-Control': 'public, max-age=31536000',
+    },
   };
 
   if (response.statusCode !== required.statusCode) {
@@ -91,7 +96,7 @@ function verifyResponse(response) {
 
   // Verify ICO format
   try {
-    const buffer = response.isBase64Encoded 
+    const buffer = response.isBase64Encoded
       ? Buffer.from(response.body, 'base64')
       : Buffer.from(response.body);
     if (!verifyIco(buffer)) {
@@ -107,5 +112,5 @@ function verifyResponse(response) {
 module.exports = {
   verifyRequest,
   verifyIco,
-  verifyResponse
+  verifyResponse,
 };

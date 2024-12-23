@@ -9,13 +9,16 @@ class Configuration {
       this.PORT = parseInt(process.env.PORT, 10) || undefined;
 
       // GitHub API configuration
-      this.GITHUB_API_TIMEOUT = parseInt(process.env.GITHUB_API_TIMEOUT, 10) || 10000;
+      this.GITHUB_API_TIMEOUT =
+        parseInt(process.env.GITHUB_API_TIMEOUT, 10) || 10000;
       this.GITHUB_API_VERSION = process.env.GITHUB_API_VERSION || 'v3';
 
       // JWT key configuration
       this.JWT_KEY_ID = process.env.JWT_KEY_ID || 'jwtRS256';
-      this.JWT_PRIVATE_KEY_PATH = process.env.JWT_PRIVATE_KEY_PATH || '../jwtRS256.key';
-      this.JWT_PUBLIC_KEY_PATH = process.env.JWT_PUBLIC_KEY_PATH || '../jwtRS256.key.pub';
+      this.JWT_PRIVATE_KEY_PATH =
+        process.env.JWT_PRIVATE_KEY_PATH || '../jwtRS256.key';
+      this.JWT_PUBLIC_KEY_PATH =
+        process.env.JWT_PUBLIC_KEY_PATH || '../jwtRS256.key.pub';
       this.JWT_ALGORITHM = process.env.JWT_ALGORITHM || 'RS256';
 
       // Splunk logging variables

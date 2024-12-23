@@ -6,8 +6,8 @@ require('./mocks');
 jest.mock('./services/authorization', () => ({
   getStoredState: jest.fn(() => ({
     codeVerifier: 'SOME_VERIFIER',
-    nonce: 'SOME_NONCE'
-  }))
+    nonce: 'SOME_NONCE',
+  })),
 }));
 
 describe('openid domain layer - Token', () => {
@@ -42,17 +42,20 @@ describe('openid domain layer - Token', () => {
             data: {
               id: 12345,
               name: 'Test User',
-              login: 'testuser'
-            }
+              login: 'testuser',
+            },
           });
-        } if (url.endsWith('/user/emails')) {
+        }
+        if (url.endsWith('/user/emails')) {
           return Promise.resolve({
             status: 200,
-            data: [{
-              email: 'test@example.com',
-              primary: true,
-              verified: true
-            }]
+            data: [
+              {
+                email: 'test@example.com',
+                primary: true,
+                verified: true,
+              },
+            ],
           });
         }
       });
@@ -61,18 +64,20 @@ describe('openid domain layer - Token', () => {
         'SOME_CODE',
         'SOME_STATE',
         'SOME_HOST',
-        'SOME_VERIFIER'
+        'SOME_VERIFIER',
       );
 
       expect(token).toEqual({
         access_token: 'SOME_TOKEN',
         id_token: expect.any(String),
         scope: 'openid scope1 scope2',
-        token_type: 'bearer'
+        token_type: 'bearer',
       });
 
       const postCall = mockAxios.post.mock.calls[0];
-      expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+      expect(postCall[0]).toBe(
+        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+      );
       // Don't test the exact format of the data, just verify the content is correct
       const data = new URLSearchParams(postCall[1]);
       expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
@@ -81,7 +86,7 @@ describe('openid domain layer - Token', () => {
       expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
       });
       expect(postCall[2].timeout).toBe(10000);
 
@@ -100,9 +105,9 @@ describe('openid domain layer - Token', () => {
           status: 400,
           data: {
             error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.'
-          }
-        }
+            error_description: 'The code passed is incorrect or expired.',
+          },
+        },
       };
 
       mockAxios.post.mockRejectedValue(errorResponse);
@@ -112,12 +117,16 @@ describe('openid domain layer - Token', () => {
           'bad_code',
           'SOME_STATE',
           'SOME_HOST',
-          'SOME_VERIFIER'
-        )
-      ).rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
+          'SOME_VERIFIER',
+        ),
+      ).rejects.toThrow(
+        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+      );
 
       const postCall = mockAxios.post.mock.calls[0];
-      expect(postCall[0]).toBe(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`);
+      expect(postCall[0]).toBe(
+        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+      );
       // Don't test the exact format of the data, just verify the content is correct
       const data = new URLSearchParams(postCall[1]);
       expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
@@ -126,7 +135,7 @@ describe('openid domain layer - Token', () => {
       expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
       });
       expect(postCall[2].timeout).toBe(10000);
     });
@@ -140,7 +149,7 @@ describe('openid domain layer - Token', () => {
       jest.resetModules();
       jest.mock('./connectors/logger', () => ({
         debug: jest.fn(),
-        error: jest.fn()
+        error: jest.fn(),
       }));
       logger = require('./connectors/logger');
       openid = require('./openid');
@@ -152,7 +161,7 @@ describe('openid domain layer - Token', () => {
         heapTotal: 78910,
         heapUsed: 11213,
         external: 14151,
-        arrayBuffers: 16171
+        arrayBuffers: 16171,
       });
     });
 
@@ -162,8 +171,9 @@ describe('openid domain layer - Token', () => {
     });
 
     test('throws error when code is missing', () => {
-      expect(() => openid.getTokens(null, 'state', 'host', 'verifier'))
-        .toThrow('The code parameter is required');
+      expect(() => openid.getTokens(null, 'state', 'host', 'verifier')).toThrow(
+        'The code parameter is required',
+      );
     });
 
     test('logs and rethrows error from token exchange with memory usage', async () => {
@@ -172,14 +182,17 @@ describe('openid domain layer - Token', () => {
           status: 400,
           data: {
             error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.'
-          }
-        }
+            error_description: 'The code passed is incorrect or expired.',
+          },
+        },
       };
       mockAxios.post.mockRejectedValue(mockError);
 
-      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
-        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
+      await expect(
+        openid.getTokens('code', 'state', 'host', 'verifier'),
+      ).rejects.toThrow(
+        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+      );
 
       const errorCalls = logger.error.mock.calls;
       expect(errorCalls).toHaveLength(4);
@@ -192,10 +205,10 @@ describe('openid domain layer - Token', () => {
             status: 400,
             data: {
               error: 'bad_verification_code',
-              error_description: 'The code passed is incorrect or expired.'
-            }
-          }
-        })
+              error_description: 'The code passed is incorrect or expired.',
+            },
+          },
+        }),
       });
 
       // Second call - Status and data
@@ -203,8 +216,8 @@ describe('openid domain layer - Token', () => {
         status: 400,
         data: {
           error: 'bad_verification_code',
-          error_description: 'The code passed is incorrect or expired.'
-        }
+          error_description: 'The code passed is incorrect or expired.',
+        },
       });
 
       // Third call - Error in getToken
@@ -214,7 +227,8 @@ describe('openid domain layer - Token', () => {
       // Fourth call - Failed to process token exchange
       expect(errorCalls[3][0]).toEqual({
         message: 'Failed to process token exchange',
-        error: 'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)'
+        error:
+          'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
       });
     });
 
@@ -224,14 +238,17 @@ describe('openid domain layer - Token', () => {
           status: 400,
           data: {
             error: 'token_exchange_failed',
-            error_description: 'Token exchange failed'
-          }
-        }
+            error_description: 'Token exchange failed',
+          },
+        },
       };
       mockAxios.post.mockRejectedValue(mockError);
 
-      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
-        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)');
+      await expect(
+        openid.getTokens('code', 'state', 'host', 'verifier'),
+      ).rejects.toThrow(
+        'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+      );
 
       const errorCalls = logger.error.mock.calls;
       expect(errorCalls).toHaveLength(4);
@@ -244,10 +261,10 @@ describe('openid domain layer - Token', () => {
             status: 400,
             data: {
               error: 'token_exchange_failed',
-              error_description: 'Token exchange failed'
-            }
-          }
-        })
+              error_description: 'Token exchange failed',
+            },
+          },
+        }),
       });
 
       // Second call - Status and data
@@ -255,8 +272,8 @@ describe('openid domain layer - Token', () => {
         status: 400,
         data: {
           error: 'token_exchange_failed',
-          error_description: 'Token exchange failed'
-        }
+          error_description: 'Token exchange failed',
+        },
       });
 
       // Third call - Error in getToken
@@ -266,7 +283,8 @@ describe('openid domain layer - Token', () => {
       // Fourth call - Failed to process token exchange
       expect(errorCalls[3][0]).toEqual({
         message: 'Failed to process token exchange',
-        error: 'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)'
+        error:
+          'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
       });
     });
 
@@ -276,14 +294,17 @@ describe('openid domain layer - Token', () => {
           status: 400,
           data: {
             error: 'token_exchange_failed',
-            error_description: 'Token exchange failed'
-          }
-        }
+            error_description: 'Token exchange failed',
+          },
+        },
       };
       mockAxios.post.mockRejectedValue(mockError);
 
-      await expect(openid.getTokens('code', 'state', 'host', 'verifier'))
-        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)');
+      await expect(
+        openid.getTokens('code', 'state', 'host', 'verifier'),
+      ).rejects.toThrow(
+        'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+      );
 
       const errorCalls = logger.error.mock.calls;
       expect(errorCalls).toHaveLength(4);
@@ -296,10 +317,10 @@ describe('openid domain layer - Token', () => {
             status: 400,
             data: {
               error: 'token_exchange_failed',
-              error_description: 'Token exchange failed'
-            }
-          }
-        })
+              error_description: 'Token exchange failed',
+            },
+          },
+        }),
       });
 
       // Second call - Status and data
@@ -307,8 +328,8 @@ describe('openid domain layer - Token', () => {
         status: 400,
         data: {
           error: 'token_exchange_failed',
-          error_description: 'Token exchange failed'
-        }
+          error_description: 'Token exchange failed',
+        },
       });
 
       // Third call - Error in getToken
@@ -318,9 +339,9 @@ describe('openid domain layer - Token', () => {
       // Fourth call - Failed to process token exchange
       expect(errorCalls[3][0]).toEqual({
         message: 'Failed to process token exchange',
-        error: 'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)'
+        error:
+          'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
       });
     });
   });
-
 });

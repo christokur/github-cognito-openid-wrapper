@@ -2,7 +2,6 @@ const { mockValues } = require('./mocks');
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 
 describe('GitHub Client - Response Handling', () => {
-
   let Configuration;
   let client;
   let github;
@@ -12,7 +11,7 @@ describe('GitHub Client - Response Handling', () => {
     github = require('./github');
     client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
   });
-  
+
   afterEach(() => {
     jest.resetModules();
     delete require.cache[require.resolve('./config')];
@@ -34,17 +33,20 @@ describe('GitHub Client - Response Handling', () => {
 
       const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
-        'GitHub API responded with a failure: 429 (API rate limit exceeded)'
+        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
       );
 
       // Verify axios was called correctly
-      expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          Authorization: 'token test_token',
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        `${mockValues.GITHUB_API_URL}/user`,
+        {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token test_token',
+          },
+          timeout: 10000,
         },
-        timeout: 10000
-      });
+      );
     }, 15000); // Increase timeout to 15 seconds
 
     test('should handle 204 response with error message', async () => {
@@ -62,13 +64,16 @@ describe('GitHub Client - Response Handling', () => {
       await expect(client.getUserDetails('test_token')).resolves.toEqual({});
 
       // Verify axios was called correctly
-      expect(mockAxios.get).toHaveBeenCalledWith(`${mockValues.GITHUB_API_URL}/user`, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          Authorization: 'token test_token',
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        `${mockValues.GITHUB_API_URL}/user`,
+        {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: 'token test_token',
+          },
+          timeout: 10000,
         },
-        timeout: 10000
-      });
+      );
     });
   });
 
@@ -78,7 +83,7 @@ describe('GitHub Client - Response Handling', () => {
 
       const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getToken('test_code')).rejects.toThrow(
-        'Network error occurred while contacting GitHub API'
+        'Network error occurred while contacting GitHub API',
       );
     });
   });

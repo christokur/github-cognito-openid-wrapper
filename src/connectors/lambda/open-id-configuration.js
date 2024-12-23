@@ -8,12 +8,12 @@ module.exports.handler = (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           error: 'invalid_request',
-          error_description: 'Host header is required'
-        })
+          error_description: 'Host header is required',
+        }),
       };
     }
     //  if host already has a `http?://` prefix do nothing else add it
@@ -25,12 +25,12 @@ module.exports.handler = (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         error: 'server_error',
-        error_description: error.message || 'Internal server error'
-      })
+        error_description: error.message || 'Internal server error',
+      }),
     };
   }
 };

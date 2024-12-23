@@ -8,7 +8,7 @@ describe('Validator', () => {
         scope: 'openid user:email',
         state: 'abcdef1234567890',
         response_type: 'code',
-        nonce: 'test-nonce-123456'
+        nonce: 'test-nonce-123456',
       };
 
       expect(() => validate('authorize', validData)).not.toThrow();
@@ -19,7 +19,7 @@ describe('Validator', () => {
         client_id: 'test-client',
         scope: 'openid user:email',
         state: 'abcdef1234567890',
-        response_type: 'code'
+        response_type: 'code',
       };
 
       expect(() => validate('authorize', validData)).not.toThrow();
@@ -27,14 +27,16 @@ describe('Validator', () => {
 
     it('should throw on invalid client_id', () => {
       const invalidData = {
-        client_id: 'test@client',  // Contains invalid character
+        client_id: 'test@client', // Contains invalid character
         scope: 'openid user:email',
         state: 'abcdef1234567890',
-        response_type: 'code'
+        response_type: 'code',
       };
 
       expect(() => validate('authorize', invalidData)).toThrow();
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
 
     it('should throw on invalid scope', () => {
@@ -42,10 +44,12 @@ describe('Validator', () => {
         client_id: 'test-client',
         scope: 'invalid-scope',
         state: 'abcdef1234567890',
-        response_type: 'code'
+        response_type: 'code',
       };
 
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
 
     it('should throw on invalid state length', () => {
@@ -53,10 +57,12 @@ describe('Validator', () => {
         client_id: 'test-client',
         scope: 'openid user:email',
         state: 'short',
-        response_type: 'code'
+        response_type: 'code',
       };
 
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
 
     it('should throw on invalid response_type', () => {
@@ -64,10 +70,12 @@ describe('Validator', () => {
         client_id: 'test-client',
         scope: 'openid user:email',
         state: 'abcdef1234567890',
-        response_type: 'token'  // Only 'code' is valid
+        response_type: 'token', // Only 'code' is valid
       };
 
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
   });
 
@@ -76,7 +84,8 @@ describe('Validator', () => {
       const validData = {
         code: 'valid-code-123',
         state: 'abcdef1234567890',
-        code_verifier: 'test-verifier-123456789012345678901234567890123456789012'
+        code_verifier:
+          'test-verifier-123456789012345678901234567890123456789012',
       };
 
       expect(() => validate('token', validData)).not.toThrow();
@@ -84,7 +93,7 @@ describe('Validator', () => {
 
     it('should validate without optional parameters', () => {
       const validData = {
-        code: 'valid-code-123'
+        code: 'valid-code-123',
       };
 
       expect(() => validate('token', validData)).not.toThrow();
@@ -92,8 +101,8 @@ describe('Validator', () => {
 
     it('should throw on invalid code format', () => {
       const invalidData = {
-        code: 'invalid@code',  // Contains invalid character
-        state: 'abcdef1234567890'
+        code: 'invalid@code', // Contains invalid character
+        state: 'abcdef1234567890',
       };
 
       expect(() => validate('token', invalidData)).toThrow('Validation failed');
@@ -102,7 +111,7 @@ describe('Validator', () => {
     it('should throw on invalid state length when provided', () => {
       const invalidData = {
         code: 'valid-code-123',
-        state: 'short'  // Too short
+        state: 'short', // Too short
       };
 
       expect(() => validate('token', invalidData)).toThrow('Validation failed');
@@ -111,7 +120,7 @@ describe('Validator', () => {
     it('should throw on invalid code_verifier format when provided', () => {
       const invalidData = {
         code: 'valid-code-123',
-        code_verifier: 'invalid@verifier'  // Contains invalid character
+        code_verifier: 'invalid@verifier', // Contains invalid character
       };
 
       expect(() => validate('token', invalidData)).toThrow('Validation failed');
@@ -134,8 +143,7 @@ describe('Validator', () => {
 
   describe('validate function', () => {
     it('should throw on unknown schema', () => {
-      expect(() => validate('unknown', {}))
-        .toThrow('Unknown schema: unknown');
+      expect(() => validate('unknown', {})).toThrow('Unknown schema: unknown');
     });
 
     it('should throw on missing required fields', () => {
@@ -143,10 +151,12 @@ describe('Validator', () => {
         // Missing required client_id
         scope: 'openid user:email',
         state: 'abcdef1234567890',
-        response_type: 'code'
+        response_type: 'code',
       };
 
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
 
     it('should handle null or undefined values', () => {
@@ -154,10 +164,12 @@ describe('Validator', () => {
         client_id: null,
         scope: undefined,
         state: 'abcdef1234567890',
-        response_type: 'code'
+        response_type: 'code',
       };
 
-      expect(() => validate('authorize', invalidData)).toThrow('Validation failed');
+      expect(() => validate('authorize', invalidData)).toThrow(
+        'Validation failed',
+      );
     });
   });
 });

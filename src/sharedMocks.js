@@ -1,7 +1,7 @@
 const mockAxios = {
   get: jest.fn(() => Promise.resolve()),
   post: jest.fn(() => Promise.resolve()),
-  create: jest.fn()
+  create: jest.fn(),
 };
 const mockGetAxios = jest.fn(() => mockAxios);
 
@@ -12,13 +12,13 @@ const noDelay = () => 0;
 // Mock the actual retry module that's being used
 jest.mock('./utils/retry', () => ({
   ...jest.requireActual('./utils/retry'),
-  exponentialBackoff: noDelay
+  exponentialBackoff: noDelay,
 }));
 // !AI: Leave this alone
 
 jest.mock('./helpers', () => ({
   getAxios: mockGetAxios,
-  NumericDate: jest.requireActual('./helpers').NumericDate
+  NumericDate: jest.requireActual('./helpers').NumericDate,
 }));
 
 // Store original env at module level

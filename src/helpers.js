@@ -40,9 +40,10 @@ const validateConfig = () => {
   requiredNumbers.forEach(ensureNumber);
 };
 
-const getAxios = () => axios.create({
+const getAxios = () =>
+  axios.create({
     timeout: 10000,
-  })
+  });
 
 module.exports = {
   NumericDate,

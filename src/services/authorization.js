@@ -21,12 +21,12 @@ class AuthorizationService {
         scope,
         state,
         response_type,
-        nonce
+        nonce,
       });
 
       const githubClientInstance = githubClient(
         Configuration.GITHUB_API_URL,
-        Configuration.GITHUB_LOGIN_URL
+        Configuration.GITHUB_LOGIN_URL,
       );
 
       // Generate PKCE values
@@ -40,7 +40,7 @@ class AuthorizationService {
         state,
         response_type,
         nonce,
-        codeChallenge
+        codeChallenge,
       });
 
       return githubClientInstance.getAuthorizeUrl(
@@ -49,12 +49,12 @@ class AuthorizationService {
         state,
         response_type,
         nonce,
-        codeChallenge
+        codeChallenge,
       );
     } catch (error) {
       logger.error({
         message: 'Failed to generate authorize URL',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }

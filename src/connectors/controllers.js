@@ -9,7 +9,7 @@ const OAUTH_ERRORS = {
   INVALID_GRANT: 'invalid_grant',
   INVALID_SCOPE: 'invalid_scope',
   UNAUTHORIZED_CLIENT: 'unauthorized_client',
-  SERVER_ERROR: 'server_error'
+  SERVER_ERROR: 'server_error',
 };
 
 // Map internal errors to OAuth2 errors
@@ -19,19 +19,19 @@ const mapError = (error) => {
       code: OAUTH_ERRORS.INVALID_REQUEST,
       status: 400,
       message: error.message,
-      errors: error.errors
+      errors: error.errors,
     };
   }
   if (error.message.includes('required parameter')) {
     return {
       code: OAUTH_ERRORS.INVALID_REQUEST,
-      status: 400
+      status: 400,
     };
   }
   if (error.message.includes('invalid token')) {
     return {
       code: OAUTH_ERRORS.INVALID_GRANT,
-      status: 401
+      status: 401,
     };
   }
   if (error.message.includes('rate limit')) {
@@ -39,13 +39,13 @@ const mapError = (error) => {
       code: OAUTH_ERRORS.SERVER_ERROR,
       status: 429,
       headers: {
-        'Retry-After': '60'
-      }
+        'Retry-After': '60',
+      },
     };
   }
   return {
     code: OAUTH_ERRORS.SERVER_ERROR,
-    status: 500
+    status: 500,
   };
 };
 
@@ -57,7 +57,7 @@ module.exports = () => ({
         client_id,
         scope,
         state,
-        response_type
+        response_type,
       });
 
       const authorizeUrl = openid.getAuthorizeUrl(
@@ -78,10 +78,10 @@ module.exports = () => ({
       return {
         statusCode: 302,
         headers: {
-          'Location': authorizeUrl,
+          Location: authorizeUrl,
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache'
-        }
+          Pragma: 'no-cache',
+        },
       };
     } catch (error) {
       logger.error({
@@ -94,14 +94,14 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache',
-          ...headers
+          Pragma: 'no-cache',
+          ...headers,
         },
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors })
-        })
+          ...(errors && { validation_errors: errors }),
+        }),
       };
     }
   },
@@ -110,7 +110,7 @@ module.exports = () => ({
     try {
       // Validate and sanitize input
       const validated = validate('userinfo', {
-        access_token: token
+        access_token: token,
       });
 
       const userInfo = openid.getUserInfo(validated.access_token);
@@ -124,9 +124,9 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache'
+          Pragma: 'no-cache',
         },
-        body: JSON.stringify(userInfo)
+        body: JSON.stringify(userInfo),
       };
     } catch (error) {
       logger.error({
@@ -139,14 +139,14 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache',
-          ...headers
+          Pragma: 'no-cache',
+          ...headers,
         },
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors })
-        })
+          ...(errors && { validation_errors: errors }),
+        }),
       };
     }
   },
@@ -165,10 +165,15 @@ module.exports = () => ({
       const validated = validate('token', {
         code,
         state,
-        code_verifier: codeVerifier
+        code_verifier: codeVerifier,
       });
 
-      const tokens = openid.getTokens(validated.code, validated.state, host, validated.code_verifier);
+      const tokens = openid.getTokens(
+        validated.code,
+        validated.state,
+        host,
+        validated.code_verifier,
+      );
       logger.debug({
         message: 'Tokens retrieved',
         tokens,
@@ -179,9 +184,9 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache'
+          Pragma: 'no-cache',
         },
-        body: JSON.stringify(tokens)
+        body: JSON.stringify(tokens),
       };
     } catch (error) {
       logger.error({
@@ -194,14 +199,14 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          'Pragma': 'no-cache',
-          ...headers
+          Pragma: 'no-cache',
+          ...headers,
         },
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors })
-        })
+          ...(errors && { validation_errors: errors }),
+        }),
       };
     }
   },
@@ -218,9 +223,9 @@ module.exports = () => ({
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=86400'
+          'Cache-Control': 'public, max-age=86400',
         },
-        body: JSON.stringify(keys)
+        body: JSON.stringify(keys),
       };
     } catch (error) {
       logger.error({
@@ -233,13 +238,13 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          ...headers
+          ...headers,
         },
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors })
-        })
+          ...(errors && { validation_errors: errors }),
+        }),
       };
     }
   },
@@ -256,9 +261,9 @@ module.exports = () => ({
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=86400'
+          'Cache-Control': 'public, max-age=86400',
         },
-        body: JSON.stringify(config)
+        body: JSON.stringify(config),
       };
     } catch (error) {
       logger.error({
@@ -271,14 +276,14 @@ module.exports = () => ({
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          ...headers
+          ...headers,
         },
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors })
-        })
+          ...(errors && { validation_errors: errors }),
+        }),
       };
     }
-  }
+  },
 });

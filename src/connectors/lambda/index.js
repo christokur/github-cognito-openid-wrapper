@@ -1,6 +1,9 @@
 // Enable source map support if enabled via environment variable
 const sourceMapSupport = process.env.SOURCE_MAP_SUPPORT;
-if (sourceMapSupport && ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCase())) {
+if (
+  sourceMapSupport &&
+  ['1', 'yes', 'true'].includes(sourceMapSupport.toLowerCase())
+) {
   require('source-map-support').install();
 }
 
@@ -28,21 +31,21 @@ const endpointConfig = {
     handler: authorize.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'no-store'
+    cacheControl: 'no-store',
   },
   '/.well-known/openid-configuration': {
     schema: null, // No validation needed
     handler: openIdConfiguration.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=86400'
+    cacheControl: 'public, max-age=86400',
   },
   '/token': {
     schema: 'token',
     handler: token.handler,
     requiresRateLimit: true,
     allowedMethods: ['POST'],
-    cacheControl: 'no-store'
+    cacheControl: 'no-store',
   },
   '/userinfo': {
     schema: 'userinfo',
@@ -50,61 +53,118 @@ const endpointConfig = {
     requiresRateLimit: true,
     allowedMethods: ['GET'],
     cacheControl: 'no-store',
-    requiresAuth: true
+    requiresAuth: true,
   },
   '/.well-known/jwks.json': {
     schema: null,
     handler: jwks.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=86400'
+    cacheControl: 'public, max-age=86400',
   },
   '/jwks.json': {
     schema: null,
     handler: jwks.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=86400'
+    cacheControl: 'public, max-age=86400',
   },
   '/favicon.ico': {
     schema: null,
     handler: favicon.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=31536000'
-  }
+    cacheControl: 'public, max-age=31536000',
+  },
 };
 
-const parseBody = (event) => {
-  logger.debug({
-    message: 'Token handler received event',
-    event
-  });
-  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+// Export parseBody for reuse in other handlers
+exports.parseBody = (event) => {
+  if (!event) {
+    logger.debug({
+      message: 'parseBody received null event',
+    });
+    return { body: undefined, contentType: '' };
+  }
+
+  // Extract body even if headers missing
   let { body } = event;
+  const headers = event.headers || {};
+  const contentType = headers['content-type'] || headers['Content-Type'] || '';
+
   if (body) {
     if (event.isBase64Encoded) {
-      body = Buffer.from(body, 'base64').toString();
+      try {
+        // Use atob to validate base64 first
+        const decoded = Buffer.from(body, 'base64').toString();
+        // Check if decoded string contains invalid characters
+        if (decoded.includes('�')) {
+          logger.debug({
+            message: 'Invalid base64 data detected',
+            body,
+          });
+          return { body, contentType };
+        }
+        body = decoded;
+        event.body = body;
+        event.isBase64Encoded = false;
+        logger.debug({
+          message: 'parseBody decoded base64',
+          event,
+        });
+      } catch (error) {
+        logger.debug({
+          message: 'Failed to decode base64',
+          error: error.message,
+        });
+        return { body, contentType };
+      }
     }
-    if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
-      body = typeof event.body === 'string' ? querystring.parse(event.body) : event.body;
-      logger.debug({
-        message: 'Parsed x-www-form-urlencoded data',
-        contentType,
-        body
-      });
+
+    if (
+      contentType &&
+      contentType.startsWith('application/x-www-form-urlencoded')
+    ) {
+      try {
+        body = typeof body === 'string' ? querystring.parse(body) : body;
+        event.body = body;
+        event.headers = headers;
+        event.headers['content-type'] = 'application/javascript';
+        logger.debug({
+          message: 'Parsed x-www-form-urlencoded data',
+          contentType: event.headers['content-type'],
+          body,
+        });
+      } catch (error) {
+        logger.debug({
+          message: 'Failed to parse form data',
+          error: error.message,
+        });
+        return { body, contentType };
+      }
     } else if (contentType && contentType.startsWith('application/json')) {
-      body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-      logger.debug({
-        message: 'Parsed JSON body',
-        contentType,
-        body
-      });
+      try {
+        body = typeof body === 'string' ? JSON.parse(body) : body;
+        event.body = body;
+        event.headers = headers;
+        event.headers['content-type'] = 'application/javascript';
+        logger.debug({
+          message: 'Parsed JSON body',
+          contentType: event.headers['content-type'],
+          body,
+        });
+      } catch (error) {
+        logger.debug({
+          message: 'Failed to parse JSON',
+          error: error.message,
+        });
+        return { body, contentType };
+      }
     } else {
       logger.debug({
         message: 'Using raw body data',
         contentType,
-        body
+        body,
       });
     }
   }
@@ -122,11 +182,11 @@ function getParameters(event) {
 
   // body
   if (event.body) {
-    const { body: parsedBody, contentType } = parseBody(event);
+    const { body: parsedBody, contentType } = exports.parseBody(event);
     logger.debug({
       message: 'Parsed request body',
       contentType,
-      body: parsedBody
+      body: parsedBody,
     });
     event.body = parsedBody;
     Object.assign(params, parsedBody);
@@ -149,7 +209,7 @@ function formatResponse(response, config) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': config.allowedMethods.join(','),
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Max-Age': '86400'
+    'Access-Control-Max-Age': '86400',
   };
 
   // Don't override existing headers
@@ -161,14 +221,14 @@ function formatResponse(response, config) {
   if (response.isBase64Encoded) {
     return {
       ...response,
-      headers
+      headers,
     };
   }
 
   // Handle JSON responses
   return {
     ...response,
-    headers
+    headers,
   };
 }
 
@@ -185,26 +245,32 @@ function processRequest(event, context, config) {
     });
     // 1. Check HTTP method first
     if (!config.allowedMethods.includes(event.httpMethod)) {
-      return formatResponse({
-        statusCode: 405,
-        body: JSON.stringify({
-          error: 'method_not_allowed',
-          error_description: `Method ${event.httpMethod} not allowed`
-        })
-      }, config);
+      return formatResponse(
+        {
+          statusCode: 405,
+          body: JSON.stringify({
+            error: 'method_not_allowed',
+            error_description: `Method ${event.httpMethod} not allowed`,
+          }),
+        },
+        config,
+      );
     }
 
     // 2. Check authorization if required
     if (config.requiresAuth) {
       const authHeader = event.headers?.Authorization;
       if (!authHeader) {
-        return formatResponse({
-          statusCode: 401,
-          body: JSON.stringify({
-            error: 'unauthorized',
-          error_description: 'No valid access token provided'
-          })
-        }, config);
+        return formatResponse(
+          {
+            statusCode: 401,
+            body: JSON.stringify({
+              error: 'unauthorized',
+              error_description: 'No valid access token provided',
+            }),
+          },
+          config,
+        );
       }
     }
 
@@ -213,7 +279,7 @@ function processRequest(event, context, config) {
 
     logger.debug({
       message: 'Request parameters',
-      params
+      params,
     });
 
     // 4. Validate parameters
@@ -222,18 +288,21 @@ function processRequest(event, context, config) {
         logger.debug({
           message: 'Validating parameters',
           schema: config.schema,
-          params
+          params,
         });
         validate(config.schema, params);
       } catch (error) {
-        return formatResponse({
-          statusCode: 400,
-          body: JSON.stringify({
-            error: 'invalid_request',
-            error_description: error.message,
-            validation_errors: error.errors
-          })
-        }, config);
+        return formatResponse(
+          {
+            statusCode: 400,
+            body: JSON.stringify({
+              error: 'invalid_request',
+              error_description: error.message,
+              validation_errors: error.errors,
+            }),
+          },
+          config,
+        );
       }
     }
 
@@ -253,31 +322,37 @@ function processRequest(event, context, config) {
       error: error.message,
       stack: error.stack,
       path: event.path,
-      requestId: context.awsRequestId
+      requestId: context.awsRequestId,
     });
 
     // Handle rate limit errors
     if (rateLimiter.isRateLimitError(error)) {
-      return formatResponse({
-        statusCode: 429,
-        headers: {
-          'Retry-After': '60'
+      return formatResponse(
+        {
+          statusCode: 429,
+          headers: {
+            'Retry-After': '60',
+          },
+          body: JSON.stringify({
+            error: 'rate_limit_exceeded',
+            error_description: 'Rate limit exceeded. Please try again later.',
+          }),
         },
-        body: JSON.stringify({
-          error: 'rate_limit_exceeded',
-          error_description: 'Rate limit exceeded. Please try again later.'
-        })
-      }, config);
+        config,
+      );
     }
 
     // Generic error response
-    return formatResponse({
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'server_error',
-        error_description: 'Internal server error'
-      })
-    }, config);
+    return formatResponse(
+      {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'Internal server error',
+        }),
+      },
+      config,
+    );
   }
 }
 
@@ -293,7 +368,7 @@ exports.handler = (event, context, callback) => {
     method: event.httpMethod,
     event,
     context,
-    memoryUsage: process.memoryUsage()
+    memoryUsage: process.memoryUsage(),
   });
 
   // Get endpoint configuration
@@ -302,8 +377,8 @@ exports.handler = (event, context, callback) => {
     path: event.path,
     pathType: typeof event.path,
     pathLength: event.path.length,
-    pathCharCodes: Array.from(event.path).map(c => c.charCodeAt(0)),
-    availableEndpoints: Object.keys(endpointConfig)
+    pathCharCodes: Array.from(event.path).map((c) => c.charCodeAt(0)),
+    availableEndpoints: Object.keys(endpointConfig),
   });
   const path = event.path.replace(/\/$/, ''); // Remove trailing slash
   logger.debug({
@@ -311,17 +386,23 @@ exports.handler = (event, context, callback) => {
     originalPath: event.path,
     cleanedPath: path,
     config: endpointConfig[path],
-    hasConfig: path in endpointConfig
+    hasConfig: path in endpointConfig,
   });
   const config = endpointConfig[path];
   if (!config) {
-    return callback(null, formatResponse({
-      statusCode: 404,
-      body: JSON.stringify({
-        error: 'not_found',
-        error_description: 'Endpoint not found'
-      })
-    }, { cacheControl: 'no-store', allowedMethods: ['GET'] }));
+    return callback(
+      null,
+      formatResponse(
+        {
+          statusCode: 404,
+          body: JSON.stringify({
+            error: 'not_found',
+            error_description: 'Endpoint not found',
+          }),
+        },
+        { cacheControl: 'no-store', allowedMethods: ['GET'] },
+      ),
+    );
   }
 
   // Process request with endpoint-specific configuration

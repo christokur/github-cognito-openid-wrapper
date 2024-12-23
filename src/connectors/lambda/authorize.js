@@ -6,7 +6,7 @@ const logger = require('../logger');
 module.exports.handler = (event, context, callback) => {
   // Parameters are already validated by index.js
   const params = event.queryStringParameters || {};
-  
+
   // Focus purely on business logic - generating GitHub OAuth URL
   return controllers().authorize(
     params.client_id,
@@ -14,6 +14,6 @@ module.exports.handler = (event, context, callback) => {
     params.state,
     params.response_type,
     params.code_challenge,
-    params.code_challenge_method
+    params.code_challenge_method,
   );
 };

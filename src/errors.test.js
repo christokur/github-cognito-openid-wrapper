@@ -1,6 +1,6 @@
 // Mock the logger
 jest.mock('./connectors/logger', () => ({
-  error: jest.fn()
+  error: jest.fn(),
 }));
 const logger = require('./connectors/logger');
 
@@ -10,7 +10,7 @@ describe('OAuthError', () => {
   it('should create error with custom message', () => {
     const customMessage = 'Custom error message';
     const error = new OAuthError(errorTypes.INVALID_REQUEST, customMessage);
-    
+
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe(customMessage);
     expect(error.type).toBe(errorTypes.INVALID_REQUEST);
@@ -19,7 +19,7 @@ describe('OAuthError', () => {
 
   it('should create error with default message', () => {
     const error = new OAuthError(errorTypes.INVALID_CLIENT);
-    
+
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('Client authentication failed');
     expect(error.type).toBe(errorTypes.INVALID_CLIENT);
@@ -35,10 +35,10 @@ describe('OAuthError', () => {
       [errorTypes.UNSUPPORTED_GRANT_TYPE]: 400,
       [errorTypes.INVALID_SCOPE]: 400,
       [errorTypes.ACCESS_DENIED]: 403,
-      [errorTypes.SERVER_ERROR]: 500
+      [errorTypes.SERVER_ERROR]: 500,
     };
 
-    Object.keys(errorTypes).forEach(key => {
+    Object.keys(errorTypes).forEach((key) => {
       const error = new OAuthError(errorTypes[key]);
       expect(error.statusCode).toBe(expectedStatusCodes[errorTypes[key]]);
     });
@@ -56,12 +56,14 @@ describe('formatOAuthError', () => {
 
     expect(formatted).toEqual({
       error: errorTypes.INVALID_REQUEST,
-      error_description: 'Test message'
+      error_description: 'Test message',
     });
-    expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'OAuth error',
-      error: formatted,
-    }));
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'OAuth error',
+        error: formatted,
+      }),
+    );
   });
 
   it('should use server_error as default type', () => {
@@ -70,11 +72,13 @@ describe('formatOAuthError', () => {
 
     expect(formatted).toEqual({
       error: 'server_error',
-      error_description: 'Unknown error'
+      error_description: 'Unknown error',
     });
-    expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'OAuth error',
-      error: formatted,
-    }));
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'OAuth error',
+        error: formatted,
+      }),
+    );
   });
 });

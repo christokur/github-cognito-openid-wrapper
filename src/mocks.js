@@ -31,7 +31,7 @@ let originalEnv;
 beforeEach(() => {
   // Store original env
   originalEnv = { ...process.env };
-  
+
   // Set mock environment variables
   Object.entries(exports.mockValues).forEach(([key, value]) => {
     process.env[key] = value;

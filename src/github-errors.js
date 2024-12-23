@@ -2,9 +2,14 @@ const logger = require('./connectors/logger');
 const rateLimiter = require('./utils/rate-limiter');
 
 const handleGitHubResponse = (response) => {
+  logger.debug({
+    message: 'GitHub response received',
+    response,
+  });
+  // Check for empty response
   if (!response) {
     logger.error({
-      message: 'Empty response received from GitHub'
+      message: 'Empty response received from GitHub',
     });
     const error = new Error('Empty response received from GitHub');
     error.isNetworkError = true;
@@ -15,7 +20,7 @@ const handleGitHubResponse = (response) => {
     message: 'GitHub response details',
     status: response?.status || 'unknown',
     headers: response?.headers || 'unknown',
-    data: response?.data || 'unknown'
+    data: response?.data || 'unknown',
   });
 
   // Update rate limits from response headers
@@ -43,11 +48,14 @@ const handleGitHubResponse = (response) => {
 const handleGitHubError = (error) => {
   logger.error({
     message: 'GitHub request failed',
-    error: error instanceof Error ? {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    } : error
+    error:
+      error instanceof Error
+        ? {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+          }
+        : error,
   });
 
   // Handle axios errors with response
@@ -59,7 +67,7 @@ const handleGitHubError = (error) => {
       } catch (e) {
         logger.error({
           message: 'Failed to update rate limits',
-          error: e
+          error: e,
         });
       }
     }
@@ -71,18 +79,20 @@ const handleGitHubError = (error) => {
       } catch (err) {
         throw err;
       }
-      throw new Error('GitHub API responded with a failure: 429 (API rate limit exceeded)');
+      throw new Error(
+        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+      );
     }
 
-    const {status} = error.response;
-    const {statusText} = error.response;
+    const { status } = error.response;
+    const { statusText } = error.response;
     let message = statusText;
 
     logger.error({
       message,
       status,
       statusText,
-      data: error.response.data
+      data: error.response.data,
     });
 
     // For OAuth endpoints
@@ -95,10 +105,12 @@ const handleGitHubError = (error) => {
       message = error.response.data.message;
     }
 
-    const err = new Error(`GitHub API responded with a failure: ${status} (${message})`);
+    const err = new Error(
+      `GitHub API responded with a failure: ${status} (${message})`,
+    );
     err.statusCode = status;
     err.type = 'github_error';
-    err.response = error.response;  // Preserve the original response
+    err.response = error.response; // Preserve the original response
     throw err;
   }
 
@@ -106,7 +118,7 @@ const handleGitHubError = (error) => {
   if (!error.response) {
     logger.error({
       message: 'Network error occurred',
-      error: error.message || 'Unknown network error'
+      error: error.message || 'Unknown network error',
     });
     const err = new Error('Network error occurred while contacting GitHub API');
     err.statusCode = 503;

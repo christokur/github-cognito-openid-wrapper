@@ -1,5 +1,5 @@
-const {mockAxios} = require('./sharedMocks');
-const {mockValues} = require('./mocks');
+const { mockAxios } = require('./sharedMocks');
+const { mockValues } = require('./mocks');
 
 describe('openid domain layer - User Info', () => {
   let openid;
@@ -36,7 +36,7 @@ describe('openid domain layer - User Info', () => {
                 html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
                 blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
                 updated_at: mockValues.USER_UPDATED_AT,
-              }
+              },
             };
 
             const emailsResponse = {
@@ -48,8 +48,8 @@ describe('openid domain layer - User Info', () => {
                   primary: true,
                   verified: true,
                   visibility: null,
-                }
-              ]
+                },
+              ],
             };
 
             // Mock all potential retries for user details
@@ -59,7 +59,8 @@ describe('openid domain layer - User Info', () => {
 
             const result = await openid.getUserInfo('good_token');
 
-            const expectedUpdatedAt = new Date(mockValues.USER_UPDATED_AT).getTime() / 1000;
+            const expectedUpdatedAt =
+              new Date(mockValues.USER_UPDATED_AT).getTime() / 1000;
 
             expect(result).toEqual({
               sub: mockValues.USER_ID.toString(),
@@ -80,8 +81,8 @@ describe('openid domain layer - User Info', () => {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token good_token',
                 },
-                timeout: 10000
-              }
+                timeout: 10000,
+              },
             );
 
             expect(mockAxios.get).toHaveBeenCalledWith(
@@ -91,8 +92,8 @@ describe('openid domain layer - User Info', () => {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token good_token',
                 },
-                timeout: 10000
-              }
+                timeout: 10000,
+              },
             );
           });
         });
@@ -111,13 +112,13 @@ describe('openid domain layer - User Info', () => {
                 html_url: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_LOGIN}`,
                 blog: `${mockValues.GITHUB_LOGIN_URL}/${mockValues.USER_BLOG}`,
                 updated_at: mockValues.USER_UPDATED_AT,
-              }
+              },
             };
 
             const emailsResponse = {
               status: 200,
               headers: {},
-              data: []  // No emails at all
+              data: [], // No emails at all
             };
 
             mockAxios.get
@@ -125,7 +126,7 @@ describe('openid domain layer - User Info', () => {
               .mockResolvedValueOnce(emailsResponse);
 
             await expect(
-              openid.getUserInfo('without_a_primary_email')
+              openid.getUserInfo('without_a_primary_email'),
             ).rejects.toThrow('User did not have a primary email address');
 
             expect(mockAxios.get).toHaveBeenCalledWith(
@@ -135,8 +136,8 @@ describe('openid domain layer - User Info', () => {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token without_a_primary_email',
                 },
-                timeout: 10000
-              }
+                timeout: 10000,
+              },
             );
 
             expect(mockAxios.get).toHaveBeenCalledWith(
@@ -146,8 +147,8 @@ describe('openid domain layer - User Info', () => {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token without_a_primary_email',
                 },
-                timeout: 10000
-              }
+                timeout: 10000,
+              },
             );
           });
         });
@@ -164,7 +165,9 @@ describe('openid domain layer - User Info', () => {
 
           mockAxios.get.mockRejectedValue(error);
 
-          await expect(openid.getUserInfo('bad_token')).rejects.toThrow('Bad credentials');
+          await expect(openid.getUserInfo('bad_token')).rejects.toThrow(
+            'Bad credentials',
+          );
 
           expect(mockAxios.get).toHaveBeenCalledWith(
             `${mockValues.GITHUB_API_URL}/user`,
@@ -173,8 +176,8 @@ describe('openid domain layer - User Info', () => {
                 Accept: 'application/vnd.github.v3+json',
                 Authorization: 'token bad_token',
               },
-              timeout: 10000
-            }
+              timeout: 10000,
+            },
           );
         });
 
@@ -189,7 +192,7 @@ describe('openid domain layer - User Info', () => {
           mockAxios.get.mockRejectedValue(detailsError);
 
           await expect(openid.getUserInfo('bad_token')).rejects.toThrow(
-            'Failed to fetch user details'
+            'Failed to fetch user details',
           );
         });
       });

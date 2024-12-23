@@ -13,8 +13,10 @@ let LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 // Validate log level
 const validLogLevels = ['error', 'warn', 'info', 'debug'];
 if (!validLogLevels.includes(LOG_LEVEL)) {
-  console.warn(`Invalid LOG_LEVEL "${LOG_LEVEL}". Using "info" instead. Valid levels are: ${validLogLevels.join(', ')}`);
-  LOG_LEVEL = 'info'
+  console.warn(
+    `Invalid LOG_LEVEL "${LOG_LEVEL}". Using "info" instead. Valid levels are: ${validLogLevels.join(', ')}`,
+  );
+  LOG_LEVEL = 'info';
 }
 
 const getCircularReplacer = () => {
@@ -40,16 +42,16 @@ const commonFormat = winston.format.combine(
       ...(typeof message === 'object' ? message : { message }),
       ...Object.entries(rest)
         .filter(([key]) => key !== Symbol.for('splat'))
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
     };
 
     return JSON.stringify(logEntry, getCircularReplacer());
-  })
+  }),
 );
 
 const logger = winston.createLogger({
   level: LOG_LEVEL,
-  format: commonFormat
+  format: commonFormat,
 });
 
 // Activate Splunk logging if Splunk's env variables are set
@@ -68,14 +70,12 @@ if (SPLUNK_URL) {
   logger.add(
     new SplunkStreamEvent({
       splunk: splunkSettings,
-      format: commonFormat
-    })
+      format: commonFormat,
+    }),
   );
 } else {
   // STDOUT logging for dev/regular servers
-  logger.add(
-    new winston.transports.Console()
-  );
+  logger.add(new winston.transports.Console());
 }
 
 // Log the current level on startup

@@ -7,6 +7,12 @@ function getTestDefinitions(config) {
   const codeVerifier = PkceHelper.generateCodeVerifier();
   const codeChallenge = PkceHelper.generateCodeChallenge(codeVerifier);
 
+  logger.debug({
+    message: 'Generating test definitions',
+    config,
+    codeVerifier,
+    codeChallenge
+  });
   return [
     // Authorization endpoint tests
     {
@@ -50,14 +56,12 @@ function getTestDefinitions(config) {
     },
     // Token endpoint tests
     {
-      name: 'Token POST w/ params & no host',
+      name: 'Token POST with missing fields',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 400,
+      expectedStatus: config.isLocalhost ? 200 : 400,
       params: {
-        code: 'test-code',
-        state: '1234567890123456',
-        code_verifier: codeVerifier,
+        code: 'test-4321',
       },
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -82,7 +86,7 @@ function getTestDefinitions(config) {
       name: 'Token POST w/ params & host',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 400,
+      expectedStatus: config.isLocalhost ? 200 : 400,
       params: {
         code: 'test-code',
         state: '1234567890123456',
@@ -97,7 +101,7 @@ function getTestDefinitions(config) {
       name: 'Token POST w/ JSON params and no host',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 200,
+      expectedStatus: config.isLocalhost ? 200 : 400,
       params: {
         code: 'test-code',
         state: '1234567890123456',

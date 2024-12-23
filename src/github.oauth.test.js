@@ -7,14 +7,14 @@ describe('GitHub Client - OAuth Operations', () => {
   let Configuration;
   let client;
   let github;
-  
+
   beforeEach(() => {
     jest.resetModules();
     Configuration = require('./config');
     github = require('./github');
     client = github(mockValues.GITHUB_API_URL, mockValues.GITHUB_LOGIN_URL);
   });
-  
+
   afterEach(() => {
     jest.resetModules();
     delete require.cache[require.resolve('./config')];
@@ -32,8 +32,8 @@ describe('GitHub Client - OAuth Operations', () => {
         data: {
           access_token: 'mock_access_token',
           token_type: 'bearer',
-          scope: 'user:email'
-        }
+          scope: 'user:email',
+        },
       };
 
       mockAxios.post.mockResolvedValueOnce(mockResponse);
@@ -53,8 +53,9 @@ describe('GitHub Client - OAuth Operations', () => {
         },
       });
 
-      await expect(client.getToken(INVALID_CODE))
-        .rejects.toThrow('GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)');
+      await expect(client.getToken(INVALID_CODE)).rejects.toThrow(
+        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+      );
     });
   });
 
@@ -66,11 +67,11 @@ describe('GitHub Client - OAuth Operations', () => {
         'test-state',
         'code',
         'test-nonce',
-        'test-code-challenge'
+        'test-code-challenge',
       );
 
       expect(url).toBe(
-        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize?client_id=test-client-id&scope=user%3Aemail&state=test-state&response_type=code&redirect_uri=${encodeURIComponent(process.env.COGNITO_REDIRECT_URI)}&nonce=test-nonce&code_challenge=test-code-challenge&code_challenge_method=S256`
+        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize?client_id=test-client-id&scope=user%3Aemail&state=test-state&response_type=code&redirect_uri=${encodeURIComponent(process.env.COGNITO_REDIRECT_URI)}&nonce=test-nonce&code_challenge=test-code-challenge&code_challenge_method=S256`,
       );
     });
   });

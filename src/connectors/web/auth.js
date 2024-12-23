@@ -14,30 +14,30 @@ module.exports = {
           const error = new Error('Invalid Authorization header format');
           logger.error({
             message: 'Invalid Authorization header',
-            header: authHeader
+            header: authHeader,
           });
           throw error;
         }
         return parts[1];
-      } if (req.query.access_token) {
+      }
+      if (req.query.access_token) {
         // Section 2.3 URI query parameter
         return req.query.access_token;
-      } if (
-        req.get('Content-Type') === 'application/x-www-form-urlencoded'
-      ) {
+      }
+      if (req.get('Content-Type') === 'application/x-www-form-urlencoded') {
         // Section 2.2 form encoded body parameter
         return req.body.access_token;
       }
       const error = new Error('No token specified in request');
       logger.error({
         message: 'Missing access token',
-        headers: req.headers
+        headers: req.headers,
       });
       throw error;
     } catch (error) {
       logger.error({
         message: 'Failed to get bearer token',
-        error: error.message || error
+        error: error.message || error,
       });
       throw error;
     }
@@ -46,7 +46,7 @@ module.exports = {
   getIssuer: (host) => {
     if (!host) {
       logger.error({
-        message: 'Missing host parameter'
+        message: 'Missing host parameter',
       });
       throw new Error('Host parameter is required');
     }
