@@ -7,7 +7,7 @@ function displayFaviconReport(analysis) {
   console.log('\n=== Favicon Report ===');
   console.log('Content Type:', analysis.contentType);
   console.log('Size:', analysis.size, 'bytes');
-  //console.log('Base64 Payload:', analysis.base64);
+  console.log('Base64 Payload:', analysis.base64);
   console.log('Saved to:', analysis.path);
   console.log('Valid ICO Format:', analysis.isValidICO ? '✓ Yes' : '✗ No');
   console.log('Cache Control:', analysis.cacheControl || 'Not set');

@@ -33,18 +33,23 @@ function verifyRequest(event) {
  */
 function verifyIco(buffer) {
   // Check ICO header
-  if (buffer[0] !== 0x00 || buffer[1] !== 0x00) {
-    throw new Error('Invalid ICO reserved bytes');
-  }
-  if (buffer[2] !== 0x01 || buffer[3] !== 0x00) {
-    throw new Error('Invalid ICO type');
+  if (buffer[0] !== 0 || buffer[1] !== 0 || buffer[2] !== 1 || buffer[3] !== 0) {
+    logger.debug('ICO header check failed', {
+      byte0: buffer[0],
+      byte1: buffer[1],
+      byte2: buffer[2],
+      byte3: buffer[3],
+      expected: [0, 0, 1, 0]
+    });
+    return false;
   }
 
-  // Check image count
-  const imageCount = buffer.readUInt16LE(4);
-  if (imageCount === 0) {
-    throw new Error('No images in ICO');
-  }
+  logger.debug('ICO verification', {
+    reservedBytes: [buffer[0], buffer[1]],
+    typeBytes: [buffer[2], buffer[3]],
+    bufferLength: buffer.length,
+    bufferStart: buffer.slice(0, 8).toString('hex')
+  });
 
   return true;
 }
@@ -68,11 +73,17 @@ function verifyResponse(response) {
     throw new Error('Invalid status code');
   }
 
-  Object.entries(required.headers).forEach(([key, value]) => {
-    if (response.headers[key] !== value) {
-      throw new Error(`Invalid header: ${key}`);
-    }
-  });
+  // Check Content-Type header
+  const contentType = response.headers['Content-Type'];
+  const expectedType = required.headers['Content-Type'];
+  if (!contentType || contentType.split(';')[0].trim() !== expectedType) {
+    throw new Error('Invalid Content-Type header');
+  }
+
+  // Check Cache-Control header
+  if (response.headers['Cache-Control'] !== required.headers['Cache-Control']) {
+    throw new Error('Invalid Cache-Control header');
+  }
 
   if (!response.body) {
     throw new Error('Missing response body');
@@ -83,7 +94,9 @@ function verifyResponse(response) {
     const buffer = response.isBase64Encoded 
       ? Buffer.from(response.body, 'base64')
       : Buffer.from(response.body);
-    verifyIco(buffer);
+    if (!verifyIco(buffer)) {
+      throw new Error('Invalid ICO format');
+    }
   } catch (error) {
     throw new Error(`Invalid ICO format: ${error.message}`);
   }

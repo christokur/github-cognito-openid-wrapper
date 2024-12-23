@@ -127,7 +127,20 @@ const lambdaToExpress = (req, res) => {
     });
 
     if (result.body) {
-      res.send(result.body);
+      if (LOG_LEVEL === 'debug') {
+        logger.debug('Mock server sending response', {
+          isBase64Encoded: result.isBase64Encoded,
+          bodyLength: result.body.length,
+          bodyType: typeof result.body,
+          firstBytes: result.isBase64Encoded ? Buffer.from(result.body, 'base64').slice(0, 4) : null
+        });
+      }
+      if (result.isBase64Encoded) {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.send(Buffer.from(result.body, 'base64'));
+      } else {
+        res.send(result.body);
+      }
     } else {
       res.end();
     }

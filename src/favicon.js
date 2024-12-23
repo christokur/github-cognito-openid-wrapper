@@ -9,11 +9,21 @@ let faviconBase64;
 // Try webpack-bundled asset first (for Lambda)
 try {
     const webpackAsset = require('./assets/favicon.ico');
+    // Webpack packs it as "data:image/vnd.microsoft.icon;base64,..."
+    // Extract just the base64 part after the comma
+    const base64Part = webpackAsset.split('base64,')[1];
+    if (!base64Part) {
+        throw new Error('Invalid webpack asset format');
+    }
     // Keep the binary buffer for verification
-    faviconBuffer = Buffer.from(webpackAsset.split('base64,')[1], 'base64');
-    // But store the base64 string for response
-    const [, base64String] = webpackAsset.split('base64,');
-    faviconBase64 = base64String;
+    faviconBuffer = Buffer.from(base64Part, 'base64');
+    // Store base64 string for response
+    faviconBase64 = base64Part;
+    logger.debug('Loaded favicon from webpack bundle', {
+        bufferLength: faviconBuffer.length,
+        base64Length: faviconBase64.length,
+        bufferStart: faviconBuffer.slice(0, 8).toString('hex')
+    });
     logger.info('Loaded favicon from webpack bundle');
 } catch (error) {
     // Fallback to direct file access (for local development)
@@ -22,6 +32,11 @@ try {
         // For filesystem, we need to encode to base64
         faviconBuffer = fs.readFileSync(faviconPath);
         faviconBase64 = faviconBuffer.toString('base64');
+        logger.debug('Loaded favicon from filesystem', {
+            bufferLength: faviconBuffer.length,
+            base64Length: faviconBase64.length,
+            bufferStart: faviconBuffer.slice(0, 8).toString('hex')
+        });
         logger.info('Loaded favicon from filesystem');
     } catch (fsError) {
         logger.error('Failed to load favicon:', fsError);
@@ -35,17 +50,11 @@ function handler(event, context) {
         // Always verify request as it's a security check
         verifyRequest(event);
 
-        // Verify ICO format before sending
-        if (process.env.LOG_LEVEL === 'debug') {
-            logger.debug('Verifying favicon response');
-            verifyIco(faviconBuffer);
-        }
-
         // Generate response
         const response = {
             statusCode: 200,
             headers: {
-                'Content-Type': 'image/x-icon',
+                'Content-Type': 'image/x-icon; charset=utf-8',
                 'Cache-Control': 'public, max-age=31536000'
             },
             body: faviconBase64,
@@ -56,6 +65,12 @@ function handler(event, context) {
         if (process.env.LOG_LEVEL === 'debug') {
             logger.debug('Verifying favicon response');
             verifyResponse(response);
+            logger.debug('API response', {
+                isBase64Encoded: response.isBase64Encoded,
+                bodyLength: response.body.length,
+                decodedLength: Buffer.from(response.body, 'base64').length,
+                firstBytes: Buffer.from(response.body, 'base64').slice(0, 4)
+            });
         }
 
         return response;

@@ -5,12 +5,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
+const { verifyIco } = require('../../src/utils/favicon-verifier');
 
 function isValidICOFormat(data) {
-  return data[0] === 0 && 
-         data[1] === 0 && 
-         data[2] === 1 && 
-         data[3] === 0;
+  return verifyIco(data);
 }
 
 async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, headers = null, options = {}) {
@@ -99,6 +97,13 @@ async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, hea
       const faviconPath = path.join(os.tmpdir(), 'favicon.ico');
       fs.writeFileSync(faviconPath, response.data);
       
+      logger.debug('Response data for favicon', {
+        dataType: typeof response.data,
+        isBuffer: Buffer.isBuffer(response.data),
+        length: response.data.length,
+        firstBytes: Buffer.isBuffer(response.data) ? response.data.slice(0, 4) : null
+      });
+
       return {
         response,
         analysis: {
