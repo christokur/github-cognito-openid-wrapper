@@ -1,55 +1,29 @@
 const qs = require('querystring');
 const responder = require('./util/responder');
 const controllers = require('../controllers');
-const { handleError } = require('./util/error-handler');
 const { OAuthError, errorTypes } = require('../../errors');
-const { validate, schemas } = require('../../utils/validator');
 const logger = require('../logger');
-
-const parseBody = (event) => {
-  logger.debug({
-    message: 'Token handler received event',
-    event
-  });
-  const contentType = event.headers['content-type'] || event.headers['Content-Type'];
-
-  if (event.body) {
-    if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
-      const parsedBody = typeof event.body === 'string' ? qs.parse(event.body) : event.body;
-      logger.debug({
-        message: 'Parsed x-www-form-urlencoded data',
-        contentType,
-        parsedBody
-      });
-      return parsedBody;
-    }
-    if (contentType && contentType.startsWith('application/json')) {
-      const parsedBody = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-      logger.debug({
-        message: 'Parsed JSON body',
-        contentType,
-        parsedBody
-      });
-      return parsedBody;
-    }
-  }
-  logger.debug({
-    message: 'No parseable body found in request'
-  });
-  return {};
-};
 
 module.exports.handler = (event, context) => {
   try {
-    const body = parseBody(event);
+    const {body} = event;
     logger.debug({
-      message: 'Validating code from body',
+      message: 'Processing token request',
       body
     });
 
-    // Validate request using schema
-    const validatedData = validate('token', body);
-    const { code, state, code_verifier } = validatedData;
+    // Check content type
+    const contentType = event.headers['Content-Type'] || event.headers['content-type'];
+    if (contentType !== 'application/json') {
+      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Content-Type must be application/json');
+    }
+
+    // Validate required fields
+    if (!body || typeof body !== 'object' || Object.keys(body).length === 0) {
+      throw new OAuthError(errorTypes.INVALID_REQUEST, 'Request body is required');
+    }
+
+    const { code, state, code_verifier } = body;
     const host = event.headers.Host || event.headers.host;
 
     if (!host) {
@@ -71,7 +45,7 @@ module.exports.handler = (event, context) => {
       error: error.message || error
     });
     const errorResponse = {
-      statusCode: error.statusCode || 500,
+      statusCode: error.statusCode || (error.type === errorTypes.INVALID_REQUEST ? 400 : 500),
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
@@ -89,4 +63,3 @@ module.exports.handler = (event, context) => {
     return errorResponse;
   }
 };
-

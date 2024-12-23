@@ -75,6 +75,42 @@ const endpointConfig = {
   }
 };
 
+const parseBody = (event) => {
+  logger.debug({
+    message: 'Token handler received event',
+    event
+  });
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  let { body } = event;
+  if (body) {
+    if (event.isBase64Encoded) {
+      body = Buffer.from(body, 'base64').toString();
+    }
+    if (contentType && contentType.startsWith('application/x-www-form-urlencoded')) {
+      body = typeof event.body === 'string' ? querystring.parse(event.body) : event.body;
+      logger.debug({
+        message: 'Parsed x-www-form-urlencoded data',
+        contentType,
+        body
+      });
+    } else if (contentType && contentType.startsWith('application/json')) {
+      body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      logger.debug({
+        message: 'Parsed JSON body',
+        contentType,
+        body
+      });
+    } else {
+      logger.debug({
+        message: 'Using raw body data',
+        contentType,
+        body
+      });
+    }
+  }
+  return { body, contentType };
+};
+
 // Extract parameters based on HTTP method
 function getParameters(event) {
   const params = {};
@@ -84,38 +120,16 @@ function getParameters(event) {
     Object.assign(params, event.queryStringParameters);
   }
 
-  // POST body
-  if (event.httpMethod === 'POST' && event.body) {
-    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
-    let { body } = event;
-    try {
-      if (event.isBase64Encoded) {
-        body = Buffer.from(body, 'base64').toString();
-      }
-      if (contentType.startsWith('application/x-www-form-urlencoded')) {
-        body = querystring.parse(body);
-      } else if (contentType.startsWith('application/json')) {
-        body = JSON.parse(body);
-      } else {
-        logger.warn({
-          message: 'Unsupported content type',
-          contentType
-        });
-        throw new Error('Unsupported content type');
-      }
-      Object.assign(params, body);
-      logger.debug({
-        message: 'Parsed request body',
-        contentType,
-        params
-      });
-    } catch (error) {
-      logger.warn({
-        message: 'Failed to parse request body',
-        error: error.message,
-        contentType
-      });
-    }
+  // body
+  if (event.body) {
+    const { body: parsedBody, contentType } = parseBody(event);
+    logger.debug({
+      message: 'Parsed request body',
+      contentType,
+      body: parsedBody
+    });
+    event.body = parsedBody;
+    Object.assign(params, parsedBody);
   }
 
   // Authorization header for userinfo endpoint
