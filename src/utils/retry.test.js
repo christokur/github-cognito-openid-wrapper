@@ -1,4 +1,5 @@
-const { withRetry, isRetryableError, exponentialBackoff } = require('./retry');
+const { withRetry, isRetryableError } = require('./retry');
+const { exponentialBackoff } = require('./backoff');
 const logger = require('../connectors/logger');
 
 jest.mock('../connectors/logger');
