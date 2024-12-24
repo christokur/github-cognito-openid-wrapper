@@ -126,7 +126,7 @@ function getTestDefinitions(config) {
       name: 'UserInfo POST',
       url: config.userinfo_endpoint,
       method: 'POST',
-      expectedStatus: 405
+      expectedStatus: 401
     },
     {
       name: 'UserInfo PUT',
