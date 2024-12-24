@@ -57,7 +57,7 @@ async function runTests(baseUrl, isLocalhost, options = {}) {
       // Filter tests if test filters are provided
       const testsToRun = options.testFilters && options.testFilters.length > 0
         ? tests.filter(test => 
-            options.testFilters.some(filter => 
+            options.testFilters.every(filter => 
               test.name.toLowerCase().includes(filter.toLowerCase())
             )
           )

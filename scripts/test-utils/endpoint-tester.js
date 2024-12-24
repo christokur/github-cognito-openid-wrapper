@@ -44,7 +44,8 @@ async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, hea
         config.data = querystring.stringify(params);
         logger.debug('Sending form-urlencoded data', {
           prefix: 'HTTP',
-          data: config.data
+          data: config.data,
+          headers: config.headers
         });
       } else if (headers && headers['Content-Type'] === 'application/json') {
         // For JSON, stringify the params
@@ -52,14 +53,16 @@ async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, hea
         config.data = jsonData;
         logger.debug('Sending JSON data', {
           prefix: 'HTTP',
-          data: jsonData
+          data: jsonData,
+          headers: config.headers
         });
       } else {
         // Default to sending params as is
         config.data = params;
         logger.debug('Sending raw data', {
           prefix: 'HTTP',
-          data: config.data
+          data: config.data,
+          headers: config.headers
         });
       }
     }

@@ -48,12 +48,24 @@ function parseBody(event) {
 
     // Parse based on content type
     if (contentType?.includes('application/x-www-form-urlencoded')) {
-      const parsed = querystring.parse(rawBody);
-      logger.debug({
-        message: 'Parsed form-urlencoded body',
-        contentType,
-        parsedBody: parsed,
-      });
+      let parsed;
+      // If body is already an object, use it directly
+      if (typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
+        logger.debug({
+          message: 'Using pre-parsed form body',
+          contentType,
+          parsedBody: rawBody,
+        });
+        parsed = rawBody;
+      } else {
+        // Otherwise parse the string body
+        parsed = querystring.parse(rawBody);
+        logger.debug({
+          message: 'Parsed form-urlencoded body',
+          contentType,
+          body: parsed,
+        });
+      }
       if (event.headers) {
         event.headers['content-type'] = 'application/javascript';
       }

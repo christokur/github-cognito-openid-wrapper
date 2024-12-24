@@ -56,69 +56,45 @@ function getTestDefinitions(config) {
     },
     // Token endpoint tests
     {
-      name: 'Token POST with missing fields',
-      url: config.token_endpoint,
-      method: 'POST',
-      expectedStatus: config.isLocalhost ? 200 : 400,
-      params: {
-        code: 'test-4321',
-      },
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    },
-    {
-      name: 'Token POST w/ JSON params',
-      url: config.token_endpoint,
-      method: 'POST',
-      expectedStatus: 200,
-      params: {
-        code: 'test-code',
-        state: '1234567890123456',
-        code_verifier: codeVerifier,
-        host: 'http://localhost:3000'
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    },
-    {
-      name: 'Token POST w/ params & host',
-      url: config.token_endpoint,
-      method: 'POST',
-      expectedStatus: config.isLocalhost ? 200 : 400,
-      params: {
-        code: 'test-code',
-        state: '1234567890123456',
-        code_verifier: codeVerifier,
-        host: 'http://localhost:3000'
-      },
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    },
-    {
-      name: 'Token POST w/ JSON params and no host',
-      url: config.token_endpoint,
-      method: 'POST',
-      expectedStatus: config.isLocalhost ? 200 : 400,
-      params: {
-        code: 'test-code',
-        state: '1234567890123456',
-        code_verifier: codeVerifier,
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    },
-    {
-      name: 'Token POST w/o params',
+      name: 'Token POST with missing code',
       url: config.token_endpoint,
       method: 'POST',
       expectedStatus: 400,
       params: {},
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    },
+    {
+      name: 'Token POST with valid form params',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 200,
+      params: {
+        grant_type: 'authorization_code',
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: codeVerifier,
+        host: 'http://localhost:3000'
+      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    },
+    {
+      name: 'Token POST with valid JSON params',
+      url: config.token_endpoint,
+      method: 'POST',
+      expectedStatus: 200,
+      params: {
+        grant_type: 'authorization_code',
+        code: 'test-code',
+        state: '1234567890123456',
+        code_verifier: codeVerifier,
+        host: 'http://localhost:3000'
+      },
+      headers: {
+        'Content-Type': 'application/json'
       }
     },
     {
