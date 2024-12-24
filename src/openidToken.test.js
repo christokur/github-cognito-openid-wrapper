@@ -175,34 +175,9 @@ describe('openid domain layer - Token', () => {
     });
 
     test('throws error when code is missing', async () => {
-      await expect(openid.getTokens(null, 'state', 'host', 'verifier', 'test_client', 'authorization_code')).rejects.toThrow(
+      await expect(openid.getTokens(null, 'state', 'host', 'verifier', 'test_client')).rejects.toThrow(
         'The code parameter is required',
       );
-    });
-
-    test('throws error for missing grant_type', async () => {
-      await expect(
-        openid.getTokens(
-          'SOME_CODE',
-          'SOME_STATE',
-          'SOME_HOST',
-          'SOME_VERIFIER',
-          'test_client'
-        )
-      ).rejects.toThrow('Missing required parameter: grant_type');
-    });
-
-    test('throws error for invalid grant_type', async () => {
-      await expect(
-        openid.getTokens(
-          'SOME_CODE',
-          'SOME_STATE',
-          'SOME_HOST',
-          'SOME_VERIFIER',
-          'test_client',
-          'invalid_grant'
-        )
-      ).rejects.toThrow('Invalid grant_type');
     });
 
     test('throws error for missing client_id', async () => {
@@ -213,22 +188,8 @@ describe('openid domain layer - Token', () => {
           'SOME_HOST',
           'SOME_VERIFIER',
           undefined,
-          'authorization_code'
         )
-      ).rejects.toThrow('Missing required parameter: client_id');
-    });
-
-    test('throws error for invalid PKCE code_verifier', async () => {
-      await expect(
-        openid.getTokens(
-          'SOME_CODE',
-          'SOME_STATE',
-          'SOME_HOST',
-          'invalid@format',
-          'test_client',
-          'authorization_code'
-        )
-      ).rejects.toThrow('Invalid code_verifier format');
+      ).rejects.toThrow('The client_id parameter is required');
     });
 
     test('logs and rethrows error from token exchange with memory usage', async () => {
@@ -249,8 +210,7 @@ describe('openid domain layer - Token', () => {
           'state',
           'host',
           'verifier',
-          'test_client',
-          'authorization_code'
+          'test_client'
         ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
@@ -284,8 +244,7 @@ describe('openid domain layer - Token', () => {
           'state',
           'host',
           'verifier',
-          'test_client',
-          'authorization_code'
+          'test_client'
         ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
@@ -319,8 +278,7 @@ describe('openid domain layer - Token', () => {
           'state',
           'host',
           'verifier',
-          'test_client',
-          'authorization_code'
+          'test_client'
         ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
