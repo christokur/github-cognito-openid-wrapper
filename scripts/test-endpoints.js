@@ -72,9 +72,12 @@ Examples:
   }
 }
 
-// Set log level
+// Set log level in environment
 process.env.LOG_LEVEL = options.logLevel;
+
+// Update logger level
 const logger = require('./test-utils/test-logger');
+logger.level = options.logLevel;
 
 // Run tests
 try {

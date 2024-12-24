@@ -13,6 +13,10 @@ function isValidICOFormat(data) {
 
 async function testEndpoint(baseUrl, urlPath, method = 'GET', params = null, headers = null, options = {}) {
   const url = baseUrl.endsWith('/') ? `${baseUrl.slice(0, -1)}${urlPath}` : `${baseUrl}${urlPath}`;
+  
+  // Log test execution at info level
+  logger.info(`Testing endpoint (method=${method} path=${urlPath})`);
+
   try {
     logger.debug(`Testing endpoint`, {
       prefix: 'HTTP',
