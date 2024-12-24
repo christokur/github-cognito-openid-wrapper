@@ -45,6 +45,12 @@ const schemas = {
       pattern: /^[a-zA-Z0-9-_]+$/,
       maxLength: 256,
     },
+    client_id: {
+      required: true,
+      type: 'string',
+      pattern: /^[a-zA-Z0-9-_]+$/,
+      maxLength: 100,
+    },
     state: {
       required: false,
       type: 'string',

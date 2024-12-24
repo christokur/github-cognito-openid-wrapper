@@ -157,7 +157,7 @@ module.exports = () => ({
     }
   },
 
-  token: async (code, state, host, codeVerifier) => {
+  token: async (code, state, host, codeVerifier, client_id) => {
     try {
       logger.debug({
         message: 'Token controller called',
@@ -165,6 +165,7 @@ module.exports = () => ({
         state,
         host,
         codeVerifier,
+        client_id,
       });
 
       // Validate and sanitize input
@@ -173,6 +174,7 @@ module.exports = () => ({
         state,
         host,
         code_verifier: codeVerifier,
+        client_id,
       });
 
       const tokens = await openid.getTokens(
@@ -180,6 +182,7 @@ module.exports = () => ({
         validated.state,
         host,
         validated.code_verifier,
+        validated.client_id,
       );
       logger.debug({
         message: 'Tokens retrieved',

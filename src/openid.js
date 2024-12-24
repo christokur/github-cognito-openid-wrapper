@@ -59,10 +59,15 @@ class OpenIDProvider {
    * @param {string} state - State parameter
    * @param {string} host - Host URL
    * @param {string} codeVerifier - PKCE code verifier
+   * @param {string} client_id - OAuth client ID
+   * @returns {Object} Token response
    */
-  static async getTokens(code, state, host, codeVerifier) {
+  static async getTokens(code, state, host, codeVerifier, client_id) {
     if (!code) {
       throw new Error('The code parameter is required');
+    }
+    if (!client_id) {
+      throw new Error('The client_id parameter is required');
     }
     logger.debug({
       message: 'Getting tokens',
@@ -70,6 +75,7 @@ class OpenIDProvider {
       state,
       codeVerifier,
       host,
+      client_id,
       memoryUsage: process.memoryUsage(),
     });
 
@@ -78,6 +84,7 @@ class OpenIDProvider {
       state,
       host,
       codeVerifier,
+      client_id,
     });
 
     logger.debug({

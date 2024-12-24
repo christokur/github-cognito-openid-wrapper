@@ -30,12 +30,12 @@ module.exports = {
     }
   },
 
-  makeIdToken: (payload, host) => {
+  makeIdToken: (payload, host, aud) => {
     try {
       const enrichedPayload = {
         ...payload,
         iss: `https://${host}`,
-        aud: config.GITHUB_CLIENT_ID,
+        aud,
       };
       logger.debug({
         message: 'Signing payload',

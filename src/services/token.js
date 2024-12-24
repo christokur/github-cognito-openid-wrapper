@@ -94,14 +94,14 @@ class TokenService {
    * @param {string} host - Issuer host
    * @returns {string} Signed ID token
    */
-  static async createIdToken(payload, host) {
+  static async createIdToken(payload, host, aud) {
     try {
       logger.debug({
         message: 'Creating ID token with payload',
         payload,
       });
 
-      return crypto.makeIdToken(payload, host);
+      return crypto.makeIdToken(payload, host, aud);
     } catch (error) {
       logger.error({
         message: 'Failed to create ID token',
@@ -126,6 +126,7 @@ class TokenService {
     host,
     codeVerifier,
     nonce = null,
+    client_id,
   }) {
     logger.debug({
       message: 'Processing token exchange',
@@ -158,7 +159,7 @@ class TokenService {
         ...userInfo,
         ...(nonce ? { nonce } : {}),
       };
-      const idToken = await this.createIdToken(payload, host);
+      const idToken = await this.createIdToken(payload, host, client_id);
 
       // Format response for Cognito IdP
       const response = {

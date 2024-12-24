@@ -32,8 +32,8 @@ module.exports.handler = async (event, context) => {
     }
 
     // Validate required parameters
-    const { code, state, code_verifier } = body;
-    const requiredParams = ['code'];
+    const { code, state, code_verifier, client_id } = body;
+    const requiredParams = ['code', 'client_id'];
     const missingParams = requiredParams.filter((param) => !body[param]);
 
     if (missingParams.length > 0) {
@@ -56,6 +56,7 @@ module.exports.handler = async (event, context) => {
       state,
       host,
       code_verifier,
+      client_id,
     );
 
     // Ensure error responses have correct status code
