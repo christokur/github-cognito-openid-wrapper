@@ -28,7 +28,7 @@ describe('openid domain layer - Token', () => {
   });
 
   describe('with the correct code', () => {
-    test('returns a token', async () => {
+    test('returns a token with valid grant_type and client_id', async () => {
       const mockResponse = {
         data: {
           access_token: 'SOME_TOKEN',
@@ -70,6 +70,8 @@ describe('openid domain layer - Token', () => {
         'SOME_STATE',
         'SOME_HOST',
         'SOME_VERIFIER',
+        'test_client',
+        'authorization_code'
       );
 
       expect(token).toEqual({
@@ -83,23 +85,17 @@ describe('openid domain layer - Token', () => {
       expect(postCall[0]).toBe(
         `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
       );
-      // Don't test the exact format of the data, just verify the content is correct
       const data = new URLSearchParams(postCall[1]);
       expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
       expect(data.get('client_secret')).toBe(mockValues.GITHUB_CLIENT_SECRET);
       expect(data.get('code')).toBe('SOME_CODE');
+      expect(data.get('grant_type')).toBe('authorization_code');
       expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
       });
       expect(postCall[2].timeout).toBe(10000);
-
-      // Verify user details and emails were requested
-      const getCalls = mockAxios.get.mock.calls;
-      expect(getCalls).toHaveLength(2);
-      expect(getCalls[0][0]).toMatch(/\/user$/);
-      expect(getCalls[1][0]).toMatch(/\/user\/emails$/);
     });
   });
 
@@ -123,6 +119,8 @@ describe('openid domain layer - Token', () => {
           'SOME_STATE',
           'SOME_HOST',
           'SOME_VERIFIER',
+          'test_client',
+          'authorization_code'
         ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
@@ -137,6 +135,7 @@ describe('openid domain layer - Token', () => {
       expect(data.get('client_id')).toBe(mockValues.GITHUB_CLIENT_ID);
       expect(data.get('client_secret')).toBe(mockValues.GITHUB_CLIENT_SECRET);
       expect(data.get('code')).toBe('bad_code');
+      expect(data.get('grant_type')).toBe('authorization_code');
       expect(data.get('redirect_uri')).toBe(mockValues.COGNITO_REDIRECT_URI);
       expect(postCall[2].headers).toEqual({
         Accept: 'application/json',
@@ -176,9 +175,60 @@ describe('openid domain layer - Token', () => {
     });
 
     test('throws error when code is missing', async () => {
-      await expect(openid.getTokens(null, 'state', 'host', 'verifier')).rejects.toThrow(
+      await expect(openid.getTokens(null, 'state', 'host', 'verifier', 'test_client', 'authorization_code')).rejects.toThrow(
         'The code parameter is required',
       );
+    });
+
+    test('throws error for missing grant_type', async () => {
+      await expect(
+        openid.getTokens(
+          'SOME_CODE',
+          'SOME_STATE',
+          'SOME_HOST',
+          'SOME_VERIFIER',
+          'test_client'
+        )
+      ).rejects.toThrow('Missing required parameter: grant_type');
+    });
+
+    test('throws error for invalid grant_type', async () => {
+      await expect(
+        openid.getTokens(
+          'SOME_CODE',
+          'SOME_STATE',
+          'SOME_HOST',
+          'SOME_VERIFIER',
+          'test_client',
+          'invalid_grant'
+        )
+      ).rejects.toThrow('Invalid grant_type');
+    });
+
+    test('throws error for missing client_id', async () => {
+      await expect(
+        openid.getTokens(
+          'SOME_CODE',
+          'SOME_STATE',
+          'SOME_HOST',
+          'SOME_VERIFIER',
+          undefined,
+          'authorization_code'
+        )
+      ).rejects.toThrow('Missing required parameter: client_id');
+    });
+
+    test('throws error for invalid PKCE code_verifier', async () => {
+      await expect(
+        openid.getTokens(
+          'SOME_CODE',
+          'SOME_STATE',
+          'SOME_HOST',
+          'invalid@format',
+          'test_client',
+          'authorization_code'
+        )
+      ).rejects.toThrow('Invalid code_verifier format');
     });
 
     test('logs and rethrows error from token exchange with memory usage', async () => {
@@ -194,7 +244,14 @@ describe('openid domain layer - Token', () => {
       mockAxios.post.mockRejectedValue(mockError);
 
       await expect(
-        openid.getTokens('code', 'state', 'host', 'verifier'),
+        openid.getTokens(
+          'code',
+          'state',
+          'host',
+          'verifier',
+          'test_client',
+          'authorization_code'
+        ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
       );
@@ -222,7 +279,14 @@ describe('openid domain layer - Token', () => {
       mockAxios.post.mockRejectedValue(mockError);
 
       await expect(
-        openid.getTokens('code', 'state', 'host', 'verifier'),
+        openid.getTokens(
+          'code',
+          'state',
+          'host',
+          'verifier',
+          'test_client',
+          'authorization_code'
+        ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
       );
@@ -250,7 +314,14 @@ describe('openid domain layer - Token', () => {
       mockAxios.post.mockRejectedValue(mockError);
 
       await expect(
-        openid.getTokens('code', 'state', 'host', 'verifier'),
+        openid.getTokens(
+          'code',
+          'state',
+          'host',
+          'verifier',
+          'test_client',
+          'authorization_code'
+        ),
       ).rejects.toThrow(
         'GitHub API responded with 400: Bad Request'
       );

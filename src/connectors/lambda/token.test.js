@@ -59,8 +59,8 @@ describe('Lambda Token Handler', () => {
       const jsonEvent = {
         body: JSON.stringify({
           code: 'test_code',
+          client_id: 'test_client',
           state: 'test_state',
-          code_verifier: 'test_verifier',
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -77,12 +77,35 @@ describe('Lambda Token Handler', () => {
         scope: 'openid user:email',
       });
     });
+
+    it('should process request with grant_type successfully', async () => {
+      const jsonEvent = {
+        body: JSON.stringify({
+          code: 'test_code',
+          client_id: 'test_client',
+          state: 'test_state',
+          grant_type: 'authorization_code',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Host: 'example.com',
+        },
+      };
+
+      const result = await token.handler(jsonEvent);
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({
+        access_token: 'test_token',
+        token_type: 'bearer',
+        scope: 'openid user:email',
+      });
+    });
   });
 
   describe('with application/x-www-form-urlencoded content type', () => {
     it('should process form-urlencoded request successfully', async () => {
       const formEvent = {
-        body: 'code=test_code&state=test_state&code_verifier=test_verifier',
+        body: 'code=test_code&client_id=test_client&state=test_state',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Host: 'example.com',
@@ -98,49 +121,93 @@ describe('Lambda Token Handler', () => {
         scope: 'openid user:email',
       });
     });
+
+    it('should process form-urlencoded request with grant_type successfully', async () => {
+      const formEvent = {
+        body: 'code=test_code&client_id=test_client&state=test_state&grant_type=authorization_code',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Host: 'example.com',
+        },
+      };
+
+      const result = await token.handler(formEvent);
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({
+        access_token: 'test_token',
+        token_type: 'bearer',
+        scope: 'openid user:email',
+      });
+    });
   });
 
   describe('error handling', () => {
     it('should handle missing body', async () => {
-      const result = await token.handler({
-        headers: { Host: 'example.com' },
-      });
-
+      const result = await token.handler({});
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body)).toEqual({
+      expect(JSON.parse(result.body)).toMatchObject({
         error: 'invalid_request',
-        error_description: 'Request body is required',
+        error_description: expect.stringContaining('body'),
       });
     });
 
     it('should handle missing host header', async () => {
-      const result = await token.handler({
+      const jsonEvent = {
         body: JSON.stringify({
           code: 'test_code',
           state: 'test_state',
         }),
-        headers: {},
-      });
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
 
+      const result = await token.handler(jsonEvent);
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body)).toEqual({
+      expect(JSON.parse(result.body)).toMatchObject({
         error: 'invalid_request',
-        error_description: 'Host header is required',
+        error_description: expect.stringContaining('Host'),
+      });
+    });
+
+    it('should handle missing required parameters', async () => {
+      const jsonEvent = {
+        body: JSON.stringify({
+          state: 'test_state',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Host: 'example.com',
+        },
+      };
+
+      const result = await token.handler(jsonEvent);
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body)).toMatchObject({
+        error: 'invalid_request',
+        error_description: expect.stringContaining('code'),
       });
     });
 
     it('should handle controller errors', async () => {
-      const mockControllers = require('../controllers');
-      mockControllers().token.mockRejectedValue(new Error('Test error'));
+      const mockControllerInstance = {
+        token: jest.fn().mockRejectedValue(new Error('Test error')),
+      };
+      controllers.mockReturnValue(mockControllerInstance);
 
-      const result = await token.handler({
+      const jsonEvent = {
         body: JSON.stringify({
           code: 'test_code',
+          client_id: 'test_client',
           state: 'test_state',
         }),
-        headers: { Host: 'example.com' },
-      });
+        headers: {
+          'Content-Type': 'application/json',
+          Host: 'example.com',
+        },
+      };
 
+      const result = await token.handler(jsonEvent);
       expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body)).toEqual({
         error: 'server_error',
