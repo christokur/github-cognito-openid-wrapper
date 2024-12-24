@@ -118,13 +118,13 @@ describe('Crypto', () => {
     const host = 'test.host.com';
 
     it('should create a signed JWT token', () => {
-      const result = crypto.makeIdToken(payload, host);
+      const result = crypto.makeIdToken(payload, host, config.GITHUB_CLIENT_ID);
 
       expect(mockJwtSign).toHaveBeenCalledWith(
         {
           ...payload,
           iss: `https://${host}`,
-          aud: 'test-client-id',
+          aud: config.GITHUB_CLIENT_ID,
         },
         mockPrivateKey,
         {
@@ -141,14 +141,14 @@ describe('Crypto', () => {
         throw new Error('Test error');
       });
 
-      expect(() => crypto.makeIdToken(payload, host)).toThrow(
+      expect(() => crypto.makeIdToken(payload, host, config.GITHUB_CLIENT_ID)).toThrow(
         'Failed to create ID token: Test error',
       );
     });
 
     it('should handle missing key files', () => {
       fs.existsSync.mockReturnValue(false);
-      const result = crypto.makeIdToken(payload, host);
+      const result = crypto.makeIdToken(payload, host, config.GITHUB_CLIENT_ID);
 
       expect(result).toBe('test.jwt.token');
     });

@@ -164,6 +164,7 @@ describe('Controllers', () => {
       host: 'http://localhost',
       code_verifier:
         'test-verifier-12345678901234567890123456789012345678901234',
+      client_id: 'test-client-id',
     };
     const mockHost = 'http://localhost';
 
@@ -182,6 +183,7 @@ describe('Controllers', () => {
         validInput.state,
         validInput.host,
         validInput.code_verifier,
+        validInput.client_id,
       );
 
       expect(validator.validate).toHaveBeenCalledWith('token', {
@@ -189,12 +191,14 @@ describe('Controllers', () => {
         state: validInput.state,
         host: validInput.host,
         code_verifier: validInput.code_verifier,
+        client_id: validInput.client_id,
       });
       expect(openid.getTokens).toHaveBeenCalledWith(
         validInput.code,
         validInput.state,
         validInput.host,
         validInput.code_verifier,
+        validInput.client_id,
       );
       expect(result).toEqual({
         statusCode: 200,
@@ -224,6 +228,7 @@ describe('Controllers', () => {
         validInput.state,
         mockHost,
         validInput.code_verifier,
+        validInput.client_id,
       );
 
       expect(result).toEqual({
@@ -248,6 +253,7 @@ describe('Controllers', () => {
         validInput.state,
         mockHost,
         validInput.code_verifier,
+        validInput.client_id,
       );
 
       expect(result).toEqual({

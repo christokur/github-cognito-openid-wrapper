@@ -83,6 +83,7 @@ describe('Validator', () => {
     it('should validate valid token request', () => {
       const validData = {
         code: 'valid-code-123',
+        client_id: 'test-client',
         state: 'abcdef1234567890',
         code_verifier:
           'test-verifier-123456789012345678901234567890123456789012',
@@ -94,6 +95,7 @@ describe('Validator', () => {
     it('should validate without optional parameters', () => {
       const validData = {
         code: 'valid-code-123',
+        client_id: 'test-client',
       };
 
       expect(() => validate('token', validData)).not.toThrow();
