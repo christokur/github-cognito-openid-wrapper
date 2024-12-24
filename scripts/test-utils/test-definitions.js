@@ -75,7 +75,8 @@ function getTestDefinitions(config) {
         code: 'test-code',
         state: '1234567890123456',
         code_verifier: codeVerifier,
-        host: 'http://localhost:3000'
+        host: 'http://localhost:3000',
+        client_id: 'test-client'
       },
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -91,7 +92,8 @@ function getTestDefinitions(config) {
         code: 'test-code',
         state: '1234567890123456',
         code_verifier: codeVerifier,
-        host: 'http://localhost:3000'
+        host: 'http://localhost:3000',
+        client_id: 'test-client'
       },
       headers: {
         'Content-Type': 'application/json'

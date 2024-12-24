@@ -104,6 +104,7 @@ describe('Validator', () => {
     it('should throw on invalid code format', () => {
       const invalidData = {
         code: 'invalid@code', // Contains invalid character
+        client_id: 'test-client',
         state: 'abcdef1234567890',
       };
 
@@ -113,6 +114,7 @@ describe('Validator', () => {
     it('should throw on invalid state length when provided', () => {
       const invalidData = {
         code: 'valid-code-123',
+        client_id: 'test-client',
         state: 'short', // Too short
       };
 
@@ -122,7 +124,17 @@ describe('Validator', () => {
     it('should throw on invalid code_verifier format when provided', () => {
       const invalidData = {
         code: 'valid-code-123',
+        client_id: 'test-client',
         code_verifier: 'invalid@verifier', // Contains invalid character
+      };
+
+      expect(() => validate('token', invalidData)).toThrow('Validation failed');
+    });
+
+    it('should throw on missing client_id', () => {
+      const invalidData = {
+        code: 'valid-code-123',
+        state: 'abcdef1234567890',
       };
 
       expect(() => validate('token', invalidData)).toThrow('Validation failed');
