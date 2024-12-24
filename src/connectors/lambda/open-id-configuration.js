@@ -18,7 +18,7 @@ module.exports.handler = async (event, context) => {
     }
     //  if host already has a `http?://` prefix do nothing else add it
     if (!host.startsWith('http://') && !host.startsWith('https://')) {
-      host = `https://${host}`;
+      host = host.includes('localhost') ? `http://${host}` : `https://${host}`;
     }
     const response = await controllers().openIdConfiguration(host);
     return response;

@@ -1,6 +1,6 @@
 {
     "$schema": "https://unpkg.com/knip@5/schema.json",
-    "entry": ["src/connectors/lambda/index.js", "src/connectors/web/app.js", "scripts/test-endpoints.js", "scripts/mock-oidc-server.js", "scripts/check-lambda-deps.js", "scripts/test-logger.js"],
+    "entry": ["src/connectors/lambda/index.js", "src/connectors/web/app.js", "scripts/test-endpoints.js", "scripts/dev-oidc-server.js", "scripts/check-lambda-deps.js", "scripts/test-logger.js"],
     "project": ["src/**/*.js", "scripts/**/*.js"],
     "ignore": ["rnd/**"]
 }

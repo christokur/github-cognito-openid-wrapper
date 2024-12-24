@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { runTests } = require('./test-utils/test-runner');
-const { PORT_NUMBER } = require('./mock-oidc-server');
+const { PORT_NUMBER } = require('./dev-oidc-server');
 
 // Parse command line arguments first
 const options = {

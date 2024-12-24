@@ -3,7 +3,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const path = require('path');
 const logger = require('./test-logger');
-const { SERVER_VERSION, startServer, PORT_NUMBER, killOrphanedServer } = require('../mock-oidc-server');
+const { SERVER_VERSION, startServer, PORT_NUMBER, killOrphanedServer } = require('../dev-oidc-server');
 
 const execAsync = promisify(exec);
 const EXPECTED_SERVER_VERSION = SERVER_VERSION;

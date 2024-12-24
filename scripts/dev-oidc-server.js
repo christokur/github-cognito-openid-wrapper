@@ -166,7 +166,17 @@ const lambdaToExpress = (req, res) => {
     logGroupName: '/mock/lambda/log-group',
     logStreamName: 'mock-log-stream',
     identity: null,
-    clientContext: null
+    clientContext: null,
+    getRemainingTimeInMillis: () => 300000 // 5 minutes in milliseconds
+  };
+
+  // Create mock event with headers
+  const mockEvent = {
+    ...event,
+    headers: {
+      ...event.headers,
+      Host: `localhost:${PORT_NUMBER}`
+    }
   };
 
   // Set environment variables for lambda handler
@@ -176,7 +186,7 @@ const lambdaToExpress = (req, res) => {
   process.env.GITHUB_API_URL = 'http://localhost:3000/github-api';
   process.env.GITHUB_LOGIN_URL = 'http://localhost:3000/github';
 
-  lambda.handler(event, mockContext, callback);
+  lambda.handler(mockEvent, mockContext, callback);
 };
 
 // Mock GitHub API endpoints

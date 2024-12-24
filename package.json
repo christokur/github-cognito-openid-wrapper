@@ -41,7 +41,7 @@
     "prepare": "#npm run snyk-protect",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
-    "mock-server": "node scripts/mock-oidc-server.js",
+    "mock-server": "node scripts/dev-oidc-server.js",
     "test-endpoints": "node scripts/test-endpoints.js",
     "knip": "knip"
   },

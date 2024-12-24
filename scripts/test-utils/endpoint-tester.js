@@ -137,8 +137,26 @@ async function testFavicon(baseUrl, options = {}) {
 }
 
 async function discoverEndpoints(baseUrl) {
-  const { response } = await testEndpoint(baseUrl, '/.well-known/openid-configuration');
-  return response.data;
+  try {
+    const { response } = await testEndpoint(baseUrl, '/.well-known/openid-configuration');
+    if (!response || !response.data) {
+      return {
+        authorization_endpoint: `${baseUrl}/authorize`,
+        token_endpoint: `${baseUrl}/token`,
+        userinfo_endpoint: `${baseUrl}/userinfo`,
+        jwks_uri: `${baseUrl}/.well-known/jwks.json`,
+        issuer: baseUrl
+      };
+    }
+    return response.data;
+  } catch (error) {
+    logger.error('Failed to discover endpoints', {
+      prefix: 'HTTP',
+      error: error.message,
+      url: baseUrl
+    });
+    throw error;
+  }
 }
 
 module.exports = {

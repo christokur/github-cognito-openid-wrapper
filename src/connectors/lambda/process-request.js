@@ -1,9 +1,9 @@
 const logger = require('../logger');
+const responseUtils = require('./response-utils');
+const { getParameters } = require('./request-utils');
 const validator = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
 const { withRetry } = require('../../utils/retry');
-const { formatResponse } = require('./index');
-const { getParameters } = require('./request-utils');
 
 // Main handler function
 async function processRequest(event, context, config) {
@@ -18,7 +18,7 @@ async function processRequest(event, context, config) {
     });
     // 1. Check HTTP method first
     if (!config.allowedMethods.includes(event.httpMethod)) {
-      return formatResponse(
+      return responseUtils.formatResponse(
         {
           statusCode: 405,
           body: JSON.stringify({
@@ -34,7 +34,7 @@ async function processRequest(event, context, config) {
     if (config.requiresAuth) {
       const authHeader = event.headers?.Authorization;
       if (!authHeader) {
-        return formatResponse(
+        return responseUtils.formatResponse(
           {
             statusCode: 401,
             body: JSON.stringify({
@@ -65,7 +65,7 @@ async function processRequest(event, context, config) {
         });
         validator.validate(config.schema, params);
       } catch (error) {
-        return formatResponse(
+        return responseUtils.formatResponse(
           {
             statusCode: error.statusCode || 400,
             body: JSON.stringify({
@@ -85,7 +85,7 @@ async function processRequest(event, context, config) {
         await rateLimiter.checkLimit();
       } catch (error) {
         if (error.statusCode === 429) {
-          return formatResponse(
+          return responseUtils.formatResponse(
             {
               statusCode: 429,
               headers: {
@@ -111,7 +111,7 @@ async function processRequest(event, context, config) {
     });
 
     // Format and return response
-    return formatResponse(response, config);
+    return responseUtils.formatResponse(response, config);
   } catch (error) {
     logger.error({
       message: 'Request processing failed',
@@ -122,7 +122,7 @@ async function processRequest(event, context, config) {
     });
 
     // Generic error response
-    return formatResponse(
+    return responseUtils.formatResponse(
       {
         statusCode: 500,
         body: JSON.stringify({
