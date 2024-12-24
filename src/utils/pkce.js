@@ -5,8 +5,6 @@ const crypto = require('crypto');
  * PKCE (Proof Key for Code Exchange) helper functions
  */
 class PkceHelper {
-  static verifierStore = new Map();
-
   /**
    * Generates a code verifier for PKCE
    * @returns {string} Base64URL-encoded random bytes
@@ -21,34 +19,48 @@ class PkceHelper {
    * @returns {string} Base64URL-encoded SHA256 hash of verifier
    */
   static generateCodeChallenge(verifier) {
-    const hash = crypto.createHash('sha256');
-    hash.update(verifier);
-    return base64url(hash.digest());
+    if (!verifier) {
+      throw new Error('Verifier is required');
+    }
+    const hash = crypto.createHash('sha256').update(verifier).digest();
+    return base64url(hash);
   }
 
   /**
    * Stores a code verifier for a given state
-   * @param {string} state - The state to associate with the verifier
+   * @param {string} state - The state to store verifier for
    * @param {string} verifier - The code verifier to store
    */
   static storeCodeVerifier(state, verifier) {
     if (!state || !verifier) {
       throw new Error('State and verifier are required');
     }
-    this.verifierStore.set(state, verifier);
+    PkceHelper._getVerifierStore().set(state, verifier);
   }
 
   /**
-   * Retrieves and removes a stored code verifier
-   * @param {string} state - The state to retrieve verifier for
+   * Gets and removes a stored code verifier for a given state
+   * @param {string} state - The state to get verifier for
    * @returns {string|null} The stored code verifier or null if not found
    */
   static getCodeVerifier(state) {
-    const verifier = this.verifierStore.get(state);
+    const verifier = PkceHelper._getVerifierStore().get(state);
     if (verifier) {
-      this.verifierStore.delete(state);
+      PkceHelper._getVerifierStore().delete(state);
     }
     return verifier || null;
+  }
+
+  /**
+   * Gets the verifier store singleton
+   * @private
+   * @returns {Map} The verifier store
+   */
+  static _getVerifierStore() {
+    if (!PkceHelper._verifierStore) {
+      PkceHelper._verifierStore = new Map();
+    }
+    return PkceHelper._verifierStore;
   }
 }
 

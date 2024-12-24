@@ -80,8 +80,8 @@ describe('Lambda Userinfo Handler', () => {
     // Call handler
     const response = await userinfo.handler(mockEvent, mockContext);
 
-    // Verify controller was called with undefined token
-    expect(mockControllerInstance.userinfo).toHaveBeenCalledWith(undefined);
+    // Verify controller was called with empty token
+    expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('');
     expect(response).toEqual(mockResponse);
   });
 
@@ -99,11 +99,12 @@ describe('Lambda Userinfo Handler', () => {
     };
     mockControllerInstance.userinfo.mockResolvedValue(mockResponse);
 
-    // Call handler
+    // Call handler with invalid token
+    mockEvent.headers.Authorization = 'Bearer invalid-token';
     const response = await userinfo.handler(mockEvent, mockContext);
 
-    // Verify controller was called and error was returned
-    expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('test-token');
+    // Verify controller was called with invalid token
+    expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('invalid-token');
     expect(response).toEqual(mockResponse);
   });
 

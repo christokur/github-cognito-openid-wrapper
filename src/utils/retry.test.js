@@ -1,5 +1,5 @@
-const { mockAxios } = require('../../src/sharedMocks');
-const { mockValues } = require('../../src/mocks');
+const { mockAxios } = require("../sharedMocks");
+const { mockValues } = require("../mocks");
 
 jest.mock('../../src/connectors/logger');
 jest.mock('./backoff', () => ({
@@ -16,7 +16,7 @@ describe('Retry Utility Functions', () => {
     jest.clearAllMocks();
 
     backoff = require('./backoff');
-    logger = require('../../src/connectors/logger');
+    logger = require("../connectors/logger");
     retry = require('./retry');
 
     backoff.exponentialBackoff = jest.fn().mockReturnValue(0);

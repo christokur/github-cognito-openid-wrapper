@@ -21,9 +21,7 @@ describe('Favicon', () => {
       .mockResolvedValue(mockFaviconBinary);
 
     // Mock webpack asset with data URL format
-    jest.doMock('./assets/favicon.ico', () => {
-      return `data:image/x-icon;base64,${mockFaviconBase64}`;
-    }, { virtual: true });
+    jest.doMock('./assets/favicon.ico', () => `data:image/x-icon;base64,${mockFaviconBase64}`, { virtual: true });
 
     // Mock favicon verifier
     jest.doMock('./utils/favicon-verifier', () => ({
@@ -132,9 +130,7 @@ describe('Favicon', () => {
       jest.resetModules();
 
       // Mock webpack asset with invalid format
-      jest.doMock('./assets/favicon.ico', () => {
-        return 'invalid-format';
-      }, { virtual: true });
+      jest.doMock('./assets/favicon.ico', () => 'invalid-format', { virtual: true });
 
       // Mock logger
       const mockError = jest.fn();

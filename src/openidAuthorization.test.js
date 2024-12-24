@@ -1,8 +1,7 @@
 const { mockValues } = require('./mocks');
 require('./mocks');
 
-jest.mock('./github', () => {
-  return jest.fn().mockImplementation(() => ({
+jest.mock('./github', () => jest.fn().mockImplementation(() => ({
     getAuthorizeUrl: jest.fn().mockReturnValue(`${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize?client_id=${mockValues.GITHUB_CLIENT_ID}&scope=user%3Aemail&state=test-state&response_type=code&redirect_uri=${encodeURIComponent(mockValues.COGNITO_REDIRECT_URI)}&nonce=test-nonce&code_challenge=test-code-challenge&code_challenge_method=S256`),
     getApiEndpoints: jest.fn().mockReturnValue({
       userDetails: `${mockValues.GITHUB_API_URL}/user`,
@@ -10,8 +9,7 @@ jest.mock('./github', () => {
       oauthToken: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
       oauthAuthorize: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`,
     }),
-  }));
-});
+  })));
 
 jest.mock('./utils/pkce', () => ({
   generateCodeVerifier: jest.fn().mockReturnValue('test-code-verifier'),

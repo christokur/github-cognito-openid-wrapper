@@ -21,6 +21,7 @@ const isRetryableError = (error) => {
   );
 };
 
+/* eslint-disable no-await-in-loop */
 async function withRetry(
   operation,
   { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {},
@@ -63,6 +64,7 @@ async function withRetry(
     }
   }
 }
+/* eslint-enable no-await-in-loop */
 module.exports = {
   withRetry,
   isRetryableError,

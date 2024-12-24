@@ -28,7 +28,8 @@
     "no-useless-catch": 0,
     "no-constructor-return": 0,
     "global-require": 0,
-    "import/no-extraneous-dependencies": 0
+    "import/no-extraneous-dependencies": 0,
+    "no-underscore-dangle": 0
   },
   "overrides": [
     {
