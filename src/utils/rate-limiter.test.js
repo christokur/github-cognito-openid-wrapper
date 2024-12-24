@@ -59,9 +59,7 @@ describe('RateLimiter', () => {
       rateLimiter.resetTime = Date.now() + 1000;
       rateLimiter.retryAfter = 0;
 
-      expect(() => rateLimiter.checkLimit()).toThrow(
-        'Rate limit exceeded',
-      );
+      expect(() => rateLimiter.checkLimit()).toThrow('Rate limit exceeded');
     });
 
     test('should throw rate limit error when retry-after is specified', () => {
@@ -69,9 +67,7 @@ describe('RateLimiter', () => {
       rateLimiter.resetTime = Date.now();
       rateLimiter.retryAfter = 1000;
 
-      expect(() => rateLimiter.checkLimit()).toThrow(
-        'Rate limit exceeded',
-      );
+      expect(() => rateLimiter.checkLimit()).toThrow('Rate limit exceeded');
     });
   });
 

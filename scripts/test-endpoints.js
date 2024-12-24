@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-const minimist = require('minimist');
 const { runTests } = require('./test-utils/test-runner');
 const { PORT_NUMBER } = require('./mock-oidc-server');
 

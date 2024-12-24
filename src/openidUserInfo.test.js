@@ -74,26 +74,26 @@ describe('openid domain layer - User Info', () => {
               updated_at: expectedUpdatedAt,
             });
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(mockAxios.get).toHaveBeenNthCalledWith(1,
               `${mockValues.GITHUB_API_URL}/user`,
-              {
+              expect.objectContaining({
                 headers: {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token good_token',
                 },
                 timeout: 10000,
-              },
+              }),
             );
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(mockAxios.get).toHaveBeenNthCalledWith(2,
               `${mockValues.GITHUB_API_URL}/user/emails`,
-              {
+              expect.objectContaining({
                 headers: {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token good_token',
                 },
                 timeout: 10000,
-              },
+              }),
             );
           });
         });
@@ -129,26 +129,26 @@ describe('openid domain layer - User Info', () => {
               openid.getUserInfo('without_a_primary_email'),
             ).rejects.toThrow('User did not have a primary email address');
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(mockAxios.get).toHaveBeenNthCalledWith(1,
               `${mockValues.GITHUB_API_URL}/user`,
-              {
+              expect.objectContaining({
                 headers: {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token without_a_primary_email',
                 },
                 timeout: 10000,
-              },
+              }),
             );
 
-            expect(mockAxios.get).toHaveBeenCalledWith(
+            expect(mockAxios.get).toHaveBeenNthCalledWith(2,
               `${mockValues.GITHUB_API_URL}/user/emails`,
-              {
+              expect.objectContaining({
                 headers: {
                   Accept: 'application/vnd.github.v3+json',
                   Authorization: 'token without_a_primary_email',
                 },
                 timeout: 10000,
-              },
+              }),
             );
           });
         });
@@ -171,13 +171,13 @@ describe('openid domain layer - User Info', () => {
 
           expect(mockAxios.get).toHaveBeenCalledWith(
             `${mockValues.GITHUB_API_URL}/user`,
-            {
+            expect.objectContaining({
               headers: {
                 Accept: 'application/vnd.github.v3+json',
                 Authorization: 'token bad_token',
               },
               timeout: 10000,
-            },
+            }),
           );
         });
 

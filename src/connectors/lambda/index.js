@@ -7,22 +7,21 @@ if (
   require('source-map-support').install();
 }
 
-const querystring = require('querystring');
 const { VERSION } = require('./version');
 
 const VERSION_CONSUMER = process.env.VERSION_CONSUMER || '0.0.0';
 const VERSION_COMPONENT = process.env.VERSION_COMPONENT || '0.0.0';
 
+const logger = require('../logger');
 const authorize = require('./authorize');
 const openIdConfiguration = require('./open-id-configuration');
 const token = require('./token');
 const userinfo = require('./userinfo');
 const jwks = require('./jwks');
 const favicon = require('../../favicon');
-const logger = require('../logger');
-const validator = require('../../utils/validator');
-const rateLimiter = require('../../utils/rate-limiter');
-const { withRetry } = require('../../utils/retry');
+const processRequest = require('./process-request');
+const { parseBody, getParameters } = require('./request-utils');
+const { formatResponse } = require('./response-utils');
 
 // Map endpoints to their validation schemas and handlers
 const endpointConfig = {
@@ -51,326 +50,30 @@ const endpointConfig = {
     schema: 'userinfo',
     handler: userinfo.handler,
     requiresRateLimit: true,
-    allowedMethods: ['GET'],
-    cacheControl: 'no-store',
     requiresAuth: true,
+    allowedMethods: ['GET', 'POST'],
+    cacheControl: 'no-store',
   },
   '/.well-known/jwks.json': {
-    schema: null,
-    handler: jwks.handler,
-    requiresRateLimit: false,
-    allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=86400',
-  },
-  '/jwks.json': {
-    schema: null,
+    schema: null, // No validation needed
     handler: jwks.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
     cacheControl: 'public, max-age=86400',
   },
   '/favicon.ico': {
-    schema: null,
+    schema: null, // No validation needed
     handler: favicon.handler,
     requiresRateLimit: false,
     allowedMethods: ['GET'],
-    cacheControl: 'public, max-age=31536000',
+    cacheControl: 'public, max-age=86400',
   },
 };
 
-// Define functions
-function parseBody(event) {
-  if (!event) {
-    logger.debug({
-      message: 'parseBody received null event',
-    });
-    return { body: undefined, contentType: '' };
-  }
-
-  // Extract body even if headers missing
-  let { body } = event;
-  const headers = event.headers || {};
-  const contentType = headers['content-type'] || headers['Content-Type'] || '';
-
-  if (body) {
-    if (event.isBase64Encoded) {
-      try {
-        // Use atob to validate base64 first
-        const decoded = Buffer.from(body, 'base64').toString();
-        // Check if decoded string contains invalid characters
-        if (decoded.includes('�')) {
-          logger.debug({
-            message: 'Invalid base64 data detected',
-            body,
-          });
-          return { body, contentType };
-        }
-        body = decoded;
-        event.body = body;
-        event.isBase64Encoded = false;
-        logger.debug({
-          message: 'parseBody decoded base64',
-          event,
-        });
-      } catch (error) {
-        logger.debug({
-          message: 'Failed to decode base64',
-          error: error.message,
-        });
-        return { body, contentType };
-      }
-    }
-
-    if (
-      contentType &&
-      contentType.startsWith('application/x-www-form-urlencoded')
-    ) {
-      try {
-        body = typeof body === 'string' ? querystring.parse(body) : body;
-        event.body = body;
-        event.headers = headers;
-        event.headers['content-type'] = 'application/javascript';
-        logger.debug({
-          message: 'Parsed x-www-form-urlencoded data',
-          contentType: event.headers['content-type'],
-          body,
-        });
-      } catch (error) {
-        logger.debug({
-          message: 'Failed to parse form data',
-          error: error.message,
-        });
-        return { body, contentType };
-      }
-    } else if (contentType && contentType.startsWith('application/json')) {
-      try {
-        body = typeof body === 'string' ? JSON.parse(body) : body;
-        event.body = body;
-        event.headers = headers;
-        event.headers['content-type'] = 'application/javascript';
-        logger.debug({
-          message: 'Parsed JSON body',
-          contentType: event.headers['content-type'],
-          body,
-        });
-      } catch (error) {
-        logger.debug({
-          message: 'Failed to parse JSON',
-          error: error.message,
-        });
-        return { body, contentType };
-      }
-    } else {
-      logger.debug({
-        message: 'Using raw body data',
-        contentType,
-        body,
-      });
-    }
-  }
-  return { body, contentType };
-}
-
-function getParameters(event) {
-  const params = {};
-
-  // Query parameters
-  if (event.queryStringParameters) {
-    Object.assign(params, event.queryStringParameters);
-  }
-
-  // body
-  if (event.body) {
-    const { body: parsedBody, contentType } = parseBody(event);
-    logger.debug({
-      message: 'Parsed request body',
-      contentType,
-      body: parsedBody,
-    });
-    event.body = parsedBody;
-    Object.assign(params, parsedBody);
-  }
-
-  // Authorization header for userinfo endpoint
-  if (event.headers && event.headers.Authorization) {
-    params.access_token = event.headers.Authorization.replace('Bearer ', '');
-  }
-
-  return params;
-}
-
-// Format response with proper headers
-function formatResponse(response, config = {}) {
-  const headers = {};
-
-  // Add Content-Type for JSON responses
-  if (response.body && typeof response.body === 'string' && response.body.startsWith('{')) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  // Add optional headers
-  if (config.cacheControl) {
-    headers['Cache-Control'] = config.cacheControl;
-  }
-
-  // Add CORS headers if enabled
-  const cors = config?.cors || false;
-  if (cors) {
-    Object.assign(headers, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': (config.allowedMethods || ['GET']).join(','),
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-      'Access-Control-Max-Age': '86400',
-    });
-  }
-
-  // Don't override existing headers
-  if (response.headers) {
-    Object.assign(headers, response.headers);
-  }
-
-  // Handle binary responses (e.g., favicon)
-  if (response.isBase64Encoded) {
-    return {
-      ...response,
-      headers,
-    };
-  }
-
-  // Handle JSON responses
-  return {
-    ...response,
-    headers,
-  };
-}
-
-// Main handler function
-function processRequest(event, context, config) {
-  try {
-    logger.debug({
-      message: 'Processing request',
-      path: event.path,
-      httpMethod: event.httpMethod,
-      headers: event.headers,
-      body: event.body,
-      config,
-    });
-    // 1. Check HTTP method first
-    if (!config.allowedMethods.includes(event.httpMethod)) {
-      return formatResponse(
-        {
-          statusCode: 405,
-          body: JSON.stringify({
-            error: 'method_not_allowed',
-            error_description: `Method ${event.httpMethod} not allowed`,
-          }),
-        },
-        config,
-      );
-    }
-
-    // 2. Check authorization if required
-    if (config.requiresAuth) {
-      const authHeader = event.headers?.Authorization;
-      if (!authHeader) {
-        return formatResponse(
-          {
-            statusCode: 401,
-            body: JSON.stringify({
-              error: 'unauthorized',
-              error_description: 'No valid access token provided',
-            }),
-          },
-          config,
-        );
-      }
-    }
-
-    // 3. Get parameters
-    const params = getParameters(event);
-
-    logger.debug({
-      message: 'Request parameters',
-      params,
-    });
-
-    // 4. Validate parameters
-    if (config.schema) {
-      try {
-        logger.debug({
-          message: 'Validating parameters',
-          schema: config.schema,
-          params,
-        });
-        validator.validate(config.schema, params);
-      } catch (error) {
-        return formatResponse(
-          {
-            statusCode: error.statusCode || 400,
-            body: JSON.stringify({
-              error: error.code || 'invalid_request',
-              error_description: error.message,
-              validation_errors: error.errors,
-            }),
-          },
-          config,
-        );
-      }
-    }
-
-    // Check rate limits if required
-    if (config.requiresRateLimit) {
-      try {
-        rateLimiter.checkLimit();
-      } catch (error) {
-        if (error.statusCode === 429) {
-          return formatResponse(
-            {
-              statusCode: 429,
-              headers: {
-                'Retry-After': error.retryAfter.toString(),
-              },
-              body: JSON.stringify({
-                error: 'rate_limit_exceeded',
-              error_description: 'Rate limit exceeded',
-              }),
-            },
-            config,
-          );
-        }
-        throw error;
-      }
-    }
-
-    // Wrap handler in retry mechanism
-    const response = withRetry(() => config.handler(event, context));
-
-    // Format and return response
-    return formatResponse(response, config);
-  } catch (error) {
-    logger.error({
-      message: 'Request processing failed',
-      error: error.message,
-      stack: error.stack,
-      path: event.path,
-      requestId: context.awsRequestId,
-    });
-
-    // Generic error response
-    return formatResponse(
-      {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: 'server_error',
-          error_description: 'Internal server error',
-        }),
-      },
-      config,
-    );
-  }
-}
-
 function handler(event, context, callback) {
+  // Prevent Lambda from waiting for Node.js event loop to be empty
+  context.callbackWaitsForEmptyEventLoop = false;
+
   // Log request details
   logger.info({
     message: 'Lambda invoked',
@@ -378,11 +81,71 @@ function handler(event, context, callback) {
     versionConsumer: VERSION_CONSUMER,
     versionComponent: VERSION_COMPONENT,
     path: event.path,
+    remainingTime: context.getRemainingTimeInMillis(),
     method: event.httpMethod,
     event,
     context,
     memoryUsage: process.memoryUsage(),
   });
+
+  // Log detailed request info
+  logger.debug({
+    message: 'Received request',
+    path: event.path,
+    httpMethod: event.httpMethod,
+    headers: event.headers,
+    queryStringParameters: event.queryStringParameters,
+    body: event.body,
+    isBase64Encoded: event.isBase64Encoded,
+    requestId: context.awsRequestId,
+    remainingTime: context.getRemainingTimeInMillis(),
+    versions: {
+      consumer: VERSION_CONSUMER,
+      component: VERSION_COMPONENT,
+      api: VERSION,
+    },
+  });
+
+  // Set a timeout handler
+  const timeoutHandler = setTimeout(() => {
+    logger.warn({
+      message: 'Request timed out',
+      path: event.path,
+      requestId: context.awsRequestId,
+      remainingTime: context.getRemainingTimeInMillis(),
+    });
+    return callback(
+      null,
+      formatResponse(
+        {
+          statusCode: 504,
+          body: JSON.stringify({
+            error: 'gateway_timeout',
+            error_description: 'Request timed out',
+          }),
+        },
+        { cacheControl: 'no-store', allowedMethods: ['GET'] },
+      ),
+    );
+  }, Math.max(context.getRemainingTimeInMillis() - 1000, 0));
+
+  // Check if path exists
+  if (!event.path) {
+    clearTimeout(timeoutHandler);
+    return callback(
+      null,
+      formatResponse(
+        {
+          statusCode: 404,
+          body: JSON.stringify({
+            error: 'not_found',
+            error_description: 'Endpoint not found',
+          }),
+        },
+        { cacheControl: 'no-store', allowedMethods: ['GET'] },
+      ),
+    );
+  }
 
   // Get endpoint configuration
   logger.info({
@@ -390,19 +153,15 @@ function handler(event, context, callback) {
     path: event.path || '',
     pathType: typeof event.path,
     pathLength: event.path ? event.path.length : 0,
-    pathCharCodes: event.path ? Array.from(event.path).map((c) => c.charCodeAt(0)) : [],
+    pathCharCodes: event.path
+      ? Array.from(event.path).map((c) => c.charCodeAt(0))
+      : [],
     availableEndpoints: Object.keys(endpointConfig),
   });
-  const path = event.path ? event.path.replace(/\/$/, '') : ''; // Remove trailing slash
-  logger.debug({
-    message: 'Path comparison',
-    originalPath: event.path,
-    cleanedPath: path,
-    config: endpointConfig[path],
-    hasConfig: path in endpointConfig,
-  });
-  const config = endpointConfig[path];
+
+  const config = endpointConfig[event.path];
   if (!config) {
+    clearTimeout(timeoutHandler);
     return callback(
       null,
       formatResponse(
@@ -419,18 +178,67 @@ function handler(event, context, callback) {
   }
 
   // Process request with endpoint-specific configuration
-  const response = processRequest(event, context, config);
-  if (typeof callback === 'function') {
-    return callback(null, response);
-  }
-  return response;
+  processRequest(event, context, config)
+    .then((response) => {
+      clearTimeout(timeoutHandler);
+      logger.debug({
+        message: 'Sending response',
+        response,
+      });
+      return callback(null, response);
+    })
+    .catch((error) => {
+      clearTimeout(timeoutHandler);
+      logger.error({
+        message: 'Request processing failed',
+        error: error.message,
+        stack: error.stack,
+        path: event.path,
+        requestId: context.awsRequestId,
+        remainingTime: context.getRemainingTimeInMillis(),
+      });
+
+      // Preserve original error details and status code
+      const errorResponse = {
+        error: error.type || 'server_error',
+        error_description: error.message || 'Internal server error',
+      };
+
+      // Add debug info in development
+      if (process.env.NODE_ENV === 'development') {
+        errorResponse.debug = {
+          stack: error.stack,
+          requestId: context.awsRequestId,
+          remainingTime: context.getRemainingTimeInMillis(),
+          memoryUsage: process.memoryUsage(),
+        };
+      }
+
+      // Create response with headers
+      const response = {
+        statusCode: error.statusCode || 500,
+        body: JSON.stringify(errorResponse),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      // Add retry-after header for rate limit errors
+      if (error.retryAfter) {
+        response.headers['Retry-After'] = error.retryAfter.toString();
+      }
+
+      return callback(
+        null,
+        formatResponse(response, {
+          cacheControl: 'no-store',
+          allowedMethods: ['GET'],
+        }),
+      );
+    });
 }
 
-// Export all functions
 module.exports = {
-  parseBody,
-  getParameters,
-  formatResponse,
-  processRequest,
+  endpointConfig,
   handler,
 };

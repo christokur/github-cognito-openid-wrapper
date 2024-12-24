@@ -11,13 +11,13 @@ describe('Lambda Userinfo Handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    
+
     // Mock controllers module
     jest.doMock('../controllers', () => jest.fn(() => mockControllerInstance));
-    
+
     // Create mock controller instance
     mockControllerInstance = {
-      userinfo: jest.fn()
+      userinfo: jest.fn(),
     };
 
     // Require modules after mocking
@@ -27,9 +27,9 @@ describe('Lambda Userinfo Handler', () => {
     // Setup default mock event and context
     mockEvent = {
       headers: {
-        Authorization: 'Bearer test-token'
+        Authorization: 'Bearer test-token',
       },
-      queryStringParameters: {}
+      queryStringParameters: {},
     };
     mockContext = {};
   });
@@ -41,26 +41,26 @@ describe('Lambda Userinfo Handler', () => {
     jest.dontMock('../controllers');
   });
 
-  it('should extract token and call userinfo controller', () => {
+  it('should extract token and call userinfo controller', async () => {
     // Setup mock response
     const mockResponse = {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ sub: 'test-user' })
+      body: JSON.stringify({ sub: 'test-user' }),
     };
-    mockControllerInstance.userinfo.mockReturnValue(mockResponse);
+    mockControllerInstance.userinfo.mockResolvedValue(mockResponse);
 
     // Call handler
-    const response = userinfo.handler(mockEvent, mockContext);
+    const response = await userinfo.handler(mockEvent, mockContext);
 
     // Verify controller was called with correct token
     expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('test-token');
     expect(response).toEqual(mockResponse);
   });
 
-  it('should handle missing Authorization header', () => {
+  it('should handle missing Authorization header', async () => {
     // Remove Authorization header
     delete mockEvent.headers.Authorization;
 
@@ -68,61 +68,61 @@ describe('Lambda Userinfo Handler', () => {
     const mockResponse = {
       statusCode: 400,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         error: 'invalid_request',
-        error_description: 'Missing access token'
-      })
+        error_description: 'Missing access token',
+      }),
     };
-    mockControllerInstance.userinfo.mockReturnValue(mockResponse);
+    mockControllerInstance.userinfo.mockResolvedValue(mockResponse);
 
     // Call handler
-    const response = userinfo.handler(mockEvent, mockContext);
+    const response = await userinfo.handler(mockEvent, mockContext);
 
     // Verify controller was called with undefined token
     expect(mockControllerInstance.userinfo).toHaveBeenCalledWith(undefined);
     expect(response).toEqual(mockResponse);
   });
 
-  it('should handle validation error', () => {
+  it('should handle validation error', async () => {
     // Setup mock validation error
     const mockResponse = {
       statusCode: 400,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         error: 'invalid_request',
-        error_description: 'Invalid access token'
-      })
+        error_description: 'Invalid access token',
+      }),
     };
-    mockControllerInstance.userinfo.mockReturnValue(mockResponse);
+    mockControllerInstance.userinfo.mockResolvedValue(mockResponse);
 
     // Call handler
-    const response = userinfo.handler(mockEvent, mockContext);
+    const response = await userinfo.handler(mockEvent, mockContext);
 
     // Verify controller was called and error was returned
     expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('test-token');
     expect(response).toEqual(mockResponse);
   });
 
-  it('should handle service error', () => {
+  it('should handle service error', async () => {
     // Setup mock service error
     const mockResponse = {
       statusCode: 500,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         error: 'server_error',
-        error_description: 'Internal server error'
-      })
+        error_description: 'Internal server error',
+      }),
     };
-    mockControllerInstance.userinfo.mockReturnValue(mockResponse);
+    mockControllerInstance.userinfo.mockResolvedValue(mockResponse);
 
     // Call handler
-    const response = userinfo.handler(mockEvent, mockContext);
+    const response = await userinfo.handler(mockEvent, mockContext);
 
     // Verify controller was called and error was returned
     expect(mockControllerInstance.userinfo).toHaveBeenCalledWith('test-token');

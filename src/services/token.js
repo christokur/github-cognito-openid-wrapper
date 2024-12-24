@@ -44,7 +44,7 @@ class TokenService {
    * @param {string} state - State parameter
    * @param {string} codeVerifier - PKCE code verifier
    */
-  static getGithubToken(code, state, codeVerifier) {
+  static async getGithubToken(code, state, codeVerifier) {
     try {
       const githubClientInstance = githubClient(
         Configuration.GITHUB_API_URL,
@@ -55,30 +55,30 @@ class TokenService {
         message: 'Getting GitHub token',
         code,
         state,
-        codeVerifier: codeVerifier ? '[REDACTED]' : undefined,
-        memoryUsage: process.memoryUsage(),
+        codeVerifier,
       });
 
-      // Return a new promise that wraps the GitHub token call
-      return githubClientInstance
-        .getToken(code, codeVerifier)
-        .then((githubTokenResponse) => {
-          logger.debug({
-            message: 'Got GitHub response',
-            githubTokenResponse,
-          });
-          // GitHub returns scopes separated by commas
-          // But OAuth wants them to be spaces
-          // https://tools.ietf.org/html/rfc6749#section-5.1
-          // Also, we need to add openid as a scope,
-          // since GitHub will have stripped it
-          const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
+      const githubTokenResponse = await githubClientInstance.getToken(
+        code,
+        codeVerifier,
+      );
 
-          return {
-            ...githubTokenResponse,
-            scope,
-          };
-        });
+      logger.debug({
+        message: 'Got GitHub response',
+        githubTokenResponse,
+      });
+
+      // GitHub returns scopes separated by commas
+      // But OAuth wants them to be spaces
+      // https://tools.ietf.org/html/rfc6749#section-5.1
+      // Also, we need to add openid as a scope,
+      // since GitHub will have stripped it
+      const scope = `openid ${githubTokenResponse.scope.replace(/,/g, ' ')}`;
+
+      return {
+        ...githubTokenResponse,
+        scope,
+      };
     } catch (error) {
       logger.error({
         message: 'Failed to get Github token',
@@ -94,7 +94,7 @@ class TokenService {
    * @param {string} host - Issuer host
    * @returns {string} Signed ID token
    */
-  static createIdToken(payload, host) {
+  static async createIdToken(payload, host) {
     try {
       logger.debug({
         message: 'Creating ID token with payload',
@@ -120,7 +120,7 @@ class TokenService {
    * @param {string} params.codeVerifier - PKCE code verifier
    * @param {string} [params.nonce] - Optional nonce for ID token
    */
-  static processTokenExchange({
+  static async processTokenExchange({
     code,
     state,
     host,
@@ -128,77 +128,54 @@ class TokenService {
     nonce = null,
   }) {
     logger.debug({
-      message: 'Starting token exchange process',
+      message: 'Processing token exchange',
       code,
       state,
+      codeVerifier: codeVerifier ? '[REDACTED]' : undefined,
       host,
-      codeVerifier,
-      nonce,
+      memoryUsage: process.memoryUsage(),
     });
 
-    return this.getGithubToken(code, state, codeVerifier)
-      .then((githubToken) => {
-        logger.debug({
-          message: 'Received GitHub token',
-          githubToken,
-        });
-
-        const githubClientInstance = githubClient(
-          Configuration.GITHUB_API_URL,
-          Configuration.GITHUB_LOGIN_URL,
-        );
-
-        return Promise.all([
-          Promise.resolve(githubToken),
-          githubClientInstance.getUserDetails(githubToken.access_token),
-          githubClientInstance.getUserEmails(githubToken.access_token),
-        ]);
-      })
-      .then(([githubToken, userInfo, userEmails]) => {
-        const primaryEmail =
-          userEmails.find((email) => email.primary) || userEmails[0];
-
-        // Create ID token payload with user info
-        const payload = {
-          sub: userInfo.id.toString(),
-          name: userInfo.name,
-          preferred_username: userInfo.login,
-          email: primaryEmail.email,
-          email_verified: primaryEmail.verified,
-          ...(nonce ? { nonce } : {}),
-        };
-
-        logger.debug({
-          message: 'Creating ID token with user info',
-          payload,
-        });
-
-        // Create ID token
-        const idToken = this.createIdToken(payload, host);
-        logger.debug({
-          message: 'Created ID token',
-          idToken,
-        });
-
-        const response = {
-          ...githubToken,
-          id_token: idToken,
-        };
-
-        logger.debug({
-          message: 'Token exchange complete',
-          response,
-        });
-
-        return response;
-      })
-      .catch((error) => {
-        logger.error({
-          message: 'Failed to get Github token',
-          error: error.message || error,
-        });
-        throw new OAuthError(errorTypes.SERVER_ERROR, error.message);
+    try {
+      // Get the GitHub token
+      const githubToken = await this.getGithubToken(code, state, codeVerifier);
+      logger.debug({
+        message: 'Got GitHub token',
+        githubToken,
       });
+
+      // Get user info from GitHub
+      const githubClientInstance = githubClient(
+        Configuration.GITHUB_API_URL,
+        Configuration.GITHUB_LOGIN_URL,
+      );
+      const userInfo = await githubClientInstance.getUserInfo(
+        githubToken.access_token,
+      );
+
+      // Create ID token
+      const payload = {
+        ...userInfo,
+        ...(nonce ? { nonce } : {}),
+      };
+      const idToken = await this.createIdToken(payload, host);
+
+      // Format response for Cognito IdP
+      const response = {
+        access_token: idToken, // Use ID token as access token for Cognito
+        token_type: 'Bearer',
+        expires_in: 3600, // Standard 1 hour expiration
+        id_token: idToken,
+      };
+
+      return response;
+    } catch (error) {
+      logger.error({
+        message: 'Failed to process token exchange',
+        error: error.message || error,
+      });
+      throw error;
+    }
   }
 }
 

@@ -13,8 +13,8 @@ class OpenIDProvider {
    * Gets user information in OpenID Connect format
    * @param {string} accessToken - GitHub access token
    */
-  static getUserInfo(accessToken) {
-    return UserInfoService.getUserInfo(accessToken);
+  static async getUserInfo(accessToken) {
+    return await UserInfoService.getUserInfo(accessToken);
   }
 
   /**
@@ -43,8 +43,8 @@ class OpenIDProvider {
    * @param {string} nonce - Nonce value for security
    * @returns {string} Authorization URL
    */
-  static getAuthorizeUrl(client_id, scope, state, response_type, nonce) {
-    return AuthorizationService.getAuthorizeUrl({
+  static async getAuthorizeUrl(client_id, scope, state, response_type, nonce) {
+    return await AuthorizationService.getAuthorizeUrl({
       client_id,
       scope,
       state,
@@ -60,7 +60,7 @@ class OpenIDProvider {
    * @param {string} host - Host URL
    * @param {string} codeVerifier - PKCE code verifier
    */
-  static getTokens(code, state, host, codeVerifier) {
+  static async getTokens(code, state, host, codeVerifier) {
     if (!code) {
       throw new Error('The code parameter is required');
     }
@@ -73,7 +73,7 @@ class OpenIDProvider {
       memoryUsage: process.memoryUsage(),
     });
 
-    const tokenResponse = TokenService.processTokenExchange({
+    const tokenResponse = await TokenService.processTokenExchange({
       code,
       state,
       host,
@@ -81,7 +81,7 @@ class OpenIDProvider {
     });
 
     logger.debug({
-      message: 'Token exchange completed',
+      message: 'processTokenExchange completed',
       memoryUsage: process.memoryUsage(),
       tokenResponse,
     });

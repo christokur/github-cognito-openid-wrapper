@@ -91,29 +91,10 @@ class GitHubClient {
     }
 
     logger.debug('getToken called with:', { code, data: params });
+    const response = await gitHubPost(endpoints.oauthToken, params);
 
-    try {
-      logger.debug('Posting to gitHubPost:', params);
-      const response = await gitHubPost(endpoints.oauthToken, params);
-      logger.debug('Response from gitHubPost:', response);
-      // Check for GitHub error response
-      if (response.error) {
-        logger.error({
-          message: 'GitHub API error',
-          error: response.error,
-          error_description: response.error_description,
-        });
-        throw new OAuthError(
-          errorTypes.INVALID_GRANT,
-          response.error_description || response.error,
-        );
-      }
-      // Parse the response if it's a string
-      return typeof response === 'string' ? qs.parse(response) : response;
-    } catch (error) {
-      logger.error('Error in getToken:', error);
-      throw error;
-    }
+    // Parse the response if it's a string
+    return typeof response === 'string' ? qs.parse(response) : response;
   }
 
   async getUserInfo(accessToken) {
@@ -123,11 +104,17 @@ class GitHubClient {
     ]);
     const primaryEmail = userEmails.find((email) => email.primary);
     if (!primaryEmail) {
-      throw new Error('User did not have a primary email address');
+      throw new OAuthError(
+        errorTypes.SERVER_ERROR,
+        'User did not have a primary email address',
+      );
     }
     return {
-      ...userDetails,
+      sub: `${userDetails.id}`,
+      name: userDetails.name,
       email: primaryEmail.email,
+      email_verified: primaryEmail.verified,
+      profile: userDetails.html_url,
     };
   }
 }

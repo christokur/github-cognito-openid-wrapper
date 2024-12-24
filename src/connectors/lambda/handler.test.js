@@ -1,87 +1,177 @@
-const { mockAxios } = require('../../sharedMocks');
-const { mockValues } = require('../../mocks');
+const logger = require('../logger');
+const { formatResponse } = require('./response-utils');
 
-// Declare intercept variables
-let logger;
-let handler;
+// Mock modules
+jest.mock('../logger');
+jest.mock('./process-request');
 
 describe('Lambda Handler', () => {
   let mockEvent;
   let mockContext;
   let mockCallback;
+  let originalEnv;
+  let processRequest;
+  let handler;
 
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
-    
-    // Load fresh copies of intercepted modules
-    logger = require('../logger');
-    handler = require('./index').handler;
+    // Save original env
+    originalEnv = process.env.NODE_ENV;
 
-    // Setup default mock event and context
+    // Reset mocks
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+
+    // Get fresh mock instance
+    processRequest = require('./process-request');
+
+    // Get fresh handler instance
+    ({ handler } = require('./index'));
+
     mockEvent = {
       path: '/authorize',
       httpMethod: 'GET',
       headers: {},
-      queryStringParameters: {},
+      queryStringParameters: {
+        client_id: 'test-client',
+        redirect_uri: 'https://example.com/callback',
+        response_type: 'code',
+      },
     };
+
     mockContext = {
       awsRequestId: 'test-request-id',
+      getRemainingTimeInMillis: jest.fn().mockReturnValue(10000),
+      callbackWaitsForEmptyEventLoop: true,
     };
+
     mockCallback = jest.fn();
   });
 
   afterEach(() => {
     jest.resetModules();
-    delete require.cache[require.resolve('../logger')];
-    delete require.cache[require.resolve('./index')];
+    jest.clearAllMocks();
+    jest.useRealTimers();
+    process.env.NODE_ENV = originalEnv;
   });
 
-  it('should handle successful request with callback', () => {
-    const response = handler(mockEvent, mockContext, mockCallback);
+  it('should handle successful request', async () => {
+    const mockResponse = {
+      statusCode: 200,
+      body: JSON.stringify({ success: true }),
+    };
 
-    expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
-      statusCode: expect.any(Number),
-      headers: expect.any(Object),
-    }));
+    processRequest.mockResolvedValue(mockResponse);
+
+    // Call handler and wait for processRequest to resolve
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(processRequest).toHaveBeenCalledWith(mockEvent, mockContext, expect.any(Object));
+    expect(mockCallback).toHaveBeenCalledWith(null, mockResponse);
+    expect(mockCallback).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle successful request without callback', () => {
-    const response = handler(mockEvent, mockContext);
-
-    expect(response).toEqual(expect.objectContaining({
-      statusCode: expect.any(Number),
-      headers: expect.any(Object),
-    }));
-  });
-
-  it('should handle missing path', () => {
+  it('should handle missing path', async () => {
     delete mockEvent.path;
-    const response = handler(mockEvent, mockContext, mockCallback);
 
-    expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
-      statusCode: 404,
-      body: expect.stringContaining('not_found'),
-    }));
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 404,
+        body: expect.stringContaining('not_found'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle unknown path', () => {
+  it('should handle unknown path', async () => {
     mockEvent.path = '/unknown';
-    const response = handler(mockEvent, mockContext, mockCallback);
 
-    expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
-      statusCode: 404,
-      body: expect.stringContaining('not_found'),
-    }));
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 404,
+        body: expect.stringContaining('not_found'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle error with callback', () => {
-    delete mockEvent.path;
-    const response = handler(mockEvent, mockContext, mockCallback);
+  it('should handle timeout', async () => {
+    mockContext.getRemainingTimeInMillis.mockReturnValue(500);
+    processRequest.mockImplementation(() => new Promise(() => {}));
 
-    expect(mockCallback).toHaveBeenCalledWith(null, expect.objectContaining({
-      statusCode: 404,
-      body: expect.stringContaining('not_found'),
-    }));
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 504,
+        body: expect.stringContaining('gateway_timeout'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('should include debug info in development', async () => {
+    process.env.NODE_ENV = 'development';
+    const error = new Error('Test error');
+    processRequest.mockRejectedValue(error);
+
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 500,
+        body: expect.stringContaining('debug'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('should handle unhandled errors', async () => {
+    const error = new Error('Test error');
+    processRequest.mockRejectedValue(error);
+
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 500,
+        body: expect.stringContaining('server_error'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('should cleanup timeout on early response', async () => {
+    mockEvent.path = '/unknown';
+
+    handler(mockEvent, mockContext, mockCallback);
+    await jest.runAllTimersAsync();
+
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        statusCode: 404,
+        body: expect.stringContaining('not_found'),
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledTimes(1);
+
+    // Fast-forward time to ensure timeout was cleared
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(mockCallback).toHaveBeenCalledTimes(1);
   });
 });

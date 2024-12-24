@@ -19,7 +19,7 @@ describe('Lambda JWKS Handler', () => {
     delete require.cache[require.resolve('./jwks')];
   });
 
-  test('should return JWKS', () => {
+  test('should return JWKS', async () => {
     const mockResponse = {
       keys: [
         {
@@ -28,15 +28,15 @@ describe('Lambda JWKS Handler', () => {
           use: 'sig',
           alg: 'RS256',
           n: 'test-modulus',
-          e: 'AQAB'
-        }
-      ]
+          e: 'AQAB',
+        },
+      ],
     };
 
-    const mockJwks = jest.fn().mockReturnValue(mockResponse);
+    const mockJwks = jest.fn().mockResolvedValue(mockResponse);
     controllers.mockReturnValue({ jwks: mockJwks });
 
-    const result = jwks.handler();
+    const result = await jwks.handler();
 
     expect(mockJwks).toHaveBeenCalled();
     expect(result).toEqual(mockResponse);

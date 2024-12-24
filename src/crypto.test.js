@@ -7,12 +7,18 @@ let jwt;
 let mockJwtSign;
 
 // Mock key content
-const mockPublicKey = '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n-----END PUBLIC KEY-----';
-const mockPrivateKey = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAA\n-----END PRIVATE KEY-----';
+const mockPublicKey =
+  '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n-----END PUBLIC KEY-----';
+const mockPrivateKey =
+  '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAA\n-----END PRIVATE KEY-----';
 
 // Mock the mock key files that crypto.js falls back to
-jest.mock('./__mocks__/privateKeyMock.js', () => mockPrivateKey, { virtual: true });
-jest.mock('./__mocks__/publicKeyMock.js', () => mockPublicKey, { virtual: true });
+jest.mock('./__mocks__/privateKeyMock.js', () => mockPrivateKey, {
+  virtual: true,
+});
+jest.mock('./__mocks__/publicKeyMock.js', () => mockPublicKey, {
+  virtual: true,
+});
 
 describe('Crypto', () => {
   beforeEach(() => {
@@ -28,15 +34,15 @@ describe('Crypto', () => {
         toJSON: () => ({
           kty: 'RSA',
           n: 'test-modulus',
-          e: 'test-exponent'
-        })
-      })
+          e: 'test-exponent',
+        }),
+      }),
     }));
 
     // Mock jsonwebtoken
     mockJwtSign = jest.fn().mockReturnValue('test.jwt.token');
     jest.mock('jsonwebtoken', () => ({
-      sign: mockJwtSign
+      sign: mockJwtSign,
     }));
 
     // Mock config with paths that crypto.js will try to require
@@ -45,7 +51,7 @@ describe('Crypto', () => {
       JWT_KEY_ID: 'test-key-id',
       GITHUB_CLIENT_ID: 'test-client-id',
       JWT_PRIVATE_KEY_PATH: './__mocks__/privateKeyMock.js',
-      JWT_PUBLIC_KEY_PATH: './__mocks__/publicKeyMock.js'
+      JWT_PUBLIC_KEY_PATH: './__mocks__/publicKeyMock.js',
     }));
 
     // Load modules after mocks are set up
@@ -76,7 +82,7 @@ describe('Crypto', () => {
         kid: 'test-key-id',
         kty: 'RSA',
         n: 'test-modulus',
-        e: 'test-exponent'
+        e: 'test-exponent',
       });
     });
 
@@ -85,7 +91,9 @@ describe('Crypto', () => {
         throw new Error('Test error');
       });
 
-      expect(() => crypto.getPublicKey()).toThrow('Failed to get public key: Test error');
+      expect(() => crypto.getPublicKey()).toThrow(
+        'Failed to get public key: Test error',
+      );
     });
 
     it('should handle missing key files', () => {
@@ -97,7 +105,7 @@ describe('Crypto', () => {
         kid: 'test-key-id',
         kty: 'RSA',
         n: 'test-modulus',
-        e: 'test-exponent'
+        e: 'test-exponent',
       });
     });
   });
@@ -105,7 +113,7 @@ describe('Crypto', () => {
   describe('makeIdToken', () => {
     const payload = {
       sub: 'test-subject',
-      name: 'Test User'
+      name: 'Test User',
     };
     const host = 'test.host.com';
 
@@ -116,14 +124,14 @@ describe('Crypto', () => {
         {
           ...payload,
           iss: `https://${host}`,
-          aud: 'test-client-id'
+          aud: 'test-client-id',
         },
         mockPrivateKey,
         {
           expiresIn: '1h',
           algorithm: 'RS256',
-          keyid: 'test-key-id'
-        }
+          keyid: 'test-key-id',
+        },
       );
       expect(result).toBe('test.jwt.token');
     });
@@ -133,7 +141,9 @@ describe('Crypto', () => {
         throw new Error('Test error');
       });
 
-      expect(() => crypto.makeIdToken(payload, host)).toThrow('Failed to create ID token: Test error');
+      expect(() => crypto.makeIdToken(payload, host)).toThrow(
+        'Failed to create ID token: Test error',
+      );
     });
 
     it('should handle missing key files', () => {

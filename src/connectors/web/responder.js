@@ -3,7 +3,7 @@ const util = require('util');
 require('colors');
 
 module.exports = (res) => ({
-  success: (data) => {
+  success: async (data) => {
     res.format({
       'application/json': () => {
         res.json(data);
@@ -13,9 +13,9 @@ module.exports = (res) => ({
       },
     });
   },
-  error: (error) => {
+  error: async (error) => {
     res.statusCode = 400;
     res.end(`Failure: ${util.inspect(error.message)}`);
   },
-  redirect: (url) => res.redirect(url),
+  redirect: async (url) => res.redirect(url),
 });

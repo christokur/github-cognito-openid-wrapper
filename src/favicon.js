@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const logger = require('./connectors/logger');
 const {
@@ -10,44 +10,58 @@ const {
 let base64Part;
 let faviconBuffer;
 
-// Try webpack-bundled asset first (for Lambda)
-try {
-  const webpackAsset = require('./assets/favicon.ico');
-  // Extract the base64 data from the data URL
-  [, base64Part] = webpackAsset.split('base64,');
-  if (!base64Part) {
-    logger.error('Invalid asset format', {
-      assetStart: webpackAsset.substring(0, 50),
-    });
-    throw new Error('Invalid asset format');
-  }
-} catch (error) {
-  // Fallback to direct file access (for local development)
+// Initialize favicon data
+async function initializeFavicon() {
   try {
-    const faviconPath = path.join(__dirname, 'assets', 'favicon.ico');
-    // For filesystem, we need to encode to base64
-    const faviconBin = fs.readFileSync(faviconPath);
-    base64Part = faviconBin.toString('base64');
-  } catch (fsError) {
-    logger.error('Failed to load favicon:', fsError);
-    throw fsError;
-  }
-}
+    // Try webpack-bundled asset first (for Lambda)
+    try {
+      const webpackAsset = require('./assets/favicon.ico');
+      // Extract the base64 data from the data URL
+      [, base64Part] = webpackAsset.split('base64,');
+      if (!base64Part) {
+        logger.error('Invalid asset format', {
+          assetStart: webpackAsset.substring(0, 50),
+        });
+        throw new Error('Invalid asset format');
+      }
+    } catch (error) {
+      // Fallback to direct file access (for local development)
+      const faviconPath = path.join(__dirname, 'assets', 'favicon.ico');
+      // For filesystem, we need to encode to base64
+      const faviconBin = await fs.readFile(faviconPath);
+      base64Part = faviconBin.toString('base64');
+    }
 
-// Handler for favicon requests
-function handler(event, context) {
-  try {
-    // Always verify request as it's a security check
-    verifyRequest(event);
-
-    // Decode base64 to binary buffer
+    // Initialize the buffer
     faviconBuffer = Buffer.from(base64Part, 'base64');
-    logger.debug('Loaded favicon from base64 string', {
+    logger.debug('Initialized favicon from base64 string', {
       base64Length: base64Part.length,
       bufferLength: faviconBuffer.length,
       bufferStart: faviconBuffer.subarray(0, 8).toString('hex'),
     });
-    logger.info('Loaded favicon from base64 string');
+  } catch (error) {
+    logger.error('Failed to initialize favicon:', error);
+    throw error;
+  }
+}
+
+// Handler for favicon requests
+async function handler(event, context) {
+  try {
+    // Initialize favicon if not already done
+    if (!faviconBuffer) {
+      try {
+        await initializeFavicon();
+      } catch (error) {
+        return {
+          statusCode: 500,
+          body: 'Internal Server Error'
+        };
+      }
+    }
+
+    // Always verify request as it's a security check
+    await verifyRequest(event);
 
     // Verify the ICO format
     if (process.env.LOG_LEVEL === 'debug') {
@@ -55,7 +69,7 @@ function handler(event, context) {
         firstBytes: faviconBuffer.subarray(0, 4).toString('hex'),
         expectedBytes: '00000100',
       });
-      verifyIco(faviconBuffer);
+      await verifyIco(faviconBuffer);
     }
 
     // Generate response with the binary buffer directly encoded to base64
@@ -65,14 +79,14 @@ function handler(event, context) {
         'Content-Type': 'image/x-icon',
         'Cache-Control': 'public, max-age=31536000',
       },
-      body: faviconBuffer.toString('base64'),
+      body: base64Part,
       isBase64Encoded: true,
     };
 
     // Only verify response in debug mode to save CPU
     if (process.env.LOG_LEVEL === 'debug') {
       logger.debug('Verifying favicon response');
-      verifyResponse(response);
+      await verifyResponse(response);
       logger.debug('API response', {
         isBase64Encoded: response.isBase64Encoded,
         bodyLength: response.body.length,
@@ -86,8 +100,17 @@ function handler(event, context) {
     return response;
   } catch (error) {
     logger.error('Error serving favicon:', error);
-    throw error;
+    return {
+      statusCode: 500,
+      body: 'Internal Server Error'
+    };
   }
 }
 
-module.exports = { handler };
+// Initialize favicon on module load
+initializeFavicon().catch((error) => {
+  logger.error('Failed to initialize favicon on module load:', error);
+});
+
+// Export handler
+module.exports = { handler, initializeFavicon };

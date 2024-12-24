@@ -1,6 +1,6 @@
 const controllers = require('../controllers');
 
-module.exports.handler = (event, context) => {
+module.exports.handler = async (event, context) => {
   try {
     // Get the host from the event headers
     let host = event.headers && event.headers.Host;
@@ -20,7 +20,8 @@ module.exports.handler = (event, context) => {
     if (!host.startsWith('http://') && !host.startsWith('https://')) {
       host = `https://${host}`;
     }
-    return controllers().openIdConfiguration(host);
+    const response = await controllers().openIdConfiguration(host);
+    return response;
   } catch (error) {
     return {
       statusCode: 500,

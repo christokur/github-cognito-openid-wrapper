@@ -33,13 +33,15 @@ describe('GitHub Client - Response Handling', () => {
 
       const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getUserDetails('test_token')).rejects.toThrow(
-        'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+        'GitHub API responded with 429: API rate limit exceeded',
       );
 
       // Verify axios was called correctly
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user`,
         {
+          url: `${mockValues.GITHUB_API_URL}/user`,
+          method: 'GET',
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: 'token test_token',
@@ -67,6 +69,8 @@ describe('GitHub Client - Response Handling', () => {
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user`,
         {
+          url: `${mockValues.GITHUB_API_URL}/user`,
+          method: 'GET',
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: 'token test_token',
@@ -83,7 +87,7 @@ describe('GitHub Client - Response Handling', () => {
 
       const client = github(mockValues.GITHUB_API_URL);
       await expect(client.getToken('test_code')).rejects.toThrow(
-        'Network error occurred while contacting GitHub API',
+        'Network Error',
       );
     });
   });

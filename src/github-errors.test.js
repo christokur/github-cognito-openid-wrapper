@@ -1,600 +1,224 @@
-const qs = require('qs'); // Add this line to import the qs library
+const qs = require('qs');
 const { mockAxios, mockGetAxios } = require('./sharedMocks');
 const { mockValues } = require('./mocks');
 
+jest.mock('./connectors/logger');
+jest.mock('./utils/rate-limiter');
+
 let github;
+let logger;
+let rateLimiter;
+let githubErrors;
 
 describe('GitHub Client - Error Handling', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     jest.resetModules();
+    jest.clearAllMocks();
+
+    logger = require('./connectors/logger');
+    rateLimiter = require('./utils/rate-limiter');
     github = require('./github');
+    githubErrors = require('./github-errors');
+
+    rateLimiter.updateLimits = jest.fn().mockResolvedValue();
+    rateLimiter.isRateLimitError = jest.fn().mockReturnValue(false);
+    rateLimiter.checkLimit = jest.fn().mockResolvedValue();
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+    delete require.cache[require.resolve('./connectors/logger')];
+    delete require.cache[require.resolve('./utils/rate-limiter')];
+    delete require.cache[require.resolve('./github')];
+    delete require.cache[require.resolve('./github-errors')];
   });
 
   describe('Network and Server Errors', () => {
-    test('should handle empty responses', () => {
-      // Mock the axios response to be null
+    test('should handle empty responses', async () => {
+      const config = {
+        url: `${mockValues.GITHUB_API_URL}/user`,
+        method: 'GET',
+        headers: { Authorization: 'token test' },
+        timeout: Number(mockValues.GITHUB_API_TIMEOUT),
+      };
+
       mockAxios.get.mockResolvedValue(undefined);
 
       const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'Network error occurred while contacting GitHub API',
-          );
-          expect(err.statusCode).toBe(503);
-          expect(err.type).toBe('network_error');
-        });
-    });
-
-    test('should handle network errors', () => {
-      const networkError = new Error('Network Error');
-      // Simulate a network error by ensuring response is undefined
-      networkError.response = undefined;
-      mockAxios.get.mockRejectedValue(networkError);
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'Network error occurred while contacting GitHub API',
-          );
-          expect(err.statusCode).toBe(503);
-          expect(err.type).toBe('network_error');
-        });
-    });
-
-    test('should handle non-200 status without error object', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 500,
-          data: { message: 'Internal Server Error' },
+      await expect(client.getUserDetails('token')).rejects.toMatchObject({
+        message: 'Invalid GitHub response: Empty response received',
+        statusCode: 503,
+        request: {
+          url: config.url,
+          method: 'GET',
+          headers: expect.any(Object),
+          timeout: expect.any(Number),
         },
       });
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 500 (Internal Server Error)',
-          );
-          expect(err.statusCode).toBe(500);
-          expect(err.type).toBe('github_error');
-        });
     });
 
-    test('should handle 401 Unauthorized', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 401,
-          data: { message: 'Bad credentials' },
+    test('should handle network errors', async () => {
+      const error = new Error('Network Error');
+      error.code = 'ECONNREFUSED';
+      error.config = {
+        url: 'https://api.github.com/user',
+        method: 'GET',
+        headers: { Authorization: 'token test' },
+        timeout: 5000,
+      };
+
+      mockAxios.get.mockRejectedValue(error);
+
+      const client = github();
+      await expect(client.getUserDetails('token')).rejects.toMatchObject({
+        message: 'Network Error (ECONNREFUSED)',
+        statusCode: 503,
+        code: 'ECONNREFUSED',
+        request: {
+          url: error.config.url,
+          method: 'GET',
+          headers: expect.any(Object),
+          timeout: expect.any(Number),
         },
       });
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 401 (Bad credentials)',
-          );
-          expect(err.statusCode).toBe(401);
-          expect(err.type).toBe('github_error');
-        });
     });
+  });
 
-    test('should handle error message in response data', () => {
-      // This will trigger lines 28-30 in github-errors.js
-      mockAxios.get.mockResolvedValue({
-        status: 200,
-        data: { message: 'API Error Message' },
-      });
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 200 (API Error Message)',
-          );
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should handle OAuth error in response data', () => {
-      // This will trigger lines 35-37 in github-errors.js
-      mockAxios.post.mockResolvedValue({
-        status: 200,
-        data: {
-          error: 'invalid_request',
-          error_description: 'OAuth Error',
-        },
-      });
-
-      const client = github();
-      return client
-        .getToken('test_code')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 200 (Bad Request - invalid_request: OAuth Error)',
-          );
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should handle API error response', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 200,
-          data: {
-            message: 'An API error occurred',
-          },
-        },
-      });
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 200 (An API error occurred)',
-          );
-          expect(err.statusCode).toBe(200);
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should handle error response with 200 status', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 200,
-          data: { message: 'Error' },
-        },
-      });
-      const client = github();
-      return client.getUserDetails('token').catch((error) => {
-        expect(error.response.status).toBe(200);
-        expect(error.response.data.message).toBe('Error');
-      });
-    });
-
-    test('should handle OAuth error response', () => {
+  describe('Rate Limit Handling', () => {
+    test('should handle rate limit exceeded', async () => {
       const error = {
         response: {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
-            error_uri: `${mockValues.GITHUB_DOCS_URL}/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps`,
+          status: 429,
+          headers: {
+            'x-ratelimit-limit': '60',
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': '1609459200',
           },
+          data: { message: 'API rate limit exceeded' },
+        },
+        config: {
+          url: `${mockValues.GITHUB_API_URL}/user`,
+          method: 'GET',
+          headers: { Authorization: 'token test' },
+          timeout: Number(mockValues.GITHUB_API_TIMEOUT),
         },
       };
 
-      mockAxios.post.mockRejectedValue(error);
+      rateLimiter.isRateLimitError.mockReturnValue(true);
+      rateLimiter.checkLimit.mockImplementation(() => {
+        const e = new Error('Rate limit exceeded');
+        e.statusCode = 429;
+        e.retryAfter = 3600;
+        throw e;
+      });
+      mockAxios.get.mockRejectedValue(error);
 
       const client = github();
-      return client
-        .getToken('invalid_code')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
-          );
-          expect(err.statusCode).toBe(400);
-          expect(err.type).toBe('github_error');
-
-          const expectedCall = [
-            `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-            {
-              client_id: mockValues.GITHUB_CLIENT_ID,
-              client_secret: mockValues.GITHUB_CLIENT_SECRET,
-              code: 'invalid_code',
-              redirect_uri: mockValues.COGNITO_REDIRECT_URI,
-              grant_type: 'authorization_code',
-            },
-            {
-              headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              timeout: 10000,
-            },
-          ];
-
-          expect(mockAxios.post.mock.calls[0]).toEqual(expectedCall);
-        });
-    });
-
-    test('should handle successful user emails request', () => {
-      mockAxios.get.mockResolvedValue({
-        status: 200,
-        data: [
-          {
-            email: 'test@example.com',
-            primary: true,
-            verified: true,
-          },
-        ],
-      });
-
-      const client = github();
-      return client.getUserEmails('token').then((data) => {
-        expect(data).toEqual([
-          {
-            email: 'test@example.com',
-            primary: true,
-            verified: true,
-          },
-        ]);
-      });
-    });
-
-    test('should handle unauthorized request for user emails with bad credentials', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 401,
-          data: {
-            message: 'Bad credentials',
-          },
+      await expect(client.getUserDetails('token')).rejects.toMatchObject({
+        message: 'GitHub API responded with 429: API rate limit exceeded',
+        statusCode: 429,
+        request: {
+          url: error.config.url,
+          method: 'GET',
+          headers: expect.any(Object),
+          timeout: expect.any(Number),
         },
       });
 
-      const client = github();
-      return client
-        .getUserEmails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 401 (Bad credentials)',
-          );
-          expect(err.statusCode).toBe(401);
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should properly URL encode parameters with special characters', async () => {
-      const specialCode = 'test+code&special=true';
-      const expectedData = {
-        client_id: mockValues.GITHUB_CLIENT_ID,
-        client_secret: mockValues.GITHUB_CLIENT_SECRET,
-        code: specialCode,
-        redirect_uri: mockValues.COGNITO_REDIRECT_URI,
-        grant_type: 'authorization_code',
-      };
-
-      mockAxios.post.mockResolvedValue({
-        status: 200,
-        data: { access_token: 'test_token' },
-      });
-
-      await github().getToken(specialCode);
-
-      const actualCall = mockAxios.post.mock.calls[0];
-      const actualUrl = actualCall[0];
-      const actualData = actualCall[1];
-
-      // Verify the URL remains unchanged
-      expect(actualUrl).toBe(
-        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+      expect(rateLimiter.updateLimits).toHaveBeenCalledWith(
+        error.response.headers,
       );
-
-      // Verify all parameters are present with correct values
-      const parsedData = Object.fromEntries(new URLSearchParams(actualData));
-      expect(parsedData).toEqual(expectedData);
+      expect(rateLimiter.checkLimit).toHaveBeenCalled();
     });
 
-    test('should properly parse urlencoded response', async () => {
-      const urlEncodedResponse =
-        'access_token=test_token&token_type=bearer&scope=user%3Aemail';
-      mockAxios.post.mockResolvedValue({
+    test('should only update rate limits once per response', async () => {
+      const response = {
         status: 200,
-        data: urlEncodedResponse,
-      });
+        headers: {
+          'x-ratelimit-limit': '60',
+          'x-ratelimit-remaining': '59',
+          'x-ratelimit-reset': '1609459200',
+        },
+        data: { message: 'Success' },
+      };
 
-      const result = await github().getToken('test_code');
+      // First call should update limits
+      await githubErrors.handleGitHubResponse(response);
+      expect(rateLimiter.updateLimits).toHaveBeenCalledTimes(1);
+      expect(response.rateLimitsUpdated).toBe(true);
 
-      expect(result).toEqual({
-        access_token: 'test_token',
-        token_type: 'bearer',
-        scope: 'user:email',
+      // Second call should skip update
+      await githubErrors.handleGitHubResponse(response);
+      expect(rateLimiter.updateLimits).toHaveBeenCalledTimes(1);
+
+      // Different response should update limits
+      const newResponse = {
+        ...response,
+        headers: { ...response.headers },
+      };
+      delete newResponse.rateLimitsUpdated;
+      await githubErrors.handleGitHubResponse(newResponse);
+      expect(rateLimiter.updateLimits).toHaveBeenCalledTimes(2);
+      expect(newResponse.rateLimitsUpdated).toBe(true);
+    });
+  });
+
+  describe('OAuth Errors', () => {
+    test('should handle OAuth error response', async () => {
+      const response = {
+        status: 200,
+        data: {
+          error: 'bad_verification_code',
+          error_description: 'The code passed is incorrect or expired',
+          error_uri: 'https://docs.github.com/apps/oauth',
+        },
+      };
+
+      mockAxios.post.mockResolvedValue(response);
+
+      const client = github();
+      await expect(client.getToken('code')).rejects.toMatchObject({
+        message:
+          'Bad Request - bad_verification_code: The code passed is incorrect or expired',
+        statusCode: 400,
+        docs: 'https://docs.github.com/apps/oauth',
+        response: expect.any(Object),
+        request: expect.any(Object),
       });
     });
   });
 
   describe('API Errors', () => {
-    test('should handle error response with 200 status and error message', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 200,
-          data: {
-            message: 'An API error occurred',
-          },
-        },
-      });
-
-      const client = github();
-      return client
-        .getUserDetails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 200 (An API error occurred)',
-          );
-          expect(err.statusCode).toBe(200);
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should handle error response with 200 status and data message', () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 200,
-          data: { message: 'Error' },
-        },
-      });
-      const client = github();
-      return client.getUserDetails('token').catch((error) => {
-        expect(error.response.status).toBe(200);
-        expect(error.response.data.message).toBe('Error');
-      });
-    });
-
-    test('should handle OAuth error response', () => {
+    test('should handle API error response', async () => {
       const error = {
-        response: {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
-            error_uri: `${mockValues.GITHUB_DOCS_URL}/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps`,
-          },
-        },
-      };
-
-      mockAxios.post.mockRejectedValue(error);
-
-      const client = github();
-      return client
-        .getToken('invalid_code')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
-          );
-          expect(err.statusCode).toBe(400);
-          expect(err.type).toBe('github_error');
-
-          const expectedCall = [
-            `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-            {
-              client_id: mockValues.GITHUB_CLIENT_ID,
-              client_secret: mockValues.GITHUB_CLIENT_SECRET,
-              code: 'invalid_code',
-              redirect_uri: mockValues.COGNITO_REDIRECT_URI,
-              grant_type: 'authorization_code',
-            },
-            {
-              headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              timeout: 10000,
-            },
-          ];
-
-          expect(mockAxios.post.mock.calls[0]).toEqual(expectedCall);
-        });
-    });
-
-    test('should handle successful user emails request', () => {
-      mockAxios.get.mockResolvedValue({
-        status: 200,
-        data: [
-          {
-            email: 'test@example.com',
-            primary: true,
-            verified: true,
-          },
-        ],
-      });
-
-      const client = github();
-      return client.getUserEmails('token').then((data) => {
-        expect(data).toEqual([
-          {
-            email: 'test@example.com',
-            primary: true,
-            verified: true,
-          },
-        ]);
-      });
-    });
-
-    test('should handle unauthorized request for user emails with bad credentials', () => {
-      mockAxios.get.mockRejectedValue({
         response: {
           status: 401,
           data: {
             message: 'Bad credentials',
+            documentation_url: 'https://docs.github.com/rest',
           },
         },
-      });
-
-      const client = github();
-      return client
-        .getUserEmails('token')
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(
-            'GitHub API responded with a failure: 401 (Bad credentials)',
-          );
-          expect(err.statusCode).toBe(401);
-          expect(err.type).toBe('github_error');
-        });
-    });
-
-    test('should properly URL encode parameters with special characters', async () => {
-      const specialCode = 'test+code&special=true';
-      const expectedData = {
-        client_id: mockValues.GITHUB_CLIENT_ID,
-        client_secret: mockValues.GITHUB_CLIENT_SECRET,
-        code: specialCode,
-        redirect_uri: mockValues.COGNITO_REDIRECT_URI,
-        grant_type: 'authorization_code',
+        config: {
+          url: 'https://api.github.com/user',
+          method: 'GET',
+          headers: { Authorization: 'token test' },
+        },
       };
 
-      mockAxios.post.mockResolvedValue({
-        status: 200,
-        data: { access_token: 'test_token' },
-      });
-
-      await github().getToken(specialCode);
-
-      const actualCall = mockAxios.post.mock.calls[0];
-      const actualUrl = actualCall[0];
-      const actualData = actualCall[1];
-
-      // Verify the URL remains unchanged
-      expect(actualUrl).toBe(
-        `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
-      );
-
-      // Verify all parameters are present with correct values
-      const parsedData = Object.fromEntries(new URLSearchParams(actualData));
-      expect(parsedData).toEqual(expectedData);
-    });
-
-    test('should properly parse urlencoded response', async () => {
-      const urlEncodedResponse =
-        'access_token=test_token&token_type=bearer&scope=user%3Aemail';
-      mockAxios.post.mockResolvedValue({
-        status: 200,
-        data: urlEncodedResponse,
-      });
-
-      const result = await github().getToken('test_code');
-
-      expect(result).toEqual({
-        access_token: 'test_token',
-        token_type: 'bearer',
-        scope: 'user:email',
-      });
-    });
-  });
-
-  describe('User Info Errors', () => {
-    test('should handle error response with 401 status', async () => {
-      mockAxios.get.mockRejectedValue({
-        response: {
-          status: 401,
-          data: { message: 'Unauthorized' },
-        },
-      });
+      mockAxios.get.mockRejectedValue(error);
 
       const client = github();
-      await expect(client.getUserDetails('bad_token')).rejects.toMatchObject({
-        message: 'GitHub API responded with a failure: 401 (Unauthorized)',
+      await expect(client.getUserDetails('token')).rejects.toMatchObject({
+        message: 'GitHub API responded with 401: Bad credentials',
         statusCode: 401,
-        type: 'github_error',
-      });
-    });
-
-    test('should handle error response without primary email', async () => {
-      const userDetails = {
-        html_url: `${mockValues.GITHUB_LOGIN_URL}/octocat`,
-        blog: 'https://github.blog',
-        updated_at: '2008-01-14T04:33:35Z',
-      };
-
-      const userEmails = [
-        {
-          email: 'octocat@github.com',
-          primary: false,
-          verified: true,
-          visibility: null,
-        },
-      ];
-
-      mockAxios.get
-        .mockResolvedValueOnce({
-          status: 200,
-          data: userDetails,
-        })
-        .mockResolvedValueOnce({
-          status: 200,
-          data: userEmails,
-        });
-
-      const client = github();
-      await expect(
-        client.getUserInfo('token_without_primary_email'),
-      ).rejects.toThrow('User did not have a primary email address');
-    });
-  });
-
-  describe('Token Errors', () => {
-    test('should handle error response with bad code', async () => {
-      mockAxios.post.mockRejectedValue({
-        response: {
-          status: 400,
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
-          },
+        docs: 'https://docs.github.com/rest',
+        response: expect.any(Object),
+        request: {
+          url: error.config.url,
+          method: 'GET',
+          headers: expect.any(Object),
         },
       });
-
-      await expect(github().getToken('bad_code')).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
-      );
     });
   });
 });

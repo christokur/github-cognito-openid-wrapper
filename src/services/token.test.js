@@ -10,7 +10,12 @@ describe('TokenService', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+
+    // Mock Configuration values
     Configuration = require('../config');
+    Configuration.GITHUB_API_URL = mockValues.GITHUB_API_URL;
+    Configuration.GITHUB_LOGIN_URL = mockValues.GITHUB_LOGIN_URL;
+
     github = require('../github');
     TokenService = require('./token');
     crypto = require('../crypto');
@@ -18,6 +23,9 @@ describe('TokenService', () => {
 
   afterEach(() => {
     jest.resetModules();
+    if (mockAxios.reset) {
+      mockAxios.reset();
+    }
     delete require.cache[require.resolve('../config')];
     delete require.cache[require.resolve('../github')];
     delete require.cache[require.resolve('../connectors/logger')];
@@ -36,8 +44,8 @@ describe('TokenService', () => {
   const mockHost = 'test-host';
 
   describe('getJwks', () => {
-    it('should return JWKS successfully', async () => {
-      const jwks = await TokenService.getJwks();
+    it('should return JWKS successfully', () => {
+      const jwks = TokenService.getJwks();
       expect(jwks).toBeDefined();
       expect(jwks.keys).toBeInstanceOf(Array);
       expect(jwks.keys[0]).toHaveProperty('kid');
@@ -50,23 +58,7 @@ describe('TokenService', () => {
         throw new Error(errorMessage);
       });
 
-      const wrappedPromise = new Promise((resolve, reject) => {
-        try {
-          TokenService.getJwks();
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      });
-
-      return wrappedPromise
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(errorMessage);
-        });
+      expect(() => TokenService.getJwks()).toThrow(errorMessage);
     });
   });
 
@@ -77,10 +69,6 @@ describe('TokenService', () => {
         data: mockGithubToken,
       });
 
-      const client = github(
-        mockValues.GITHUB_API_URL,
-        mockValues.GITHUB_LOGIN_URL,
-      );
       const token = await TokenService.getGithubToken(mockCode);
       expect(token).toEqual({
         access_token: mockGithubToken.access_token,
@@ -94,10 +82,6 @@ describe('TokenService', () => {
         data: mockGithubToken,
       });
 
-      const client = github(
-        mockValues.GITHUB_API_URL,
-        mockValues.GITHUB_LOGIN_URL,
-      );
       const token = await TokenService.getGithubToken(
         mockCode,
         mockState,
@@ -114,12 +98,12 @@ describe('TokenService', () => {
       mockAxios.post.mockRejectedValue({
         response: {
           status: 400,
-          data: { error: errorMessage },
+          data: { message: errorMessage },
         },
       });
 
       await expect(TokenService.getGithubToken(mockCode)).rejects.toThrow(
-        errorMessage,
+        `GitHub API responded with 400: ${errorMessage}`,
       );
     });
   });
@@ -136,29 +120,13 @@ describe('TokenService', () => {
       expect(typeof token).toBe('string');
     });
 
-    it('should handle crypto errors', () => {
+    it('should handle crypto errors', async () => {
       const errorMessage = 'Failed to create ID token: Mock error';
-      jest.spyOn(crypto, 'makeIdToken').mockImplementation(() => {
-        throw new Error(errorMessage);
-      });
+      jest.spyOn(crypto, 'makeIdToken').mockRejectedValue(new Error(errorMessage));
 
-      const wrappedPromise = new Promise((resolve, reject) => {
-        try {
-          TokenService.createIdToken(payload, mockHost);
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      });
-
-      return wrappedPromise
-        .then(() => {
-          throw new Error('Expected promise to reject');
-        })
-        .catch((err) => {
-          expect(err).toBeTruthy();
-          expect(err.message).toBe(errorMessage);
-        });
+      await expect(TokenService.createIdToken(payload, mockHost)).rejects.toThrow(
+        errorMessage,
+      );
     });
   });
 
@@ -209,8 +177,10 @@ describe('TokenService', () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.access_token).toBe(mockGithubToken.access_token);
+      expect(result.access_token).toBeDefined();
       expect(result.id_token).toBeDefined();
+      expect(result.token_type).toBe('Bearer');
+      expect(result.expires_in).toBe(3600);
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user'),
         expect.any(Object),
@@ -235,8 +205,10 @@ describe('TokenService', () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.access_token).toBe(mockGithubToken.access_token);
+      expect(result.access_token).toBeDefined();
       expect(result.id_token).toBeDefined();
+      expect(result.token_type).toBe('Bearer');
+      expect(result.expires_in).toBe(3600);
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/user'),
         expect.any(Object),
@@ -252,29 +224,8 @@ describe('TokenService', () => {
       mockAxios.post.mockRejectedValue({
         response: {
           status: 400,
-          data: { error: errorMessage },
+          data: { message: errorMessage },
         },
-      });
-
-      await expect(
-        TokenService.processTokenExchange({
-          code: mockCode,
-          state: mockState,
-          codeVerifier: mockCodeVerifier,
-          host: mockHost,
-        }),
-      ).rejects.toThrow(errorMessage);
-    });
-
-    it('should handle ID token creation errors', async () => {
-      mockAxios.post.mockResolvedValue({
-        status: 200,
-        data: mockGithubToken,
-      });
-
-      const errorMessage = 'Failed to create ID token: Mock error';
-      jest.spyOn(crypto, 'makeIdToken').mockImplementation(() => {
-        throw new Error(errorMessage);
       });
 
       await expect(

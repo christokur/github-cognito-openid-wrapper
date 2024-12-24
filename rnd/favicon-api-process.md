@@ -112,6 +112,7 @@ try {
         verifyResponse(response);
     }
     ```
+
 - **Response Format**:
 
   ```javascript

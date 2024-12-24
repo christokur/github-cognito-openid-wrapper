@@ -1,7 +1,7 @@
 const logger = require('../../logger');
 
-module.exports = (callback) => ({
-  success: (response) => {
+module.exports = () => ({
+  success: async (response) => {
     logger.info({
       message: 'Success response',
     });
@@ -9,15 +9,15 @@ module.exports = (callback) => ({
       message: 'Response was: ',
       response,
     });
-    callback(null, {
+    return {
       statusCode: 200,
       body: JSON.stringify(response),
       headers: {
         'Content-Type': 'application/json',
       },
-    });
+    };
   },
-  error: (err) => {
+  error: async (err) => {
     logger.error({
       message: 'Error response',
       error: err.message || err,
@@ -26,7 +26,7 @@ module.exports = (callback) => ({
       error: err.type || 'server_error',
       error_description: err.message || 'An unexpected error occurred',
     };
-    callback(null, {
+    return {
       statusCode: err.statusCode || 400,
       body: JSON.stringify(errorResponse),
       headers: {
@@ -34,9 +34,9 @@ module.exports = (callback) => ({
         'Cache-Control': 'no-store',
         Pragma: 'no-cache',
       },
-    });
+    };
   },
-  redirect: (url) => {
+  redirect: async (url) => {
     logger.info({
       message: 'Redirect response',
     });
@@ -44,11 +44,11 @@ module.exports = (callback) => ({
       message: 'Redirect response to',
       url,
     });
-    callback(null, {
+    return {
       statusCode: 302,
       headers: {
         Location: url,
       },
-    });
+    };
   },
 });

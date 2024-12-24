@@ -39,6 +39,8 @@ describe('Controllers', () => {
     openid.getAuthorizeUrl = jest.fn();
     openid.getTokens = jest.fn();
     openid.getUserInfo = jest.fn();
+    openid.getJwks = jest.fn();
+    openid.getConfigFor = jest.fn();
     logger.info = jest.fn();
     logger.error = jest.fn();
     logger.debug = jest.fn();
@@ -49,7 +51,7 @@ describe('Controllers', () => {
       client_id: 'mock-client-id',
       scope: 'openid',
       state: 'test-state-12345678',
-      response_type: 'code'
+      response_type: 'code',
     };
 
     beforeEach(() => {
@@ -57,12 +59,12 @@ describe('Controllers', () => {
       openid.getAuthorizeUrl.mockReturnValue('https://example.com/auth');
     });
 
-    it('should return redirect response for valid input', () => {
-      const result = controllers.authorize(
+    it('should return redirect response for valid input', async () => {
+      const result = await controllers.authorize(
         validInput.client_id,
         validInput.scope,
         validInput.state,
-        validInput.response_type
+        validInput.response_type,
       );
 
       expect(validator.validate).toHaveBeenCalledWith('authorize', validInput);
@@ -70,7 +72,7 @@ describe('Controllers', () => {
         validInput.client_id,
         validInput.scope,
         validInput.state,
-        validInput.response_type
+        validInput.response_type,
       );
       expect(result).toEqual({
         statusCode: 302,
@@ -82,21 +84,29 @@ describe('Controllers', () => {
       });
     });
 
-    it('should handle validation errors', () => {
-      const validationError = new validator.ValidationError('Invalid client_id', 'client_id', validInput.client_id);
-      validationError.errors = [{
-        name: 'ValidationError',
-        field: 'client_id',
-        value: validInput.client_id,
-        message: 'Invalid client_id'
-      }];
-      validator.validate.mockImplementation(() => { throw validationError; });
+    it('should handle validation errors', async () => {
+      const validationError = new validator.ValidationError(
+        'Invalid client_id',
+        'client_id',
+        validInput.client_id,
+      );
+      validationError.errors = [
+        {
+          name: 'ValidationError',
+          field: 'client_id',
+          value: validInput.client_id,
+          message: 'Invalid client_id',
+        },
+      ];
+      validator.validate.mockImplementation(() => {
+        throw validationError;
+      });
 
-      const result = controllers.authorize(
+      const result = await controllers.authorize(
         validInput.client_id,
         validInput.scope,
         validInput.state,
-        validInput.response_type
+        validInput.response_type,
       );
 
       expect(result).toEqual({
@@ -109,12 +119,39 @@ describe('Controllers', () => {
         body: JSON.stringify({
           error: 'invalid_request',
           error_description: 'Invalid client_id',
-          validation_errors: [{
-            name: 'ValidationError',
-            field: 'client_id',
-            value: validInput.client_id,
-            message: 'Invalid client_id'
-          }]
+          validation_errors: [
+            {
+              name: 'ValidationError',
+              field: 'client_id',
+              value: validInput.client_id,
+              message: 'Invalid client_id',
+            },
+          ],
+        }),
+      });
+    });
+
+    it('should handle rate limit errors', async () => {
+      openid.getAuthorizeUrl.mockRejectedValue(new Error('rate limit exceeded'));
+
+      const result = await controllers.authorize(
+        validInput.client_id,
+        validInput.scope,
+        validInput.state,
+        validInput.response_type,
+      );
+
+      expect(result).toEqual({
+        statusCode: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          Pragma: 'no-cache',
+          'Retry-After': '60',
+        },
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'rate limit exceeded',
         }),
       });
     });
@@ -125,7 +162,8 @@ describe('Controllers', () => {
       code: 'test-code-12345678',
       state: 'test-state-12345678',
       host: 'http://localhost',
-      code_verifier: 'test-verifier-12345678901234567890123456789012345678901234'
+      code_verifier:
+        'test-verifier-12345678901234567890123456789012345678901234',
     };
     const mockHost = 'http://localhost';
 
@@ -134,29 +172,29 @@ describe('Controllers', () => {
       openid.getTokens.mockReturnValue({
         access_token: 'test-token',
         token_type: 'Bearer',
-        expires_in: 3600
+        expires_in: 3600,
       });
     });
 
-    it('should return token response for valid input', () => {
-      const result = controllers.token(
+    it('should return token response for valid input', async () => {
+      const result = await controllers.token(
         validInput.code,
         validInput.state,
         validInput.host,
-        validInput.code_verifier
+        validInput.code_verifier,
       );
 
       expect(validator.validate).toHaveBeenCalledWith('token', {
         code: validInput.code,
         state: validInput.state,
         host: validInput.host,
-        code_verifier: validInput.code_verifier
+        code_verifier: validInput.code_verifier,
       });
       expect(openid.getTokens).toHaveBeenCalledWith(
         validInput.code,
         validInput.state,
         validInput.host,
-        validInput.code_verifier
+        validInput.code_verifier,
       );
       expect(result).toEqual({
         statusCode: 200,
@@ -168,25 +206,24 @@ describe('Controllers', () => {
         body: JSON.stringify({
           access_token: 'test-token',
           token_type: 'Bearer',
-          expires_in: 3600
+          expires_in: 3600,
         }),
       });
     });
 
-    it('should handle invalid token errors', () => {
+    it('should handle invalid token errors', async () => {
       const tokenError = new OAuthError(
         errorTypes.INVALID_GRANT,
-        'The code passed is incorrect or expired.'
+        'The code passed is incorrect or expired.',
+        400
       );
-      openid.getTokens.mockImplementation(() => {
-        throw tokenError;
-      });
+      openid.getTokens.mockRejectedValue(tokenError);
 
-      const result = controllers.token(
-        validInput.code,
+      const result = await controllers.token(
+        'invalid-code',
         validInput.state,
         mockHost,
-        validInput.code_verifier
+        validInput.code_verifier,
       );
 
       expect(result).toEqual({
@@ -194,30 +231,23 @@ describe('Controllers', () => {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
-          Pragma: 'no-cache'
+          Pragma: 'no-cache',
         },
         body: JSON.stringify({
           error: 'invalid_grant',
-          error_description: 'The code passed is incorrect or expired.'
-        })
+          error_description: 'The code passed is incorrect or expired.',
+        }),
       });
     });
 
-    it('should handle rate limit errors', () => {
-      const rateLimitError = new OAuthError(
-        errorTypes.SERVER_ERROR,
-        'API rate limit exceeded',
-        429
-      );
-      openid.getTokens.mockImplementation(() => {
-        throw rateLimitError;
-      });
+    it('should handle rate limit errors', async () => {
+      openid.getTokens.mockRejectedValue(new Error('rate limit exceeded'));
 
-      const result = controllers.token(
+      const result = await controllers.token(
         validInput.code,
         validInput.state,
         mockHost,
-        validInput.code_verifier
+        validInput.code_verifier,
       );
 
       expect(result).toEqual({
@@ -226,33 +256,35 @@ describe('Controllers', () => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
           Pragma: 'no-cache',
-          'Retry-After': '60'
+          'Retry-After': '60',
         },
         body: JSON.stringify({
           error: 'server_error',
-          error_description: 'API rate limit exceeded'
-        })
+          error_description: 'rate limit exceeded',
+        }),
       });
     });
   });
 
   describe('userinfo', () => {
+    const validToken = 'valid-token';
+    const mockUserInfo = {
+      sub: '12345',
+      email: 'test@example.com',
+    };
+
     beforeEach(() => {
-      validator.validate.mockReturnValue({ access_token: 'valid-token' });
-      openid.getUserInfo.mockReturnValue({
-        sub: '12345',
-        name: 'Test User',
-        email: 'test@example.com'
-      });
+      validator.validate.mockReturnValue({ access_token: validToken });
+      openid.getUserInfo.mockResolvedValue(mockUserInfo);
     });
 
-    it('should return user info for valid token', () => {
-      const result = controllers.userinfo('valid-token');
+    it('should return user info for valid token', async () => {
+      const result = await controllers.userinfo(validToken);
 
       expect(validator.validate).toHaveBeenCalledWith('userinfo', {
-        access_token: 'valid-token'
+        access_token: validToken,
       });
-      expect(openid.getUserInfo).toHaveBeenCalledWith('valid-token');
+      expect(openid.getUserInfo).toHaveBeenCalledWith(validToken);
       expect(result).toEqual({
         statusCode: 200,
         headers: {
@@ -260,24 +292,16 @@ describe('Controllers', () => {
           'Cache-Control': 'no-store',
           Pragma: 'no-cache',
         },
-        body: JSON.stringify({
-          sub: '12345',
-          name: 'Test User',
-          email: 'test@example.com'
-        }),
+        body: JSON.stringify(mockUserInfo),
       });
     });
 
-    it('should handle missing authorization header', () => {
-      const validationError = new validator.ValidationError('access_token is required', 'access_token');
-      validationError.errors = [{
-        name: 'ValidationError',
-        field: 'access_token',
-        message: 'access_token is required'
-      }];
-      validator.validate.mockImplementation(() => { throw validationError; });
+    it('should handle missing authorization header', async () => {
+      validator.validate.mockImplementation(() => {
+        throw new Error('required parameter: access_token');
+      });
 
-      const result = controllers.userinfo();
+      const result = await controllers.userinfo(undefined);
 
       expect(result).toEqual({
         statusCode: 400,
@@ -288,55 +312,149 @@ describe('Controllers', () => {
         },
         body: JSON.stringify({
           error: 'invalid_request',
-          error_description: 'access_token is required',
-          validation_errors: [{
-            name: 'ValidationError',
-            field: 'access_token',
-            message: 'access_token is required'
-          }]
+          error_description: 'required parameter: access_token',
         }),
       });
     });
 
-    it('should handle invalid token format', () => {
-      const validationError = new validator.ValidationError('access_token contains invalid characters', 'access_token', 'InvalidFormat token');
-      validationError.errors = [{
-        name: 'ValidationError',
-        field: 'access_token',
-        value: 'InvalidFormat token',
-        message: 'access_token contains invalid characters'
-      }];
-      validator.validate.mockImplementation(() => { throw validationError; });
+    it('should handle invalid token format', async () => {
+      openid.getUserInfo.mockRejectedValue(new Error('invalid token'));
 
-      const result = controllers.userinfo('InvalidFormat token');
+      const result = await controllers.userinfo('invalid-token');
 
       expect(result).toEqual({
-        statusCode: 400,
+        statusCode: 401,
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
           Pragma: 'no-cache',
         },
         body: JSON.stringify({
-          error: 'invalid_request',
-          error_description: 'access_token contains invalid characters',
-          validation_errors: [{
-            name: 'ValidationError',
-            field: 'access_token',
-            value: 'InvalidFormat token',
-            message: 'access_token contains invalid characters'
-          }]
+          error: 'invalid_grant',
+          error_description: 'invalid token',
         }),
       });
     });
   });
 
-  afterEach(() => {
-    jest.resetModules();
-    delete require.cache[require.resolve('./controllers')];
-    delete require.cache[require.resolve('../openid')];
-    delete require.cache[require.resolve('../utils/validator')];
-    delete require.cache[require.resolve('./logger')];
-    delete require.cache[require.resolve('../config')];
+  describe('jwks', () => {
+    const mockJwks = {
+      keys: [
+        {
+          kty: 'RSA',
+          kid: 'test-key-id',
+          n: 'test-modulus',
+          e: 'AQAB',
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      openid.getJwks.mockResolvedValue(mockJwks);
+    });
+
+    it('should return JWKS for successful request', async () => {
+      const result = await controllers.jwks();
+
+      expect(openid.getJwks).toHaveBeenCalled();
+      expect(result).toEqual({
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400',
+        },
+        body: JSON.stringify(mockJwks),
+      });
+    });
+
+    it('should handle JWKS retrieval errors', async () => {
+      const error = new Error('Failed to get public key');
+      openid.getJwks.mockRejectedValue(error);
+
+      const result = await controllers.jwks();
+
+      expect(result).toEqual({
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'Failed to get public key',
+        }),
+      });
+    });
+  });
+
+  describe('openIdConfiguration', () => {
+    const mockHost = 'http://localhost';
+    const mockConfig = {
+      issuer: 'http://localhost',
+      authorization_endpoint: 'http://localhost/authorize',
+      token_endpoint: 'http://localhost/token',
+      userinfo_endpoint: 'http://localhost/userinfo',
+      jwks_uri: 'http://localhost/.well-known/jwks.json',
+    };
+
+    beforeEach(() => {
+      openid.getConfigFor.mockResolvedValue(mockConfig);
+    });
+
+    it('should return OpenID configuration for valid host', async () => {
+      const result = await controllers.openIdConfiguration(mockHost);
+
+      expect(openid.getConfigFor).toHaveBeenCalledWith(mockHost);
+      expect(result).toEqual({
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400',
+        },
+        body: JSON.stringify(mockConfig),
+      });
+    });
+
+    it('should handle missing host', async () => {
+      const error = new OAuthError(
+        errorTypes.INVALID_REQUEST,
+        'Host is required',
+        400
+      );
+      openid.getConfigFor.mockRejectedValue(error);
+
+      const result = await controllers.openIdConfiguration();
+
+      expect(result).toEqual({
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify({
+          error: 'invalid_request',
+          error_description: 'Host is required',
+        }),
+      });
+    });
+
+    it('should handle configuration retrieval errors', async () => {
+      const error = new Error('Failed to get configuration');
+      openid.getConfigFor.mockRejectedValue(error);
+
+      const result = await controllers.openIdConfiguration(mockHost);
+
+      expect(result).toEqual({
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'Failed to get configuration',
+        }),
+      });
+    });
   });
 });

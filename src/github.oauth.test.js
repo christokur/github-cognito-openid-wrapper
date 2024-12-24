@@ -43,18 +43,17 @@ describe('GitHub Client - OAuth Operations', () => {
     });
 
     test('with invalid code', async () => {
-      mockAxios.post.mockRejectedValueOnce({
-        response: {
-          status: 400,
-          data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
-          },
+      mockAxios.post.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          error: 'bad_verification_code',
+          error_description: 'The code passed is incorrect or expired.',
+          error_uri: 'https://docs.github.com/apps/oauth',
         },
       });
 
       await expect(client.getToken(INVALID_CODE)).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+        'Bad Request - bad_verification_code: The code passed is incorrect or expired.'
       );
     });
   });

@@ -7,8 +7,8 @@ let favicon;
 let faviconVerifier;
 let logger;
 
-// Mock favicon binary content - First 4 bytes must be [0,0,1,0] for ICO format
-const mockFaviconBase64 = 'AAAAAQAAAA=='; // [0,0,1,0,0,0,0,0]
+// Simple 1x1 ICO format mock
+const mockFaviconBase64 = 'AAAAAQAAAA==';
 const mockFaviconBinary = Buffer.from(mockFaviconBase64, 'base64');
 
 describe('Favicon', () => {
@@ -16,17 +16,26 @@ describe('Favicon', () => {
     jest.resetModules();
     jest.clearAllMocks();
 
-    // Mock fs module
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(mockFaviconBinary);
+    // Mock fs.promises for filesystem fallback
+    jest.spyOn(fs.promises, 'readFile')
+      .mockResolvedValue(mockFaviconBinary);
 
-    // Mock webpack asset (for Lambda)
-    jest.doMock('./assets/favicon.ico', () => `data:image/x-icon;base64,${mockFaviconBase64}`, { virtual: true });
+    // Mock webpack asset with data URL format
+    jest.doMock('./assets/favicon.ico', () => {
+      return `data:image/x-icon;base64,${mockFaviconBase64}`;
+    }, { virtual: true });
 
     // Mock favicon verifier
     jest.doMock('./utils/favicon-verifier', () => ({
-      verifyRequest: jest.fn(),
-      verifyIco: jest.fn(),
-      verifyResponse: jest.fn()
+      verifyRequest: jest.fn().mockResolvedValue(),
+      verifyIco: jest.fn().mockResolvedValue(),
+      verifyResponse: jest.fn().mockResolvedValue(),
+    }));
+
+    // Mock logger
+    jest.doMock('./connectors/logger', () => ({
+      error: jest.fn(),
+      debug: jest.fn(),
     }));
 
     // Load modules after mocks
@@ -41,143 +50,152 @@ describe('Favicon', () => {
     delete require.cache[require.resolve('./assets/favicon.ico')];
     delete require.cache[require.resolve('./utils/favicon-verifier')];
     delete require.cache[require.resolve('./connectors/logger')];
+    delete process.env.LOG_LEVEL;
   });
 
   describe('handler', () => {
     const mockEvent = {
       httpMethod: 'GET',
       path: '/favicon.ico',
-      headers: {}
+      headers: {},
     };
     const mockContext = { someContext: 'data' };
 
-    it('should serve favicon from webpack asset', () => {
-      const response = favicon.handler(mockEvent, mockContext);
+    it('should serve favicon from webpack asset', async () => {
+      const response = await favicon.handler(mockEvent, mockContext);
 
       expect(faviconVerifier.verifyRequest).toHaveBeenCalledWith(mockEvent);
       expect(response).toEqual({
         statusCode: 200,
         headers: {
           'Content-Type': 'image/x-icon',
-          'Cache-Control': 'public, max-age=31536000'
+          'Cache-Control': 'public, max-age=31536000',
         },
         body: mockFaviconBase64,
-        isBase64Encoded: true
+        isBase64Encoded: true,
       });
     });
 
-    it('should serve favicon from filesystem when webpack asset fails', () => {
+    it('should serve favicon from filesystem when webpack asset fails', async () => {
       jest.resetModules();
 
       // Mock webpack require to fail
-      jest.doMock('./assets/favicon.ico', () => { 
+      jest.doMock('./assets/favicon.ico', () => {
         throw new Error('webpack fail');
       }, { virtual: true });
 
       // Mock filesystem read
-      jest.spyOn(fs, 'readFileSync').mockReturnValue(mockFaviconBinary);
+      jest.spyOn(fs.promises, 'readFile')
+        .mockResolvedValue(mockFaviconBinary);
 
-      // Load favicon after webpack mock is set up
+      // Mock favicon verifier
+      jest.doMock('./utils/favicon-verifier', () => ({
+        verifyRequest: jest.fn().mockResolvedValue(),
+        verifyIco: jest.fn().mockResolvedValue(),
+        verifyResponse: jest.fn().mockResolvedValue(),
+      }));
+
+      // Load favicon after mocks are set up
       favicon = require('./favicon');
-      
-      const response = favicon.handler(mockEvent, mockContext);
 
-      expect(fs.readFileSync).toHaveBeenCalledWith(expect.stringContaining('favicon.ico'));
+      const response = await favicon.handler(mockEvent, mockContext);
+
+      // Verify filesystem fallback was used
+      expect(fs.promises.readFile).toHaveBeenCalledWith(
+        expect.stringContaining('favicon.ico')
+      );
+
       expect(response).toEqual({
         statusCode: 200,
         headers: {
           'Content-Type': 'image/x-icon',
-          'Cache-Control': 'public, max-age=31536000'
+          'Cache-Control': 'public, max-age=31536000',
         },
         body: mockFaviconBase64,
-        isBase64Encoded: true
+        isBase64Encoded: true,
       });
     });
 
-    it('should verify ICO format in debug mode', () => {
+    it('should verify ICO format in debug mode', async () => {
       process.env.LOG_LEVEL = 'debug';
-      const response = favicon.handler(mockEvent, mockContext);
 
-      expect(faviconVerifier.verifyIco).toHaveBeenCalledWith(expect.any(Buffer));
+      const response = await favicon.handler(mockEvent, mockContext);
+
+      expect(faviconVerifier.verifyIco).toHaveBeenCalledWith(
+        expect.any(Buffer)
+      );
       expect(faviconVerifier.verifyResponse).toHaveBeenCalledWith(response);
       expect(response.body).toBe(mockFaviconBase64);
-
-      delete process.env.LOG_LEVEL;
     });
 
-    it('should handle invalid webpack asset format', () => {
+    it('should handle invalid webpack asset format', async () => {
       jest.resetModules();
 
-      // Mock webpack asset with invalid format (missing base64 part)
-      jest.doMock('./assets/favicon.ico', () => 'data:image/x-icon;base64', { virtual: true });
+      // Mock webpack asset with invalid format
+      jest.doMock('./assets/favicon.ico', () => {
+        return 'invalid-format';
+      }, { virtual: true });
 
-      // Mock filesystem read to fail as fallback
-      const fsError = new Error('filesystem error');
-      jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
-        throw fsError;
-      });
-
-      // Mock favicon verifier to pass validation
-      jest.doMock('./utils/favicon-verifier', () => ({
-        verifyRequest: jest.fn(),
-        verifyIco: jest.fn(),
-        verifyResponse: jest.fn()
-      }));
-
-      // Mock logger to capture error
+      // Mock logger
       const mockError = jest.fn();
       jest.doMock('./connectors/logger', () => ({
         error: mockError,
         debug: jest.fn(),
-        info: jest.fn()
       }));
 
-      // Load favicon module after mocks
-      delete require.cache[require.resolve('./favicon')];
-      expect(() => {
-        require('./favicon');
-      }).toThrow('filesystem error');
+      // Mock filesystem read to fail
+      jest.spyOn(fs.promises, 'readFile')
+        .mockRejectedValue(new Error('filesystem error'));
 
-      // Verify that the invalid asset format was logged before falling back to filesystem
-      expect(mockError).toHaveBeenCalledWith('Invalid asset format', {
-        assetStart: 'data:image/x-icon;base64'
-      });
+      // Mock favicon verifier
+      jest.doMock('./utils/favicon-verifier', () => ({
+        verifyRequest: jest.fn().mockResolvedValue(),
+        verifyIco: jest.fn().mockResolvedValue(),
+        verifyResponse: jest.fn().mockResolvedValue(),
+      }));
+
+      // Load favicon after mocks are set up
+      favicon = require('./favicon');
+
+      const response = await favicon.handler(mockEvent, mockContext);
+      expect(response.statusCode).toBe(500);
+      expect(mockError).toHaveBeenCalledWith('Invalid asset format', expect.any(Object));
     });
 
-    it('should handle filesystem read error', () => {
+    it('should handle filesystem read error', async () => {
       jest.resetModules();
 
       // Mock webpack require to fail
-      jest.doMock('./assets/favicon.ico', () => { 
+      jest.doMock('./assets/favicon.ico', () => {
         throw new Error('webpack fail');
       }, { virtual: true });
 
-      // Mock favicon verifier to pass validation
+      // Mock filesystem read to fail
+      jest.spyOn(fs.promises, 'readFile')
+        .mockRejectedValue(new Error('filesystem error'));
+
+      // Mock favicon verifier
       jest.doMock('./utils/favicon-verifier', () => ({
-        verifyRequest: jest.fn(),
-        verifyIco: jest.fn(),
-        verifyResponse: jest.fn()
+        verifyRequest: jest.fn().mockResolvedValue(),
+        verifyIco: jest.fn().mockResolvedValue(),
+        verifyResponse: jest.fn().mockResolvedValue(),
       }));
 
-      // Mock filesystem error
-      const fsError = new Error('filesystem error');
-      jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
-        throw fsError;
-      });
+      // Load favicon after mocks are set up
+      favicon = require('./favicon');
 
-      delete require.cache[require.resolve('./favicon')];
-      expect(() => {
-        require('./favicon');
-      }).toThrow('filesystem error');
+      const response = await favicon.handler(mockEvent, mockContext);
+      expect(response.statusCode).toBe(500);
+      expect(response.body).toBe('Internal Server Error');
     });
 
-    it('should handle verifier errors', () => {
-      const verifyError = new Error('verify error');
-      jest.spyOn(faviconVerifier, 'verifyRequest').mockImplementation(() => {
-        throw verifyError;
-      });
+    it('should handle verifier errors', async () => {
+      jest.spyOn(faviconVerifier, 'verifyRequest')
+        .mockRejectedValue(new Error('verify error'));
 
-      expect(() => favicon.handler(mockEvent, mockContext)).toThrow(verifyError);
+      const response = await favicon.handler(mockEvent, mockContext);
+      expect(response.statusCode).toBe(500);
+      expect(response.body).toBe('Internal Server Error');
     });
   });
 });

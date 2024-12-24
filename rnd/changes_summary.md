@@ -1,5 +1,5 @@
 
-### Explanation of Changes Made:
+### Explanation of Changes Made
 
 1. **Fixed the `wait` Function:**
    - Replaced busy wait with `setTimeout`

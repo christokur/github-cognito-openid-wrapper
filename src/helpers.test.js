@@ -75,6 +75,12 @@ describe('ensureNumber', () => {
     const { ensureNumber } = require('./helpers');
     expect(() => ensureNumber('PORT')).not.toThrow();
   });
+
+  it('should not throw if the variable is already a number', () => {
+    process.env.PORT = 123;
+    const { ensureNumber } = require('./helpers');
+    expect(() => ensureNumber('PORT')).not.toThrow();
+  });
 });
 
 describe('ensureNumber SOME_NUMBER', () => {
@@ -84,5 +90,13 @@ describe('ensureNumber SOME_NUMBER', () => {
     expect(() => ensureNumber('SOME_NUMBER')).toThrow(
       'Environment variable SOME_NUMBER must be set and be a number',
     );
+  });
+});
+
+describe('getAxios', () => {
+  it('should return an axios instance with timeout', () => {
+    const { getAxios } = require('./helpers');
+    const axiosInstance = getAxios();
+    expect(axiosInstance.defaults.timeout).toBe(10000);
   });
 });

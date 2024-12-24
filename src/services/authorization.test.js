@@ -1,6 +1,20 @@
 const { mockAxios } = require('../sharedMocks');
 const { mockValues } = require('../mocks');
 
+// Mock Configuration
+jest.mock('../config', () => ({
+  GITHUB_API_URL: mockValues.GITHUB_API_URL,
+  GITHUB_LOGIN_URL: mockValues.GITHUB_LOGIN_URL,
+  COGNITO_REDIRECT_URI: 'http://localhost/callback',
+}));
+
+const { GITHUB_LOGIN_URL } = mockValues;
+
+// Mock GitHub client
+jest.mock('../github');
+
+const mockGitHubUrl = `${GITHUB_LOGIN_URL}/login/oauth/authorize?client_id=test-client-id&scope=user%3Aemail&state=test-state&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback&nonce=test-nonce&code_challenge=test-code-challenge&code_challenge_method=S256`;
+
 let AuthorizationService;
 let Configuration;
 let ConfigurationService;
@@ -16,6 +30,25 @@ describe('AuthorizationService', () => {
     AuthorizationService = require('./authorization');
     ConfigurationService = require('./configuration');
     PkceHelper = require('../utils/pkce');
+
+    // Setup default successful mocks
+    jest.spyOn(ConfigurationService, 'validateAuthorizationParams')
+      .mockImplementation(() => undefined);
+    jest.spyOn(PkceHelper, 'generateCodeVerifier')
+      .mockReturnValue(mockCodeVerifier);
+    jest.spyOn(PkceHelper, 'generateCodeChallenge')
+      .mockReturnValue(mockCodeChallenge);
+
+    // Setup default GitHub client mock
+    github.mockImplementation(() => ({
+      getAuthorizeUrl: () => mockGitHubUrl,
+      getApiEndpoints: () => ({
+        userDetails: `${mockValues.GITHUB_API_URL}/user`,
+        userEmails: `${mockValues.GITHUB_API_URL}/user/emails`,
+        oauthToken: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+        oauthAuthorize: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`,
+      }),
+    }));
   });
 
   afterEach(() => {
@@ -37,20 +70,9 @@ describe('AuthorizationService', () => {
   const mockCodeChallenge = 'test-code-challenge';
 
   describe('getAuthorizeUrl', () => {
-    it('should generate and return authorization URL successfully', () => {
-      // Mock PKCE
-      jest
-        .spyOn(PkceHelper, 'generateCodeVerifier')
-        .mockReturnValue(mockCodeVerifier);
-      jest
-        .spyOn(PkceHelper, 'generateCodeChallenge')
-        .mockReturnValue(mockCodeChallenge);
-      jest
-        .spyOn(ConfigurationService, 'validateAuthorizationParams')
-        .mockImplementation(() => true);
-
+    it('should generate and return authorization URL successfully', async () => {
       // Call the service
-      const result = AuthorizationService.getAuthorizeUrl({
+      const result = await AuthorizationService.getAuthorizeUrl({
         client_id: mockClientId,
         scope: mockScope,
         state: mockState,
@@ -69,6 +91,7 @@ describe('AuthorizationService', () => {
       expect(result).toMatch(`nonce=${mockNonce}`);
       expect(result).toMatch(`code_challenge=${mockCodeChallenge}`);
       expect(result).toMatch('code_challenge_method=S256');
+      expect(result).toMatch(`redirect_uri=${encodeURIComponent(Configuration.COGNITO_REDIRECT_URI)}`);
 
       // Verify method calls
       expect(
@@ -86,14 +109,14 @@ describe('AuthorizationService', () => {
       );
     });
 
-    it('should handle validation errors', () => {
-      jest
-        .spyOn(ConfigurationService, 'validateAuthorizationParams')
+    it('should handle validation errors', async () => {
+      // Reset mock to throw error
+      jest.spyOn(ConfigurationService, 'validateAuthorizationParams')
         .mockImplementation(() => {
           throw new Error('Validation failed');
         });
 
-      expect(() =>
+      await expect(
         AuthorizationService.getAuthorizeUrl({
           client_id: mockClientId,
           scope: mockScope,
@@ -101,15 +124,15 @@ describe('AuthorizationService', () => {
           response_type: mockResponseType,
           nonce: mockNonce,
         }),
-      ).toThrow('Validation failed');
+      ).rejects.toThrow('Validation failed');
     });
 
-    it('should handle PKCE generation errors', () => {
+    it('should handle PKCE generation errors', async () => {
       jest.spyOn(PkceHelper, 'generateCodeVerifier').mockImplementation(() => {
         throw new Error('PKCE generation failed');
       });
 
-      expect(() =>
+      await expect(
         AuthorizationService.getAuthorizeUrl({
           client_id: mockClientId,
           scope: mockScope,
@@ -117,18 +140,24 @@ describe('AuthorizationService', () => {
           response_type: mockResponseType,
           nonce: mockNonce,
         }),
-      ).toThrow('PKCE generation failed');
+      ).rejects.toThrow('PKCE generation failed');
     });
 
-    it('should handle GitHub client errors', () => {
-      jest
-        .spyOn(PkceHelper, 'generateCodeVerifier')
-        .mockReturnValue(mockCodeVerifier);
-      jest.spyOn(PkceHelper, 'generateCodeChallenge').mockImplementation(() => {
-        throw new Error('GitHub client error');
-      });
+    it('should handle GitHub client errors', async () => {
+      // Mock the GitHub client to throw an error
+      github.mockImplementation(() => ({
+        getAuthorizeUrl: () => {
+          throw new Error('GitHub client error');
+        },
+        getApiEndpoints: () => ({
+          userDetails: `${mockValues.GITHUB_API_URL}/user`,
+          userEmails: `${mockValues.GITHUB_API_URL}/user/emails`,
+          oauthToken: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/access_token`,
+          oauthAuthorize: `${mockValues.GITHUB_LOGIN_URL}/login/oauth/authorize`,
+        }),
+      }));
 
-      expect(() =>
+      await expect(
         AuthorizationService.getAuthorizeUrl({
           client_id: mockClientId,
           scope: mockScope,
@@ -136,7 +165,7 @@ describe('AuthorizationService', () => {
           response_type: mockResponseType,
           nonce: mockNonce,
         }),
-      ).toThrow('GitHub client error');
+      ).rejects.toThrow('GitHub client error');
     });
   });
 });

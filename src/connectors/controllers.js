@@ -56,7 +56,7 @@ const mapError = (error) => {
 };
 
 module.exports = () => ({
-  authorize: (client_id, scope, state, response_type) => {
+  authorize: async (client_id, scope, state, response_type) => {
     try {
       // Validate and sanitize input
       const validated = validate('authorize', {
@@ -66,7 +66,7 @@ module.exports = () => ({
         response_type,
       });
 
-      const authorizeUrl = openid.getAuthorizeUrl(
+      const authorizeUrl = await openid.getAuthorizeUrl(
         validated.client_id,
         validated.scope,
         validated.state,
@@ -112,14 +112,14 @@ module.exports = () => ({
     }
   },
 
-  userinfo: (token) => {
+  userinfo: async (token) => {
     try {
       // Validate and sanitize input
       const validated = validate('userinfo', {
         access_token: token,
       });
 
-      const userInfo = openid.getUserInfo(validated.access_token);
+      const userInfo = await openid.getUserInfo(validated.access_token);
       logger.debug({
         message: 'Resolved user infos',
         userInfo,
@@ -157,7 +157,7 @@ module.exports = () => ({
     }
   },
 
-  token: (code, state, host, codeVerifier) => {
+  token: async (code, state, host, codeVerifier) => {
     try {
       logger.debug({
         message: 'Token controller called',
@@ -175,7 +175,7 @@ module.exports = () => ({
         code_verifier: codeVerifier,
       });
 
-      const tokens = openid.getTokens(
+      const tokens = await openid.getTokens(
         validated.code,
         validated.state,
         host,
@@ -218,9 +218,9 @@ module.exports = () => ({
     }
   },
 
-  jwks: () => {
+  jwks: async () => {
     try {
-      const keys = openid.getJwks();
+      const keys = await openid.getJwks();
       logger.debug({
         message: 'JWKS retrieved',
         keys,
@@ -256,9 +256,9 @@ module.exports = () => ({
     }
   },
 
-  openIdConfiguration: (host) => {
+  openIdConfiguration: async (host) => {
     try {
-      const config = openid.getConfigFor(host);
+      const config = await openid.getConfigFor(host);
       logger.debug({
         message: 'OpenID configuration retrieved',
         config,

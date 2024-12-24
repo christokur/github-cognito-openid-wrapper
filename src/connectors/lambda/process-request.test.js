@@ -5,7 +5,10 @@ const { mockValues } = require('../../mocks');
 let logger;
 let validator;
 let rateLimiter;
+let retry;
+let formatResponse;
 let processRequest;
+let requestUtils;
 
 describe('processRequest', () => {
   let mockEvent;
@@ -15,39 +18,49 @@ describe('processRequest', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    
+
     if (mockAxios.reset) {
       mockAxios.reset();
     }
-    
+
+    // Setup mocks first
+    formatResponse = jest.fn(response => response);
+    jest.mock('./index', () => ({
+      formatResponse,
+    }));
+
     // Load fresh copies of intercepted modules
     logger = require('../logger');
     validator = require('../../utils/validator');
     rateLimiter = require('../../utils/rate-limiter');
-    processRequest = require('./index').processRequest;
-    
+    retry = require('../../utils/retry');
+    requestUtils = require('./request-utils');
+    processRequest = require('./process-request');
+
     // Setup mocks
     rateLimiter.checkLimit = jest.fn();
     rateLimiter.isRateLimitError = jest.fn();
     validator.validate = jest.fn();
+    retry.withRetry = jest.fn(fn => fn()); // Execute the function immediately
+    requestUtils.getParameters = jest.fn().mockReturnValue({});
 
     // Setup test data
     mockEvent = {
       path: '/authorize',
       httpMethod: 'GET',
       headers: {},
-      body: null
+      body: null,
     };
     mockContext = {
-      awsRequestId: '123'
+      awsRequestId: '123',
     };
     config = {
       allowedMethods: ['GET'],
       requiresRateLimit: true,
-      handler: jest.fn().mockReturnValue({
+      handler: jest.fn().mockResolvedValue({
         statusCode: 200,
-        body: JSON.stringify({ success: true })
-      })
+        body: JSON.stringify({ success: true }),
+      }),
     };
   });
 
@@ -56,13 +69,16 @@ describe('processRequest', () => {
     delete require.cache[require.resolve('../logger')];
     delete require.cache[require.resolve('../../utils/validator')];
     delete require.cache[require.resolve('../../utils/rate-limiter')];
+    delete require.cache[require.resolve('../../utils/retry')];
+    delete require.cache[require.resolve('./request-utils')];
+    delete require.cache[require.resolve('./process-request')];
     delete require.cache[require.resolve('./index')];
   });
 
-  it('should handle method not allowed', () => {
+  it('should handle method not allowed', async () => {
     mockEvent.httpMethod = 'POST';
 
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response.statusCode).toBe(405);
     expect(JSON.parse(response.body)).toEqual({
@@ -71,10 +87,10 @@ describe('processRequest', () => {
     });
   });
 
-  it('should handle missing authorization', () => {
+  it('should handle missing authorization', async () => {
     config.requiresAuth = true;
 
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response.statusCode).toBe(401);
     expect(JSON.parse(response.body)).toEqual({
@@ -83,12 +99,12 @@ describe('processRequest', () => {
     });
   });
 
-  it('should handle validation error', () => {
+  it('should handle validation error', async () => {
     config.schema = 'test';
 
     validator.validate.mockImplementation(() => {
       const error = new Error('Validation failed');
-      error.name = 'ValidationError'; 
+      error.name = 'ValidationError';
       error.statusCode = 400;
       error.code = 'invalid_request';
       error.field = 'testField';
@@ -96,26 +112,24 @@ describe('processRequest', () => {
       throw error;
     });
 
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body)).toEqual({
       error: 'invalid_request',
-      error_description: 'Validation failed'
+      error_description: 'Validation failed',
     });
   });
 
-  it('should handle rate limit error', () => {
+  it('should handle rate limit error', async () => {
     const rateLimitError = new Error('Rate limit exceeded');
     rateLimitError.statusCode = 429;
     rateLimitError.retryAfter = 60;
 
-    rateLimiter.checkLimit.mockImplementation(() => {
-      throw rateLimitError;
-    });
+    rateLimiter.checkLimit.mockRejectedValue(rateLimitError);
     rateLimiter.isRateLimitError.mockReturnValue(true);
 
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response.statusCode).toBe(429);
     expect(response.headers['Retry-After']).toBe('60');
@@ -125,7 +139,7 @@ describe('processRequest', () => {
     });
   });
 
-  it('should handle successful request', () => {
+  it('should handle successful request', async () => {
     const mockResponse = {
       statusCode: 302,
       headers: {
@@ -139,34 +153,18 @@ describe('processRequest', () => {
       },
     };
 
-    config.handler.mockReturnValue(mockResponse);
+    config.handler.mockResolvedValue(mockResponse);
 
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response).toEqual(mockResponse);
     expect(config.handler).toHaveBeenCalledWith(mockEvent, mockContext);
   });
 
-  it('should handle internal server error', () => {
-    config.handler.mockImplementation(() => {
-      throw new Error('Internal error');
-    });
+  it('should handle server error', async () => {
+    config.handler.mockRejectedValue(new Error('Internal error'));
 
-    const response = processRequest(mockEvent, mockContext, config);
-
-    expect(response.statusCode).toBe(500);
-    expect(JSON.parse(response.body)).toEqual({
-      error: 'server_error',
-      error_description: 'Internal server error',
-    });
-  });
-
-  it('should handle server error', () => {
-    config.handler.mockImplementation(() => {
-      throw new Error('Internal error');
-    });
-
-    const response = processRequest(mockEvent, mockContext, config);
+    const response = await processRequest(mockEvent, mockContext, config);
 
     expect(response.statusCode).toBe(500);
     expect(JSON.parse(response.body)).toEqual({

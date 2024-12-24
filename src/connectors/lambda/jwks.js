@@ -1,5 +1,7 @@
 const controllers = require('../controllers');
 
-module.exports.handler = (event, context) =>
+module.exports.handler = async (event, context) => {
   // No parameters needed, just return public keys
-  controllers().jwks();
+  const response = await controllers().jwks();
+  return response;
+};

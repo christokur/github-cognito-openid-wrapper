@@ -3,7 +3,7 @@ const { OAuthError, errorTypes } = require('../../errors');
 
 // Mock controllers
 jest.mock('../controllers', () => {
-  const mockToken = jest.fn().mockReturnValue({
+  const mockToken = jest.fn().mockResolvedValue({
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
@@ -22,6 +22,26 @@ jest.mock('../controllers', () => {
   });
 });
 
+// Mock request-utils
+jest.mock('./request-utils', () => ({
+  parseBody: jest.fn((event) => {
+    if (!event || !event.body) {
+      return { body: undefined, contentType: '' };
+    }
+
+    if (event.headers?.['Content-Type']?.includes('application/x-www-form-urlencoded')) {
+      const body = {};
+      event.body.split('&').forEach((pair) => {
+        const [key, value] = pair.split('=');
+        body[key] = value;
+      });
+      return { body, contentType: 'application/x-www-form-urlencoded' };
+    }
+
+    return { body: JSON.parse(event.body), contentType: 'application/json' };
+  }),
+}));
+
 describe('Lambda Token Handler', () => {
   let token;
   let controllers;
@@ -35,7 +55,7 @@ describe('Lambda Token Handler', () => {
   });
 
   describe('with application/json content type', () => {
-    it('should process JSON request successfully', () => {
+    it('should process JSON request successfully', async () => {
       const jsonEvent = {
         body: JSON.stringify({
           code: 'test_code',
@@ -48,7 +68,7 @@ describe('Lambda Token Handler', () => {
         },
       };
 
-      const result = token.handler(jsonEvent);
+      const result = await token.handler(jsonEvent);
 
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body)).toEqual({
@@ -60,7 +80,7 @@ describe('Lambda Token Handler', () => {
   });
 
   describe('with application/x-www-form-urlencoded content type', () => {
-    it('should process form-urlencoded request successfully', () => {
+    it('should process form-urlencoded request successfully', async () => {
       const formEvent = {
         body: 'code=test_code&state=test_state&code_verifier=test_verifier',
         headers: {
@@ -69,7 +89,7 @@ describe('Lambda Token Handler', () => {
         },
       };
 
-      const result = token.handler(formEvent);
+      const result = await token.handler(formEvent);
 
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body)).toEqual({
@@ -81,8 +101,8 @@ describe('Lambda Token Handler', () => {
   });
 
   describe('error handling', () => {
-    it('should handle missing body', () => {
-      const result = token.handler({
+    it('should handle missing body', async () => {
+      const result = await token.handler({
         headers: { Host: 'example.com' },
       });
 
@@ -93,15 +113,13 @@ describe('Lambda Token Handler', () => {
       });
     });
 
-    it('should handle missing host header', () => {
-      const result = token.handler({
+    it('should handle missing host header', async () => {
+      const result = await token.handler({
         body: JSON.stringify({
           code: 'test_code',
           state: 'test_state',
         }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {},
       });
 
       expect(result.statusCode).toBe(400);
@@ -111,29 +129,16 @@ describe('Lambda Token Handler', () => {
       });
     });
 
-    it('should handle controller errors', () => {
-      controllers().token.mockReturnValue({
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
-          Pragma: 'no-cache',
-        },
-        body: JSON.stringify({
-          error: 'server_error',
-          error_description: 'Test error',
-        }),
-      });
+    it('should handle controller errors', async () => {
+      const mockControllers = require('../controllers');
+      mockControllers().token.mockRejectedValue(new Error('Test error'));
 
-      const result = token.handler({
+      const result = await token.handler({
         body: JSON.stringify({
           code: 'test_code',
           state: 'test_state',
         }),
-        headers: {
-          'Content-Type': 'application/json',
-          Host: 'example.com',
-        },
+        headers: { Host: 'example.com' },
       });
 
       expect(result.statusCode).toBe(500);

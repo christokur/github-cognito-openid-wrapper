@@ -2,7 +2,7 @@ const logger = require('../../logger');
 const { OAuthError, errorTypes, formatOAuthError } = require('../../../errors');
 const { ValidationError } = require('../../../utils/validator');
 
-function handleError(error, callback) {
+function handleError(error) {
   let oauthError;
 
   if (error instanceof ValidationError) {
@@ -36,7 +36,7 @@ function handleError(error, callback) {
     response,
   });
 
-  callback(null, response);
+  return response;
 }
 
 module.exports = {

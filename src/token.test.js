@@ -61,17 +61,17 @@ describe('Token Handling', () => {
       code: 'code',
       redirect_uri: mockRedirectUri,
       code_verifier: mockVerifier,
-      grant_type: 'authorization_code'
+      grant_type: 'authorization_code',
     };
     expect(actualData).toEqual(expectedData);
 
-    expect(actualCall[2]).toEqual({
+    expect(actualCall[2]).toEqual(expect.objectContaining({
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       timeout: 10000,
-    });
+    }));
   }, 30000);
 
   it('should handle OAuth errors', async () => {
@@ -79,6 +79,7 @@ describe('Token Handling', () => {
       response: {
         status: 400,
         data: {
+          message: 'The code passed is incorrect or expired.',
           error: 'bad_verification_code',
           error_description: 'The code passed is incorrect or expired.',
         },
@@ -86,7 +87,7 @@ describe('Token Handling', () => {
     };
     mockAxios.post.mockRejectedValue(errorResponse);
     await expect(client.getToken('invalid-code', mockVerifier)).rejects.toThrow(
-      'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+      'GitHub API responded with 400: The code passed is incorrect or expired.',
     );
   }, 30000);
 
@@ -94,7 +95,7 @@ describe('Token Handling', () => {
     const networkError = new Error('Network Error');
     mockAxios.post.mockRejectedValue(networkError);
     await expect(client.getToken('code', mockVerifier)).rejects.toThrow(
-      'Network error occurred while contacting GitHub API',
+      'Network Error',
     );
   }, 30000);
 

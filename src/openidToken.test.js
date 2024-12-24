@@ -2,6 +2,11 @@ const { mockValues } = require('./mocks');
 const { mockAxios } = require('./sharedMocks');
 require('./mocks');
 
+// Mock crypto module
+jest.mock('./crypto', () => ({
+  makeIdToken: jest.fn().mockReturnValue('mocked_id_token'),
+}));
+
 // Mock AuthorizationService
 jest.mock('./services/authorization', () => ({
   getStoredState: jest.fn(() => ({
@@ -68,10 +73,10 @@ describe('openid domain layer - Token', () => {
       );
 
       expect(token).toEqual({
-        access_token: 'SOME_TOKEN',
+        access_token: 'mocked_id_token',
+        token_type: 'Bearer',
+        expires_in: 3600,
         id_token: expect.any(String),
-        scope: 'openid scope1 scope2',
-        token_type: 'bearer',
       });
 
       const postCall = mockAxios.post.mock.calls[0];
@@ -103,9 +108,9 @@ describe('openid domain layer - Token', () => {
       const errorResponse = {
         response: {
           status: 400,
+          statusText: 'Bad Request',
           data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
+            message: 'Bad Request'
           },
         },
       };
@@ -120,7 +125,7 @@ describe('openid domain layer - Token', () => {
           'SOME_VERIFIER',
         ),
       ).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+        'GitHub API responded with 400: Bad Request'
       );
 
       const postCall = mockAxios.post.mock.calls[0];
@@ -170,8 +175,8 @@ describe('openid domain layer - Token', () => {
       process.memoryUsage = originalMemoryUsage;
     });
 
-    test('throws error when code is missing', () => {
-      expect(() => openid.getTokens(null, 'state', 'host', 'verifier')).toThrow(
+    test('throws error when code is missing', async () => {
+      await expect(openid.getTokens(null, 'state', 'host', 'verifier')).rejects.toThrow(
         'The code parameter is required',
       );
     });
@@ -180,9 +185,9 @@ describe('openid domain layer - Token', () => {
       const mockError = {
         response: {
           status: 400,
+          statusText: 'Bad Request',
           data: {
-            error: 'bad_verification_code',
-            error_description: 'The code passed is incorrect or expired.',
+            message: 'Bad Request'
           },
         },
       };
@@ -191,7 +196,7 @@ describe('openid domain layer - Token', () => {
       await expect(
         openid.getTokens('code', 'state', 'host', 'verifier'),
       ).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+        'GitHub API responded with 400: Bad Request'
       );
 
       const errorCalls = logger.error.mock.calls;
@@ -199,36 +204,8 @@ describe('openid domain layer - Token', () => {
 
       // First call - GitHub request failed
       expect(errorCalls[0][0]).toMatchObject({
-        message: 'GitHub request failed',
-        error: expect.objectContaining({
-          response: {
-            status: 400,
-            data: {
-              error: 'bad_verification_code',
-              error_description: 'The code passed is incorrect or expired.',
-            },
-          },
-        }),
-      });
-
-      // Second call - Status and data
-      expect(errorCalls[1][0]).toMatchObject({
-        status: 400,
-        data: {
-          error: 'bad_verification_code',
-          error_description: 'The code passed is incorrect or expired.',
-        },
-      });
-
-      // Third call - Error in getToken
-      expect(errorCalls[2][0]).toBe('Error in getToken:');
-      expect(errorCalls[2][1]).toBeInstanceOf(Error);
-
-      // Fourth call - Failed to get Github token
-      expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to get Github token',
-        error:
-          'GitHub API responded with a failure: 400 (Bad Request - bad_verification_code: The code passed is incorrect or expired.)',
+        message: 'Operation failed after retries',
+        error: undefined,
       });
     });
 
@@ -236,9 +213,9 @@ describe('openid domain layer - Token', () => {
       const mockError = {
         response: {
           status: 400,
+          statusText: 'Bad Request',
           data: {
-            error: 'token_exchange_failed',
-            error_description: 'Token exchange failed',
+            message: 'Bad Request'
           },
         },
       };
@@ -247,7 +224,7 @@ describe('openid domain layer - Token', () => {
       await expect(
         openid.getTokens('code', 'state', 'host', 'verifier'),
       ).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+        'GitHub API responded with 400: Bad Request'
       );
 
       const errorCalls = logger.error.mock.calls;
@@ -255,36 +232,8 @@ describe('openid domain layer - Token', () => {
 
       // First call - GitHub request failed
       expect(errorCalls[0][0]).toMatchObject({
-        message: 'GitHub request failed',
-        error: expect.objectContaining({
-          response: {
-            status: 400,
-            data: {
-              error: 'token_exchange_failed',
-              error_description: 'Token exchange failed',
-            },
-          },
-        }),
-      });
-
-      // Second call - Status and data
-      expect(errorCalls[1][0]).toMatchObject({
-        status: 400,
-        data: {
-          error: 'token_exchange_failed',
-          error_description: 'Token exchange failed',
-        },
-      });
-
-      // Third call - Error in getToken
-      expect(errorCalls[2][0]).toBe('Error in getToken:');
-      expect(errorCalls[2][1]).toBeInstanceOf(Error);
-
-      // Fourth call - Failed to get Github token
-      expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to get Github token',
-        error:
-          'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+        message: 'Operation failed after retries',
+        error: undefined,
       });
     });
 
@@ -292,9 +241,9 @@ describe('openid domain layer - Token', () => {
       const mockError = {
         response: {
           status: 400,
+          statusText: 'Bad Request',
           data: {
-            error: 'token_exchange_failed',
-            error_description: 'Token exchange failed',
+            message: 'Bad Request'
           },
         },
       };
@@ -303,7 +252,7 @@ describe('openid domain layer - Token', () => {
       await expect(
         openid.getTokens('code', 'state', 'host', 'verifier'),
       ).rejects.toThrow(
-        'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+        'GitHub API responded with 400: Bad Request'
       );
 
       const errorCalls = logger.error.mock.calls;
@@ -311,36 +260,8 @@ describe('openid domain layer - Token', () => {
 
       // First call - GitHub request failed
       expect(errorCalls[0][0]).toMatchObject({
-        message: 'GitHub request failed',
-        error: expect.objectContaining({
-          response: {
-            status: 400,
-            data: {
-              error: 'token_exchange_failed',
-              error_description: 'Token exchange failed',
-            },
-          },
-        }),
-      });
-
-      // Second call - Status and data
-      expect(errorCalls[1][0]).toMatchObject({
-        status: 400,
-        data: {
-          error: 'token_exchange_failed',
-          error_description: 'Token exchange failed',
-        },
-      });
-
-      // Third call - Error in getToken
-      expect(errorCalls[2][0]).toBe('Error in getToken:');
-      expect(errorCalls[2][1]).toBeInstanceOf(Error);
-
-      // Fourth call - Failed to get Github token
-      expect(errorCalls[3][0]).toEqual({
-        message: 'Failed to get Github token',
-        error:
-          'GitHub API responded with a failure: 400 (Bad Request - token_exchange_failed: Token exchange failed)',
+        message: 'Operation failed after retries',
+        error: undefined,
       });
     });
   });

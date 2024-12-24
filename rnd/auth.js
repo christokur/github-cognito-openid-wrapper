@@ -1,7 +1,7 @@
 const logger = require('../../logger');
 
 module.exports = {
-  getBearerToken: (event) => {
+  getBearerToken: async (event) => {
     try {
       // This method implements https://tools.ietf.org/html/rfc6750
       const authHeader = event.headers
@@ -53,20 +53,18 @@ module.exports = {
       throw error;
     } catch (error) {
       logger.error({
-        message: 'Failed to get bearer token',
-        error: error.message || error,
+        message: 'Error getting bearer token',
+        error: error.message,
+        stack: error.stack,
       });
       throw error;
     }
   },
 
-  getIssuer: (host) => {
+  getIssuer: async (host) => {
     if (!host) {
-      logger.error({
-        message: 'Missing host parameter',
-      });
-      throw new Error('Host parameter is required');
+      throw new Error('No host header in request');
     }
-    return `${host}`;
+    return `https://${host}`;
   },
 };

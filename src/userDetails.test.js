@@ -85,7 +85,7 @@ describe('User Details and Emails', () => {
       })
       .catch((err) => {
         expect(err.message).toBe(
-          'GitHub API responded with a failure: 429 (API rate limit exceeded)',
+          'GitHub API responded with 403: API rate limit exceeded'
         );
         expect(mockRateLimiter.updateLimits).toHaveBeenCalledWith(
           rateLimitError.response.headers,

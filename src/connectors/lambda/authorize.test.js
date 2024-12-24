@@ -10,7 +10,9 @@ describe('Lambda Authorize Handler', () => {
     jest.resetModules();
     jest.clearAllMocks();
     mockAuthorize = jest.fn();
-    jest.mock('../controllers', () => jest.fn(() => ({ authorize: mockAuthorize })));
+    jest.mock('../controllers', () =>
+      jest.fn(() => ({ authorize: mockAuthorize })),
+    );
     controllers = require('../controllers');
     authorize = require('./authorize');
   });
@@ -21,7 +23,7 @@ describe('Lambda Authorize Handler', () => {
     delete require.cache[require.resolve('./authorize')];
   });
 
-  test('should handle authorize request with all parameters', () => {
+  test('should handle authorize request with all parameters', async () => {
     const event = {
       queryStringParameters: {
         client_id: 'test-client',
@@ -29,18 +31,18 @@ describe('Lambda Authorize Handler', () => {
         state: 'test-state',
         response_type: 'code',
         code_challenge: 'test-challenge',
-        code_challenge_method: 'S256'
-      }
+        code_challenge_method: 'S256',
+      },
     };
 
     const mockResponse = {
       statusCode: 302,
-      headers: { Location: 'https://github.com/login/oauth/authorize' }
+      headers: { Location: 'https://github.com/login/oauth/authorize' },
     };
 
-    mockAuthorize.mockReturnValue(mockResponse);
+    mockAuthorize.mockResolvedValue(mockResponse);
 
-    const result = authorize.handler(event);
+    const result = await authorize.handler(event);
 
     expect(mockAuthorize).toHaveBeenCalledWith(
       'test-client',
@@ -48,22 +50,22 @@ describe('Lambda Authorize Handler', () => {
       'test-state',
       'code',
       'test-challenge',
-      'S256'
+      'S256',
     );
     expect(result).toEqual(mockResponse);
   });
 
-  test('should handle authorize request with no parameters', () => {
+  test('should handle authorize request with no parameters', async () => {
     const event = {};
-    
+
     const mockResponse = {
       statusCode: 302,
-      headers: { Location: 'https://github.com/login/oauth/authorize' }
+      headers: { Location: 'https://github.com/login/oauth/authorize' },
     };
 
-    mockAuthorize.mockReturnValue(mockResponse);
+    mockAuthorize.mockResolvedValue(mockResponse);
 
-    const result = authorize.handler(event);
+    const result = await authorize.handler(event);
 
     expect(mockAuthorize).toHaveBeenCalledWith(
       undefined,
@@ -71,27 +73,27 @@ describe('Lambda Authorize Handler', () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
     );
     expect(result).toEqual(mockResponse);
   });
 
-  test('should handle authorize request with partial parameters', () => {
+  test('should handle authorize request with partial parameters', async () => {
     const event = {
       queryStringParameters: {
         client_id: 'test-client',
-        scope: 'user:email'
-      }
+        scope: 'user:email',
+      },
     };
 
     const mockResponse = {
       statusCode: 302,
-      headers: { Location: 'https://github.com/login/oauth/authorize' }
+      headers: { Location: 'https://github.com/login/oauth/authorize' },
     };
 
-    mockAuthorize.mockReturnValue(mockResponse);
+    mockAuthorize.mockResolvedValue(mockResponse);
 
-    const result = authorize.handler(event);
+    const result = await authorize.handler(event);
 
     expect(mockAuthorize).toHaveBeenCalledWith(
       'test-client',
@@ -99,7 +101,7 @@ describe('Lambda Authorize Handler', () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
     );
     expect(result).toEqual(mockResponse);
   });

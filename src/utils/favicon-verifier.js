@@ -3,10 +3,10 @@ const logger = require('../connectors/logger');
 /**
  * Verify the request for favicon.ico
  * @param {Object} event - The Lambda event object
- * @returns {boolean} True if request is valid
+ * @returns {Promise<boolean>} True if request is valid
  * @throws {Error} If request is invalid
  */
-function verifyRequest(event) {
+async function verifyRequest(event) {
   // Check HTTP method
   if (event.httpMethod !== 'GET') {
     throw new Error('Method not allowed');
@@ -28,10 +28,10 @@ function verifyRequest(event) {
 /**
  * Verify the ICO format of the binary data
  * @param {Buffer} buffer - Binary favicon data
- * @returns {boolean} True if format is valid
+ * @returns {Promise<boolean>} True if format is valid
  * @throws {Error} If format is invalid
  */
-function verifyIco(buffer) {
+async function verifyIco(buffer) {
   // Check ICO header
   if (
     buffer[0] !== 0 ||
@@ -62,10 +62,10 @@ function verifyIco(buffer) {
 /**
  * Verify the response structure
  * @param {Object} response - The response object
- * @returns {boolean} True if response is valid
+ * @returns {Promise<boolean>} True if response is valid
  * @throws {Error} If response is invalid
  */
-function verifyResponse(response) {
+async function verifyResponse(response) {
   const required = {
     statusCode: 200,
     headers: {
@@ -99,7 +99,7 @@ function verifyResponse(response) {
     const buffer = response.isBase64Encoded
       ? Buffer.from(response.body, 'base64')
       : Buffer.from(response.body);
-    if (!verifyIco(buffer)) {
+    if (!(await verifyIco(buffer))) {
       throw new Error('Invalid ICO format');
     }
   } catch (error) {

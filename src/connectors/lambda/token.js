@@ -2,10 +2,10 @@ const qs = require('querystring');
 const controllers = require('../controllers');
 const { OAuthError, errorTypes } = require('../../errors');
 const logger = require('../logger');
+const { parseBody } = require('./request-utils');
 
-module.exports.handler = (event, context) => {
+module.exports.handler = async (event, context) => {
   try {
-    const { parseBody } = require('./index');
     const { body, contentType } = parseBody(event);
 
     logger.debug({
@@ -51,7 +51,12 @@ module.exports.handler = (event, context) => {
       host,
     });
 
-    const response = controllers().token(code, state, host, code_verifier);
+    const response = await controllers().token(
+      code,
+      state,
+      host,
+      code_verifier,
+    );
 
     // Ensure error responses have correct status code
     if (response.body) {

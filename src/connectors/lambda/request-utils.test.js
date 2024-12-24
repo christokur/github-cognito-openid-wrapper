@@ -4,19 +4,20 @@ const { mockValues } = require('../../mocks');
 // Declare intercept variables
 let logger;
 let parseBody;
+let getParameters;
 
 describe('parseBody', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    
+
     logger = require('../logger');
-    parseBody = require('./index').parseBody;
+    parseBody = require('./request-utils').parseBody;
   });
 
   afterEach(() => {
     jest.resetModules();
-    delete require.cache[require.resolve('./index')];
+    delete require.cache[require.resolve('./request-utils')];
     delete require.cache[require.resolve('../logger')];
   });
 
@@ -193,6 +194,89 @@ describe('parseBody', () => {
       const { body, contentType } = parseBody(null);
       expect(body).toBeUndefined();
       expect(contentType).toBe('');
+    });
+  });
+});
+
+describe('getParameters', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    logger = require('../logger');
+    getParameters = require('./request-utils').getParameters;
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+    delete require.cache[require.resolve('./request-utils')];
+    delete require.cache[require.resolve('../logger')];
+  });
+
+  it('should extract query parameters for GET request', () => {
+    const event = {
+      httpMethod: 'GET',
+      queryStringParameters: {
+        code: 'test_code',
+        state: 'test_state',
+      },
+    };
+
+    const params = getParameters(event);
+    expect(params).toEqual({
+      code: 'test_code',
+      state: 'test_state',
+    });
+  });
+
+  it('should extract body parameters for POST request', () => {
+    const event = {
+      httpMethod: 'POST',
+      body: JSON.stringify({
+        code: 'test_code',
+        state: 'test_state',
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const params = getParameters(event);
+    expect(params).toEqual({
+      code: 'test_code',
+      state: 'test_state',
+    });
+  });
+
+  it('should handle missing query parameters', () => {
+    const event = {
+      httpMethod: 'GET',
+    };
+
+    const params = getParameters(event);
+    expect(params).toEqual({});
+  });
+
+  it('should handle missing body', () => {
+    const event = {
+      httpMethod: 'POST',
+    };
+
+    const params = getParameters(event);
+    expect(params).toEqual({});
+  });
+
+  it('should extract access token from Authorization header', () => {
+    const event = {
+      httpMethod: 'GET',
+      headers: {
+        Authorization: 'Bearer test_token'
+      }
+    };
+
+    const params = getParameters(event);
+    expect(params).toEqual({
+      access_token: 'test_token'
     });
   });
 });

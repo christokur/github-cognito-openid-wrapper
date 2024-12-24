@@ -13,7 +13,13 @@ class AuthorizationService {
    * @param {Object} params - Authorization parameters
    * @returns {string} Authorization URL
    */
-  static getAuthorizeUrl({ client_id, scope, state, response_type, nonce }) {
+  static async getAuthorizeUrl({
+    client_id,
+    scope,
+    state,
+    response_type,
+    nonce,
+  }) {
     try {
       // Validate parameters
       ConfigurationService.validateAuthorizationParams({
@@ -43,7 +49,10 @@ class AuthorizationService {
         codeChallenge,
       });
 
-      return githubClientInstance.getAuthorizeUrl(
+      // Store PKCE values for later verification
+      PkceHelper.storeCodeVerifier(state, codeVerifier);
+
+      const authorizeUrl = githubClientInstance.getAuthorizeUrl(
         client_id,
         scope,
         state,
@@ -51,9 +60,15 @@ class AuthorizationService {
         nonce,
         codeChallenge,
       );
+
+      if (!authorizeUrl) {
+        throw new Error('Failed to generate authorize URL');
+      }
+
+      return authorizeUrl;
     } catch (error) {
       logger.error({
-        message: 'Failed to generate authorize URL',
+        message: 'Error generating authorize URL',
         error: error.message || error,
       });
       throw error;

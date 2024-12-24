@@ -5,21 +5,27 @@ This document describes the standard mocking pattern used in our tests.
 ## Pattern Structure
 
 ### 1. Require Shared Mocks
+
 Always require shared mocks as constants at the top of the test file:
+
 ```javascript
 const { mockAxios } = require('../sharedMocks');
 const { mockValues } = require('../mocks');
 ```
 
 ### 2. Declare Intercept Variables
+
 Declare variables for modules you want to intercept using `let`:
+
 ```javascript
 let logger;
 let faviconVerifier;
 ```
 
 ### 3. Setup in beforeEach
+
 Reset modules and load fresh copies in `beforeEach`:
+
 ```javascript
 beforeEach(() => {
     jest.resetModules();
@@ -30,7 +36,9 @@ beforeEach(() => {
 ```
 
 ### 4. Cleanup in afterEach
+
 Clean up ONLY the modules that were intercepted in `afterEach`:
+
 ```javascript
 afterEach(() => {
     jest.resetModules();

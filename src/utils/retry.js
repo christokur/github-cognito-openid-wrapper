@@ -1,12 +1,9 @@
 const logger = require('../connectors/logger');
 const backoff = require('./backoff');
 
-const wait = (ms) => {
-  const start = Date.now();
-  while (Date.now() - start < ms) {
-    // Busy wait
-  }
-};
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const isRetryableError = (error) => {
   const retry = error?.isRetryable || true;
@@ -24,20 +21,22 @@ const isRetryableError = (error) => {
   );
 };
 
-function withRetry(
+async function withRetry(
   operation,
   { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = {},
 ) {
   let retryCount = 0;
-  let result;
   let error;
 
   while (retryCount <= maxRetries) {
     try {
-      result = operation();
-      break;
+      // If operation() returns a promise, we await it here
+      const result = await operation();
+      // If it succeeded, return immediately
+      return result;
     } catch (err) {
       error = err;
+
       if (!isRetryableError(error) || retryCount === maxRetries) {
         logger.error({
           message: 'Operation failed after retries',
@@ -47,19 +46,23 @@ function withRetry(
         throw error;
       }
 
+      // Otherwise, increment and do a backoff
       retryCount++;
-      const delay = backoff.exponentialBackoff(retryCount - 1, baseDelay, maxDelay);
+      const delay = backoff.exponentialBackoff(
+        retryCount - 1,
+        baseDelay,
+        maxDelay,
+      );
       logger.debug({
         message: `Retrying operation (attempt ${retryCount}/${maxRetries})`,
         delay,
       });
-      wait(delay);
+
+      // This wait function should return a promise that resolves after `delay` ms
+      await wait(delay);
     }
   }
-
-  return result;
 }
-
 module.exports = {
   withRetry,
   isRetryableError,

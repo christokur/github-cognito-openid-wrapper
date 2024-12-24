@@ -45,6 +45,8 @@ describe('GitHub Client - User Operations', () => {
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user`,
         {
+          url: `${mockValues.GITHUB_API_URL}/user`,
+          method: 'GET',
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: 'token mock_access_token',
@@ -95,6 +97,8 @@ describe('GitHub Client - User Operations', () => {
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user/emails`,
         {
+          url: `${mockValues.GITHUB_API_URL}/user/emails`,
+          method: 'GET',
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: `token ${accessToken}`,
@@ -120,6 +124,8 @@ describe('GitHub Client - User Operations', () => {
       expect(mockAxios.get).toHaveBeenCalledWith(
         `${mockValues.GITHUB_API_URL}/user/emails`,
         {
+          url: `${mockValues.GITHUB_API_URL}/user/emails`,
+          method: 'GET',
           headers: {
             Accept: 'application/vnd.github.v3+json',
             Authorization: `token ${accessToken}`,

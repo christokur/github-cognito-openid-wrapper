@@ -1,8 +1,19 @@
 {
 	"folders": [
 		{
+			"path": "../github-cognito-openid-wrapper"
+		},
+		{
 			"path": "."
+		},
+		{
+			"path": "../../../../../github.com/christokur/ai-tools"
+		},
+		{
+			"path": "../../../../../../Documents/Cline"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"editor.fontFamily": "Jetbrains Mono, Fira Code, Menlo, Monaco, 'Courier New', monospace"
+	}
 }
