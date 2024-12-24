@@ -44,7 +44,7 @@ function parseBody(event) {
     });
 
     // Get content type
-    const contentType = event.headers?.['Content-Type'] || event.headers?.['content-type'] || '';
+    const contentType = getHeaderCaseInsensitive(event.headers, 'Content-Type') || '';
 
     // Parse based on content type
     if (contentType?.includes('application/x-www-form-urlencoded')) {
@@ -116,30 +116,33 @@ function parseBody(event) {
 }
 
 function getParameters(event) {
-  // Start with query string parameters
-  const params = {
-    ...(event.queryStringParameters || {}),
-  };
+  const params = {};
+
+  // Get query string parameters
+  if (event.queryStringParameters) {
+    Object.assign(params, event.queryStringParameters);
+  }
 
   logger.debug({
     message: 'Extracted query parameters',
     queryParams: params,
   });
 
-  // Add parsed body parameters if present
+  // Get body parameters
   if (event.body) {
-    const { body: bodyParams } = parseBody(event);
-    Object.assign(params, bodyParams);
+    const bodyParams = parseBody(event);
+    Object.assign(params, bodyParams.body);
     logger.debug({
       message: 'Added body parameters',
-      bodyParams,
+      bodyParams: bodyParams.body,
       finalParams: params,
     });
   }
 
-  // Add Authorization header for userinfo endpoint
-  if (event.headers?.Authorization) {
-    params.access_token = event.headers.Authorization.replace('Bearer ', '');
+  // Get token from Authorization header
+  const authHeader = getHeaderCaseInsensitive(event.headers, 'Authorization');
+  if (authHeader) {
+    params.access_token = authHeader.replace('Bearer ', '');
     logger.debug({
       message: 'Added access token from Authorization header',
       hasToken: !!params.access_token,
@@ -149,5 +152,23 @@ function getParameters(event) {
   return params;
 }
 
-module.exports.parseBody = parseBody;
-module.exports.getParameters = getParameters;
+/**
+ * Get a header value in a case-insensitive way
+ * @param {Object} headers - Headers object from event
+ * @param {string} headerName - Name of header to find
+ * @returns {string|undefined} Header value if found
+ */
+function getHeaderCaseInsensitive(headers, headerName) {
+  if (!headers || !headerName) return undefined;
+  
+  const headerKey = Object.keys(headers)
+    .find(key => key.toLowerCase() === headerName.toLowerCase());
+  
+  return headerKey ? headers[headerKey] : undefined;
+}
+
+module.exports = {
+  parseBody,
+  getParameters,
+  getHeaderCaseInsensitive,
+};

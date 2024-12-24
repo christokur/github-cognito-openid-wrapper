@@ -117,16 +117,48 @@ function getTestDefinitions(config) {
     },
     // UserInfo endpoint tests
     {
-      name: 'UserInfo GET',
+      name: 'UserInfo GET without token',
       url: config.userinfo_endpoint,
       method: 'GET',
       expectedStatus: 401
     },
     {
-      name: 'UserInfo POST',
+      name: 'UserInfo POST without token',
       url: config.userinfo_endpoint,
       method: 'POST',
       expectedStatus: 401
+    },
+    {
+      name: 'UserInfo GET with token',
+      url: config.userinfo_endpoint,
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer mock-access-token'
+      },
+      expectedStatus: config.isLocalhost ? 200 : 401,
+      expectedResponse: config.isLocalhost ? {
+        sub: '12345',
+        name: 'Test User',
+        preferred_username: 'test-user',
+        email: 'test@example.com',
+        email_verified: true
+      } : undefined
+    },
+    {
+      name: 'UserInfo POST with token',
+      url: config.userinfo_endpoint,
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer mock-access-token'
+      },
+      expectedStatus: config.isLocalhost ? 200 : 401,
+      expectedResponse: config.isLocalhost ? {
+        sub: '12345',
+        name: 'Test User',
+        preferred_username: 'test-user',
+        email: 'test@example.com',
+        email_verified: true
+      } : undefined
     },
     {
       name: 'UserInfo PUT',

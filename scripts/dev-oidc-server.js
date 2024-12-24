@@ -209,26 +209,64 @@ app.post('/github/login/oauth/access_token', async (req, res) => {
   }
 });
 
+// Mock GitHub API user endpoints
 app.get('/github-api/user', async (req, res) => {
-  logger.debug('Mock GitHub user endpoint called');
-  
+  logger.debug('Mock GitHub user endpoint called', { headers: req.headers });
+
+  // Get token from Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'unauthorized',
+      error_description: 'No valid access token provided'
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (token !== 'mock-access-token') {
+    return res.status(401).json({
+      error: 'unauthorized',
+      error_description: 'Invalid access token'
+    });
+  }
+
   try {
     const mockAxios = githubApiMock.getAxios();
     const response = await mockAxios.get('/user', {
-      headers: req.headers
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
     res.json(response.data);
   } catch (error) {
     logger.error('Mock GitHub user error', { error: error.message });
     res.status(error.response?.status || 500).json(error.response?.data || {
-      message: error.message
+      error: 'server_error',
+      error_description: error.message
     });
   }
 });
 
 app.get('/github-api/user/emails', async (req, res) => {
-  logger.debug('Mock GitHub emails endpoint called');
-  
+  logger.debug('Mock GitHub user emails endpoint called', { headers: req.headers });
+
+  // Get token from Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'unauthorized',
+      error_description: 'No valid access token provided'
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (token !== 'mock-access-token') {
+    return res.status(401).json({
+      error: 'unauthorized',
+      error_description: 'Invalid access token'
+    });
+  }
+
   try {
     const mockAxios = githubApiMock.getAxios();
     const response = await mockAxios.get('/user/emails', {
@@ -238,9 +276,36 @@ app.get('/github-api/user/emails', async (req, res) => {
   } catch (error) {
     logger.error('Mock GitHub emails error', { error: error.message });
     res.status(error.response?.status || 500).json(error.response?.data || {
-      message: error.message
+      error: 'server_error',
+      error_description: error.message
     });
   }
+});
+
+// Mock GitHub OAuth login page
+app.get('/github/login/oauth/authorize', (req, res) => {
+  logger.debug('Mock GitHub authorize endpoint called', { query: req.query });
+  
+  // Validate required parameters
+  const requiredParams = ['client_id', 'scope', 'state'];
+  const missingParams = requiredParams.filter(param => !req.query[param]);
+  
+  if (missingParams.length > 0) {
+    return res.status(400).json({
+      error: 'invalid_request',
+      error_description: `Missing required parameters: ${missingParams.join(', ')}`
+    });
+  }
+
+  // Auto-approve and redirect back with code
+  const code = 'mock-auth-code-' + Date.now();
+  const redirectUri = req.query.redirect_uri || process.env.COGNITO_REDIRECT_URI;
+  const redirectUrl = new URL(redirectUri);
+  redirectUrl.searchParams.set('code', code);
+  redirectUrl.searchParams.set('state', req.query.state);
+  
+  logger.debug('Redirecting to callback', { redirectUrl: redirectUrl.toString() });
+  res.redirect(redirectUrl.toString());
 });
 
 // OIDC endpoints (handled by Lambda)

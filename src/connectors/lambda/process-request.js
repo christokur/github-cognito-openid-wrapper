@@ -1,6 +1,6 @@
 const logger = require('../logger');
 const responseUtils = require('./response-utils');
-const { getParameters } = require('./request-utils');
+const { getParameters, getHeaderCaseInsensitive } = require('./request-utils');
 const validator = require('../../utils/validator');
 const rateLimiter = require('../../utils/rate-limiter');
 const { withRetry } = require('../../utils/retry');
@@ -32,7 +32,7 @@ async function processRequest(event, context, config) {
 
     // 2. Check authorization if required
     if (config.requiresAuth) {
-      const authHeader = event.headers?.Authorization;
+      const authHeader = getHeaderCaseInsensitive(event.headers, 'Authorization');
       if (!authHeader) {
         return responseUtils.formatResponse(
           {
