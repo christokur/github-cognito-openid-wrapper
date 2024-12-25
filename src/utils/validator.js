@@ -70,8 +70,8 @@ const schemas = {
     access_token: {
       required: true,
       type: 'string',
-      pattern: /^[a-zA-Z0-9-_]+$/,
-      maxLength: 256,
+      pattern: /^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/,
+      maxLength: 8192,  // 8KB to match common infrastructure limits
     },
   },
 };
