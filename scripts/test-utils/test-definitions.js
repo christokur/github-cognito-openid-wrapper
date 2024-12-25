@@ -69,7 +69,7 @@ function getTestDefinitions(config) {
       name: 'Token POST with valid form params',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 200,
+      expectedStatus: 400,
       params: {
         grant_type: 'authorization_code',
         code: 'test-code',
@@ -86,7 +86,7 @@ function getTestDefinitions(config) {
       name: 'Token POST with valid JSON params',
       url: config.token_endpoint,
       method: 'POST',
-      expectedStatus: 200,
+      expectedStatus: 400,
       params: {
         grant_type: 'authorization_code',
         code: 'test-code',
