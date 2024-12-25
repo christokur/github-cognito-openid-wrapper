@@ -1,59 +1,7 @@
 const logger = require('./logger');
 const openid = require('../openid');
 const { validate } = require('../utils/validator');
-
-// OAuth2 error codes
-const OAUTH_ERRORS = {
-  INVALID_REQUEST: 'invalid_request',
-  INVALID_CLIENT: 'invalid_client',
-  INVALID_GRANT: 'invalid_grant',
-  INVALID_SCOPE: 'invalid_scope',
-  UNAUTHORIZED_CLIENT: 'unauthorized_client',
-  SERVER_ERROR: 'server_error',
-};
-
-// Map internal errors to OAuth2 errors
-const mapError = (error) => {
-  if (error.name === 'ValidationError') {
-    return {
-      code: OAUTH_ERRORS.INVALID_REQUEST,
-      status: 400,
-      message: error.message,
-      errors: error.errors,
-    };
-  }
-  if (error.message.includes('required parameter')) {
-    return {
-      code: OAUTH_ERRORS.INVALID_REQUEST,
-      status: 400,
-    };
-  }
-  if (error.message.includes('invalid token') || error.message.includes('GitHub API responded with 401')) {
-    return {
-      code: OAUTH_ERRORS.INVALID_GRANT,
-      status: 401,
-    };
-  }
-  if (error.message.includes('rate limit')) {
-    return {
-      code: OAUTH_ERRORS.SERVER_ERROR,
-      status: 429,
-      headers: {
-        'Retry-After': '60',
-      },
-    };
-  }
-  if (error.type && error.statusCode) {
-    return {
-      code: error.type,
-      status: error.statusCode,
-    };
-  }
-  return {
-    code: OAUTH_ERRORS.SERVER_ERROR,
-    status: 500,
-  };
-};
+const { OAUTH_ERRORS, mapError } = require('../errors');
 
 module.exports = () => ({
   authorize: async (client_id, scope, state, response_type) => {
