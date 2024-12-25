@@ -343,6 +343,26 @@ describe('Controllers', () => {
     });
   });
 
+  it('should handle GitHub bad credentials error', async () => {
+    validator.validate.mockReturnValue({ access_token: 'invalid-token' });
+    openid.getUserInfo.mockRejectedValue(new Error('GitHub API responded with 401: Bad credentials'));
+
+    const result = await controllers.userinfo('invalid-token');
+
+    expect(result).toEqual({
+      statusCode: 401,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        Pragma: 'no-cache',
+      },
+      body: JSON.stringify({
+        error: 'invalid_grant',
+        error_description: 'GitHub API responded with 401: Bad credentials',
+      }),
+    });
+  });
+
   describe('jwks', () => {
     const mockJwks = {
       keys: [

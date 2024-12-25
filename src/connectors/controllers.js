@@ -28,7 +28,7 @@ const mapError = (error) => {
       status: 400,
     };
   }
-  if (error.message.includes('invalid token')) {
+  if (error.message.includes('invalid token') || error.message.includes('GitHub API responded with 401')) {
     return {
       code: OAUTH_ERRORS.INVALID_GRANT,
       status: 401,

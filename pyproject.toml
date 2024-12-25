@@ -7,7 +7,7 @@ requires = [
 
 [tool.poetry]
 name = "github-cognito-openid-wrapper"
-version = "1.7.3"
+version = "1.7.4"
 description = "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)"
 authors = ["Christo De Lange <christo.delange@sands.com>"]
 license = "(c) 2024 DLDInternet LLC"
@@ -316,7 +316,7 @@ args = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.7.3"
+version = "1.7.4"
 version_files = [
     ".bumpversion.cfg",
     "VERSION",
