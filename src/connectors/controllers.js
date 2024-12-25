@@ -40,7 +40,7 @@ module.exports = () => ({
     } catch (error) {
       logger.error({
         message: 'Failed to generate authorize URL',
-        error: error.message || error,
+        error,
       });
       const { code, status, headers = {}, message, errors } = mapError(error);
       return {
@@ -85,7 +85,7 @@ module.exports = () => ({
     } catch (error) {
       logger.error({
         message: 'Failed to provide user info',
-        error: error.message || error,
+        error,
       });
       const { code, status, headers = {}, message, errors } = mapError(error);
       return {
@@ -99,7 +99,7 @@ module.exports = () => ({
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors }),
+          ...errors,
         }),
       };
     }
@@ -149,7 +149,7 @@ module.exports = () => ({
     } catch (error) {
       logger.error({
         message: 'Failed to get tokens',
-        error: error.message || error,
+        error,
       });
       const { code, status, headers = {}, message, errors } = mapError(error);
       return {
@@ -163,7 +163,7 @@ module.exports = () => ({
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors }),
+          ...errors,
         }),
       };
     }
@@ -188,7 +188,7 @@ module.exports = () => ({
     } catch (error) {
       logger.error({
         message: 'Failed to get JWKS',
-        error: error.message || error,
+        error,
       });
       const { code, status, headers = {}, message, errors } = mapError(error);
       return {
@@ -201,7 +201,7 @@ module.exports = () => ({
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors }),
+          ...errors,
         }),
       };
     }
@@ -226,7 +226,7 @@ module.exports = () => ({
     } catch (error) {
       logger.error({
         message: 'Failed to get OpenID configuration',
-        error: error.message || error,
+        error,
       });
       const { code, status, headers = {}, message, errors } = mapError(error);
       return {
@@ -239,7 +239,7 @@ module.exports = () => ({
         body: JSON.stringify({
           error: code,
           error_description: message || error.message,
-          ...(errors && { validation_errors: errors }),
+          ...errors,
         }),
       };
     }
