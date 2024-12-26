@@ -33,7 +33,7 @@ const getCircularReplacer = () => {
 };
 
 const commonFormat = winston.format.combine(
-  winston.format.splat(),
+  winston.format.uncolorize(), // Remove colors
   winston.format.timestamp(),
   winston.format.printf(({ level, message, timestamp, ...rest }) => {
     const logEntry = {

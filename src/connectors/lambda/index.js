@@ -71,8 +71,8 @@ const endpointConfig = {
 };
 
 function handler(event, context, callback) {
-  // Prevent Lambda from waiting for Node.js event loop to be empty
-  context.callbackWaitsForEmptyEventLoop = false;
+  // Allow Lambda to wait for event loop to empty so logs are flushed
+  context.callbackWaitsForEmptyEventLoop = true;
 
   // Log request details
   logger.info({
@@ -88,23 +88,23 @@ function handler(event, context, callback) {
     memoryUsage: process.memoryUsage(),
   });
 
-  // Log detailed request info
-  logger.debug({
-    message: 'Received request',
-    path: event.path,
-    httpMethod: event.httpMethod,
-    headers: event.headers,
-    queryStringParameters: event.queryStringParameters,
-    body: event.body,
-    isBase64Encoded: event.isBase64Encoded,
-    requestId: context.awsRequestId,
-    remainingTime: context.getRemainingTimeInMillis(),
-    versions: {
-      consumer: VERSION_CONSUMER,
-      component: VERSION_COMPONENT,
-      api: VERSION,
-    },
-  });
+  // // Log detailed request info
+  // logger.debug({
+  //   message: 'Received request',
+  //   path: event.path,
+  //   httpMethod: event.httpMethod,
+  //   headers: event.headers,
+  //   queryStringParameters: event.queryStringParameters,
+  //   body: event.body,
+  //   isBase64Encoded: event.isBase64Encoded,
+  //   requestId: context.awsRequestId,
+  //   remainingTime: context.getRemainingTimeInMillis(),
+  //   versions: {
+  //     consumer: VERSION_CONSUMER,
+  //     component: VERSION_COMPONENT,
+  //     api: VERSION,
+  //   },
+  // });
 
   // Set a timeout handler
   const timeoutHandler = setTimeout(() => {
@@ -148,6 +148,9 @@ function handler(event, context, callback) {
   }
 
   // Get endpoint configuration
+  const config = endpointConfig[event.path];
+  
+  // Log after getting config to ensure it's captured
   logger.info({
     message: 'Looking up endpoint config',
     path: event.path || '',
@@ -157,9 +160,9 @@ function handler(event, context, callback) {
       ? Array.from(event.path).map((c) => c.charCodeAt(0))
       : [],
     availableEndpoints: Object.keys(endpointConfig),
+    foundConfig: !!config,
+    config
   });
-
-  const config = endpointConfig[event.path];
   if (!config) {
     clearTimeout(timeoutHandler);
     return callback(
