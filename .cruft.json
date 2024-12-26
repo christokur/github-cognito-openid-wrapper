@@ -13,7 +13,7 @@
       "description": "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)",
       "license_text": "(c) 2024 DLDInternet LLC",
       "readme": "README.md",
-      "version": "1.8.1",
+      "version": "1.8.2",
       "package_name": "",
       "packager": "poetry",
       "dynamic": "",
@@ -118,7 +118,7 @@
         "isort": "{ version = '~5.13.2' }",
         "pre-commit": "{ version = '~2.21.0' }",
         "prompt-toolkit": "~3.0.38",
-        "pyproject-fmt": "{ version = '~1.8.1' }",
+        "pyproject-fmt": "{ version = '~1.8.2' }",
         "python-toolbag": ">=0.24.72",
         "ruff": ">=0.3.0",
         "semver": ">=3.0.0,<4.0.0"
