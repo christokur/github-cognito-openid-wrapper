@@ -6,7 +6,7 @@ const express = require('express');
 const execAsync = promisify(exec);
 
 // Server version
-const SERVER_VERSION = '0.3.5';
+const SERVER_VERSION = '0.4.0';
 
 // Parse command line arguments
 const args = process.argv.slice(2);

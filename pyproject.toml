@@ -7,7 +7,7 @@ requires = [
 
 [tool.poetry]
 name = "github-cognito-openid-wrapper"
-version = "1.8.0"
+version = "1.8.1"
 description = "A wrapper to enable AWS Cognito User Pools (which requires OpenID Connect) to talk to GitHub (which only provides OAuth2.0)"
 authors = ["Christo De Lange <christo.delange@sands.com>"]
 license = "(c) 2024 DLDInternet LLC"
@@ -82,7 +82,7 @@ gitlint = { version = '~0.19.1' }
 isort = { version = '~5.13.2' }
 pre-commit = { version = '~2.21.0' }
 prompt-toolkit = "~3.0.38"
-pyproject-fmt = { version = '~1.8.0' }
+pyproject-fmt = { version = '~1.8.1' }
 ruff = ">=0.3.0"
 semver = ">=3.0.0,<4.0.0"
 
@@ -91,7 +91,7 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 #mkdocs = "~1.4.2"
-#portray = "~1.8.0"
+#portray = "~1.8.1"
 pdocs = { git = "https://github.com/christokur/pdocs.git", branch = "master" }
 portray = { git = "https://github.com/christokur/portray.git", branch = "main" }
 mkdocs-material = { version = ">=8.5.0,<9.0.0" }
@@ -316,7 +316,7 @@ args = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.8.0"
+version = "1.8.1"
 version_files = [
     ".bumpversion.cfg",
     "VERSION",

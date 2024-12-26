@@ -191,7 +191,7 @@ function handler(event, context, callback) {
   processRequest(event, context, config)
     .then((response) => {
       clearTimeout(timeoutHandler);
-      logger.debug({
+      logger.info({
         message: 'Sending response',
         response,
       });
