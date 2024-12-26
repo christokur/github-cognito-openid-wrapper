@@ -1,6 +1,21 @@
 const responder = require('./responder');
 const auth = require('./auth');
 const controllers = require('../controllers');
+const { VERSION } = require('../lambda/version');
+
+// List of environment variables that should not be exposed
+const SENSITIVE_ENV_VARS = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+
+// Function to get safe environment variables
+const getSafeEnvironment = () => {
+  const safeEnv = {};
+  Object.keys(process.env).forEach(key => {
+    if (!SENSITIVE_ENV_VARS.includes(key)) {
+      safeEnv[key] = process.env[key];
+    }
+  });
+  return safeEnv;
+};
 
 module.exports = {
   userinfo: async (req, res) => {
@@ -59,5 +74,12 @@ module.exports = {
     } catch (error) {
       responder(res).error(error);
     }
+  },
+
+  version: (req, res) => {
+    responder(res).success({
+      version: VERSION,
+      environment: getSafeEnvironment()
+    });
   },
 };

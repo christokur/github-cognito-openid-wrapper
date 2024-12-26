@@ -22,9 +22,17 @@ const favicon = require('../../favicon');
 const processRequest = require('./process-request');
 const { parseBody, getParameters } = require('./request-utils');
 const { formatResponse } = require('./response-utils');
+const versionHandler = require('./version-handler');
 
 // Map endpoints to their validation schemas and handlers
 const endpointConfig = {
+  '/api/version': {
+    schema: null, // No validation needed
+    handler: versionHandler.handler,
+    requiresRateLimit: false,
+    allowedMethods: ['GET'],
+    cacheControl: 'no-store',
+  },
   '/authorize': {
     schema: 'authorize',
     handler: authorize.handler,

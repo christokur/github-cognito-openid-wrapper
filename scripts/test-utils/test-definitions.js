@@ -14,6 +14,61 @@ function getTestDefinitions(config) {
     codeChallenge
   });
   return [
+    // Version endpoint tests
+    {
+      name: 'Version GET',
+      url: '/api/version',
+      method: 'GET',
+      expectedStatus: 200,
+      validateResponse: (response) => {
+        const { version, environment } = response;
+        if (!version || typeof version !== 'string') {
+          throw new Error('Version must be a string');
+        }
+        if (!environment || typeof environment !== 'object') {
+          throw new Error('Environment must be an object');
+        }
+        // Check required environment variables
+        const requiredEnvVars = [
+          'VERSION_COMPONENT',
+          'VERSION_CONSUMER',
+          'GITHUB_API_URL',
+          'GITHUB_LOGIN_URL',
+          'CONSUMER',
+          'COGNITO_REDIRECT_URI'
+        ];
+        for (const envVar of requiredEnvVars) {
+          if (!(envVar in environment)) {
+            throw new Error(`Missing required environment variable: ${envVar}`);
+          }
+        }
+        // Check that sensitive data is not exposed
+        const sensitiveEnvVars = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+        for (const envVar of sensitiveEnvVars) {
+          if (envVar in environment) {
+            throw new Error(`Sensitive environment variable exposed: ${envVar}`);
+          }
+        }
+      }
+    },
+    {
+      name: 'Version POST',
+      url: '/api/version',
+      method: 'POST',
+      expectedStatus: 405
+    },
+    {
+      name: 'Version PUT',
+      url: '/api/version',
+      method: 'PUT',
+      expectedStatus: 405
+    },
+    {
+      name: 'Version DELETE',
+      url: '/api/version',
+      method: 'DELETE',
+      expectedStatus: 405
+    },
     // Authorization endpoint tests
     {
       name: 'Authorization GET w/ status',

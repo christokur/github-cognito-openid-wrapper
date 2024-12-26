@@ -315,6 +315,7 @@ app.all('/userinfo', lambdaToExpress);
 app.all('/jwks', lambdaToExpress);
 app.all('/.well-known/openid-configuration', lambdaToExpress);
 app.all('/favicon.ico', lambdaToExpress);
+app.all('/api/version', lambdaToExpress);
 
 // Error handling
 app.use((err, req, res, next) => {
