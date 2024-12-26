@@ -20,7 +20,6 @@ const userinfo = require('./userinfo');
 const jwks = require('./jwks');
 const favicon = require('../../favicon');
 const processRequest = require('./process-request');
-const { parseBody, getParameters } = require('./request-utils');
 const { formatResponse } = require('./response-utils');
 const versionHandler = require('./version-handler');
 
