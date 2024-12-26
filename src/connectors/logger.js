@@ -1,4 +1,5 @@
 const winston = require('winston');
+const { format } = require('winston');
 const {
   SPLUNK_URL,
   SPLUNK_TOKEN,
@@ -32,10 +33,9 @@ const getCircularReplacer = () => {
   };
 };
 
-const commonFormat = winston.format.combine(
-  winston.format.uncolorize(), // Remove colors
-  winston.format.timestamp(),
-  winston.format.printf(({ level, message, timestamp, ...rest }) => {
+const commonFormat = format.combine(
+  format.timestamp(),
+  format.printf(({ level, message, timestamp, ...rest }) => {
     const logEntry = {
       timestamp,
       level,
